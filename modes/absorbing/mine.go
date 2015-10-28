@@ -36,14 +36,13 @@ func (m *Miner) Close() error {
 }
 
 func (m *Miner) Mine(input io.Reader, dt lattice.DataType) error {
+	errors.Logf("INFO", "loading data")
 	start, err := dt.Loader().StartingPoints(input, m.Support)
 	if err != nil {
 		return err
 	}
+	errors.Logf("INFO", "loaded data, about to start mining")
 	m.start = start
-	for _, n := range m.start {
-		errors.Logf("INFO", "%v", n)
-	}
 	panic("unfinished")
 }
 

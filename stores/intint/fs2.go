@@ -5,9 +5,9 @@ import (
 )
 
 import(
-	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/fs2/bptree"
 	"github.com/timtadh/fs2/fmap"
+	"github.com/timtadh/fs2/slice"
 )
 
 
@@ -84,45 +84,26 @@ func (b *BpTree) Size() int {
 	return b.bpt.Size()
 }
 
-var marshal types.ItemMarshal
-var unmarshal types.ItemUnmarshal
-
-func init() {
-	marshal, unmarshal = types.Int64Marshals()
-}
-
-func (b *BpTree) Add(key, val int) error {
+func (b *BpTree) Add(key, value int) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k, err := marshal(types.Int64(int64(key)))
-	if err != nil {
-		return err
-	}
-	v, err := marshal(types.Int64(int64(val)))
-	if err != nil {
-		return err
-	}
-	return b.bpt.Add(k, v)
+	k := int64(key)
+	v := int64(value)
+	return b.bpt.Add(slice.Int64AsSlice(&k), slice.Int64AsSlice(&v))
 }
 
 func (b *BpTree) Count(key int) (int, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k, err := marshal(types.Int64(int64(key)))
-	if err != nil {
-		return 0, err
-	}
-	return b.bpt.Count(k)
+	k := int64(key)
+	return b.bpt.Count(slice.Int64AsSlice(&k))
 }
 
 func (b *BpTree) Has(key int) (bool, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k, err := marshal(types.Int64(int64(key)))
-	if err != nil {
-		return false, err
-	}
-	return b.bpt.Has(k)
+	k := int64(key)
+	return b.bpt.Has(slice.Int64AsSlice(&k))
 }
 
 func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
@@ -137,16 +118,8 @@ func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
 		if kvi == nil {
 			return 0, 0, nil, nil
 		}
-		K, err := unmarshal(k)
-		if err != nil {
-			return 0, 0, err, nil
-		}
-		V, err := unmarshal(v)
-		if err != nil {
-			return 0, 0, err, nil
-		}
-		key = int(int64(K.(types.Int64)))
-		value = int(int64(V.(types.Int64)))
+		key = int(*slice.AsInt64(&k))
+		value = int(*slice.AsInt64(&v))
 		return key, value, nil, it
 	}
 	return it
@@ -164,11 +137,7 @@ func (b *BpTree) itemIter(raw bptree.Iterator) (it IntIterator) {
 		if raw == nil {
 			return 0, nil, nil
 		}
-		I, err := unmarshal(i)
-		if err != nil {
-			return 0, err, nil
-		}
-		item = int(int64(I.(types.Int64)))
+		item = int(*slice.AsInt64(&i))
 		return item, nil, it
 	}
 	return it
@@ -197,11 +166,8 @@ func (b *BpTree) Values() (it IntIterator, err error) {
 func (b *BpTree) Find(key int) (it Iterator, err error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k, err := marshal(types.Int64(int64(key)))
-	if err != nil {
-		return nil, err
-	}
-	raw, err := b.bpt.Find(k)
+	k := int64(key)
+	raw, err := b.bpt.Find(slice.Int64AsSlice(&k))
 	if err != nil {
 		return nil, err
 	}
@@ -221,27 +187,12 @@ func (b *BpTree) Iterate() (it Iterator, err error) {
 func (b *BpTree) Remove(key int, where func(int) bool) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k, err := marshal(types.Int64(int64(key)))
-	if err != nil {
-		return err
-	}
-	rerr := b.bpt.Remove(k, func(bytes []byte) bool {
-		I, e := unmarshal(bytes)
-		if e != nil && err == nil {
-			err = e
-		}
-		if e != nil {
-			return false
-		}
-		item := int(int64(I.(types.Int64)))
-		return where(item)
+	k := int64(key)
+	err := b.bpt.Remove(slice.Int64AsSlice(&k), func(bytes []byte) bool {
+		return where(int(*slice.AsInt64(&bytes)))
 	})
-	if err != nil {
+	if err == nil {
 		return err
-	}
-	if rerr == nil {
-		return rerr
 	}
 	return nil
 }
-
