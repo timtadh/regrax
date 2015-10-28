@@ -70,7 +70,7 @@ func NewIntLoader(sets *ItemSets) lattice.Loader {
 	}
 }
 
-func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node, error) {
+func (l *IntLoader) buildIndex(input io.Reader, support int) (error) {
 	scanner := bufio.NewScanner(input)
 	tx := 0
 	for scanner.Scan() {
@@ -82,21 +82,30 @@ func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node
 			item, err := strconv.Atoi(col)
 			if err != nil {
 				errors.Logf("WARN", "input line %d contained non int '%s'", tx, col)
+				continue
 			}
 			err = l.sets.InvertedIndex.Add(item, tx)
 			if err != nil{
-				return nil, err
+				return err
 			}
 		}
 		tx += 1
 	}
 	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node, error) {
+	err := l.buildIndex(input, support)
+	if err != nil {
 		return nil, err
 	}
 	nodes := make([]lattice.Node, 0, 10)
 	citem := -1
 	txs := make([]int, 0, 10)
-	err := intint.Do(l.sets.InvertedIndex.Iterate, func(item, tx int) error {
+	err = intint.Do(l.sets.InvertedIndex.Iterate, func(item, tx int) error {
 		if len(txs) > 0 && item != citem {
 			n := &Node{
 				items: []int{citem},
