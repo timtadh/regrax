@@ -42,6 +42,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miner"
 	"github.com/timtadh/sfp/types/itemset"
@@ -209,7 +210,7 @@ func AssertFile(fname string) string {
 	return fname
 }
 
-func itemsetType(argv []string) (lattice.DataType, []string) {
+func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{ "help", "loader="},
@@ -240,10 +241,10 @@ func itemsetType(argv []string) (lattice.DataType, []string) {
 		Usage(ErrorCodes["opts"])
 	}
 
-	return itemset.NewItemSets(loader), args
+	return itemset.NewItemSets(conf, loader), args
 }
 
-func absorbingMode(argv []string) (miner.Miner, []string) {
+func absorbingMode(argv []string, conf *config.Config) (miner.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"h",
@@ -275,13 +276,13 @@ func absorbingMode(argv []string) (miner.Miner, []string) {
 		}
 	}
 
-	miner := absorbing.NewMiner(support, minVertices, maxVertices)
+	miner := absorbing.NewMiner(conf, support, minVertices, maxVertices)
 	return miner, args
 }
 
-func types(argv []string) (lattice.DataType, []string) {
+func types(argv []string, conf *config.Config) (lattice.DataType, []string) {
 	switch argv[0] {
-	case "itemset": return itemsetType(argv[1:])
+	case "itemset": return itemsetType(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown data type '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])
@@ -289,9 +290,9 @@ func types(argv []string) (lattice.DataType, []string) {
 	}
 }
 
-func modes(argv []string) (miner.Miner, []string) {
+func modes(argv []string, conf *config.Config) (miner.Miner, []string) {
 	switch argv[0] {
-	case "absorbing": return absorbingMode(argv[1:])
+	case "absorbing": return absorbingMode(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown mining mode '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])
@@ -302,7 +303,7 @@ func modes(argv []string) (miner.Miner, []string) {
 func main() {
 	args, optargs, err := getopt.GetOpt(
 		os.Args[1:],
-		"h", []string{ "help", "modes", "types" },
+		"ho:c:", []string{ "help", "output=", "cache=", "modes", "types" },
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -311,10 +312,16 @@ func main() {
 		Usage(ErrorCodes["opts"])
 	}
 
+	output := ""
+	cache := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
+		case "-o", "--output":
+			output = EmptyDir(oa.Arg())
+		case "-c", "--cache":
+			cache = EmptyDir(oa.Arg())
 		case "--types":
 			fmt.Fprintf(os.Stderr, "Types")
 			os.Exit(0)
@@ -326,18 +333,29 @@ func main() {
 			Usage(ErrorCodes["opts"])
 		}
 	}
+
+	if output == "" {
+		fmt.Fprintf(os.Stderr, "You must supply an output dir (-o)\n")
+		Usage(ErrorCodes["opts"])
+	}
+
+	conf := &config.Config{
+		Cache: cache,
+		Output: output,
+	}
+
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a type and a mode)\n")
 		Usage(ErrorCodes["opts"])
 	}
-	dt, args := types(args)
-	log.Println(dt, args)
+	dt, args := types(args, conf)
+
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a mode\n")
 		Usage(ErrorCodes["opts"])
 	}
-	mode, args := modes(args)
-	log.Println(mode, args)
+	mode, args := modes(args, conf)
+
 	if len(args) != 1 {
 		fmt.Fprintf(os.Stderr, "You must supply exactly one input path\n")
 		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
@@ -345,6 +363,7 @@ func main() {
 	}
 	input, closer := Input(args[0])
 	defer closer()
+
 	mode.Mine(input, dt)
 	log.Println("Done!")
 }

@@ -11,18 +11,21 @@ import (
 
 type RawSupport struct{}
 
-func (s RawSupport) Supported(embeddings []Embedding) []Embedding {
-	return embeddings
+func (s RawSupport) Supported(embeddings []Embedding) ([]Embedding, error) {
+	return embeddings, nil
 }
 
 
 type MinImageSupport struct{}
 
-func (s MinImageSupport) Supported(embeddings []Embedding) []Embedding {
+func (s MinImageSupport) Supported(embeddings []Embedding) ([]Embedding, error) {
 	if len(embeddings) <= 1 {
-		return embeddings
+		return embeddings, nil
 	}
-	sets := componentSets(embeddings)
+	sets, err := componentSets(embeddings)
+	if err != nil {
+		return nil, err
+	}
 	arg, size := min(srange(len(sets)), func(i int) float64 {
 		return float64(sets[i].Size())
 	})
@@ -31,26 +34,34 @@ func (s MinImageSupport) Supported(embeddings []Embedding) []Embedding {
 		idx := embedsIdx.(int)
 		supported = append(supported, embeddings[idx])
 	}
-	return supported
+	return supported, nil
 }
 
 
-func componentSets(embeds []Embedding) []*set.MapSet {
+func componentSets(embeds []Embedding) ([]*set.MapSet, error) {
 	if len(embeds) == 0 {
-		return make([]*set.MapSet, 0)
+		return make([]*set.MapSet, 0), nil
 	}
-	C := len(embeds[0].Components())
+	comp0, err := embeds[0].Components()
+	if err != nil {
+		return nil, err
+	}
+	C := len(comp0)
 	sets := make([]*set.MapSet, 0, C)
 	for i := 0; i < C; i++ {
 		set := set.NewMapSet(set.NewSortedSet(len(embeds)))
 		for j, e := range embeds {
-			id := types.Int(e.Components()[i])
+			comp, err := e.Components()
+			if err != nil {
+				return nil, err
+			}
+			id := types.Int(comp[i])
 			if !set.Has(id) {
 				set.Put(id, j)
 			}
 		}
 		sets = append(sets, set)
 	}
-	return sets
+	return sets, nil
 }
 

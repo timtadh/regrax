@@ -10,6 +10,6 @@ import (
 
 
 type Miner interface {
-	Mine(io.Reader, lattice.DataType)
+	Mine(io.Reader, lattice.DataType) error
 }
 
