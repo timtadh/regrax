@@ -56,7 +56,7 @@ func (i *ItemSets) Loader() lattice.Loader {
 }
 
 func (i *ItemSets) Close() error {
-	return nil
+	return i.InvertedIndex.Delete()
 }
 
 
