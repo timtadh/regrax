@@ -11,5 +11,6 @@ import (
 
 type Miner interface {
 	Mine(io.Reader, lattice.DataType) error
+	Close() error
 }
 

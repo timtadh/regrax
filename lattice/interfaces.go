@@ -7,6 +7,7 @@ import (
 type DataType interface {
 	Metric() SupportMetric
 	Loader() Loader
+	Close() error
 }
 
 type Loader interface {

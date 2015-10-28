@@ -31,6 +31,10 @@ func NewMiner(conf *config.Config, support int, minVertices int, maxVertices int
 	}
 }
 
+func (m *Miner) Close() error {
+	return nil
+}
+
 func (m *Miner) Mine(input io.Reader, dt lattice.DataType) error {
 	start, err := dt.Loader().StartingPoints(input, m.Support)
 	if err != nil {

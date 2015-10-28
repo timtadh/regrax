@@ -14,6 +14,7 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stores/intint"
 )
 
 
@@ -21,19 +22,29 @@ type MakeLoader func(*ItemSets) lattice.Loader
 
 
 type ItemSets struct {
-	InvertedIndex map[int][]int
+	InvertedIndex intint.MultiMap
 	FrequentItems []*Node
 	makeLoader MakeLoader
 	config *config.Config
 }
 
-func NewItemSets(config *config.Config, makeLoader MakeLoader) *ItemSets {
-	return &ItemSets{
-		InvertedIndex: make(map[int][]int),
+func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err error) {
+	var index intint.MultiMap
+	if config.Cache == "" {
+		index, err = intint.AnonBpTree()
+	} else {
+		index, err = intint.NewBpTree(config.CacheFile("itemsets-inverted.bptree"))
+	}
+	if err != nil {
+		return nil, err
+	}
+	i = &ItemSets{
+		InvertedIndex: index,
 		FrequentItems: make([]*Node, 0, 10),
 		makeLoader: makeLoader,
 		config: config,
 	}
+	return i, nil
 }
 
 func (i *ItemSets) Metric() lattice.SupportMetric {
@@ -42,6 +53,10 @@ func (i *ItemSets) Metric() lattice.SupportMetric {
 
 func (i *ItemSets) Loader() lattice.Loader {
 	return i.makeLoader(i)
+}
+
+func (i *ItemSets) Close() error {
+	return nil
 }
 
 
@@ -68,7 +83,10 @@ func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node
 			if err != nil {
 				errors.Logf("WARN", "input line %d contained non int '%s'", tx, col)
 			}
-			l.addInverted(item, tx)
+			err = l.sets.InvertedIndex.Add(item, tx)
+			if err != nil{
+				return nil, err
+			}
 		}
 		tx += 1
 	}
@@ -76,24 +94,33 @@ func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node
 		return nil, err
 	}
 	nodes := make([]lattice.Node, 0, 10)
-	for item, txs := range l.sets.InvertedIndex {
-		if len(txs) >= support {
+	citem := -1
+	txs := make([]int, 0, 10)
+	err := intint.Do(l.sets.InvertedIndex.Iterate, func(item, tx int) error {
+		if len(txs) > 0 && item != citem {
 			n := &Node{
-				items: []int{item},
+				items: []int{citem},
 				embeddings: txs,
 			}
 			l.sets.FrequentItems = append(l.sets.FrequentItems, n)
 			nodes = append(nodes, n)
+			txs = make([]int, 0, 10)
 		}
+		citem = item
+		txs = append(txs, tx)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(txs) > 0 {
+		n := &Node{
+			items: []int{citem},
+			embeddings: txs,
+		}
+		l.sets.FrequentItems = append(l.sets.FrequentItems, n)
+		nodes = append(nodes, n)
 	}
 	return nodes, nil
-}
-
-func (l *IntLoader) addInverted(item, tx int) error {
-	if txs := l.sets.InvertedIndex[item]; txs == nil {
-		l.sets.InvertedIndex[item] = make([]int, 0, 10)
-	}
-	l.sets.InvertedIndex[item] = append(l.sets.InvertedIndex[item], tx)
-	return nil
 }
 

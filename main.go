@@ -241,7 +241,11 @@ func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string
 		Usage(ErrorCodes["opts"])
 	}
 
-	return itemset.NewItemSets(conf, loader), args
+	sets, err := itemset.NewItemSets(conf, loader)
+	if err != nil {
+		log.Panic(err)
+	}
+	return sets, args
 }
 
 func absorbingMode(argv []string, conf *config.Config) (miner.Miner, []string) {
@@ -349,6 +353,7 @@ func main() {
 		Usage(ErrorCodes["opts"])
 	}
 	dt, args := types(args, conf)
+	defer dt.Close()
 
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a mode\n")
