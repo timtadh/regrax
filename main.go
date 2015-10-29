@@ -44,9 +44,9 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miner"
+	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/types/itemset"
-	"github.com/timtadh/sfp/modes/absorbing"
+	"github.com/timtadh/sfp/miners/absorbing"
 )
 
 
@@ -248,7 +248,7 @@ func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string
 	return sets, args
 }
 
-func absorbingMode(argv []string, conf *config.Config) (miner.Miner, []string) {
+func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"h",
@@ -294,7 +294,7 @@ func types(argv []string, conf *config.Config) (lattice.DataType, []string) {
 	}
 }
 
-func modes(argv []string, conf *config.Config) (miner.Miner, []string) {
+func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
 	switch argv[0] {
 	case "absorbing": return absorbingMode(argv[1:], conf)
 	default:

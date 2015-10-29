@@ -15,8 +15,8 @@ type Loader interface {
 }
 
 type Node interface {
-	Parents(support int, metric SupportMetric) (NodeIterator, error)
-	Children(support int, metric SupportMetric) (NodeIterator, error)
+	Parents(support int, dt DataType) (NodeIterator, error)
+	Children(support int, dt DataType) (NodeIterator, error)
 	Label() ([]byte, error)
 	Embeddings() ([]Embedding, error)
 }

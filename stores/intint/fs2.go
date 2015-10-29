@@ -50,7 +50,7 @@ func OpenBpTree(path string) (*BpTree, error) {
 }
 
 func newBpTree(bf *fmap.BlockFile) (*BpTree, error) {
-	bpt, err := bptree.New(bf, 8, 8)
+	bpt, err := bptree.New(bf, 4, 4)
 	if err != nil {
 		return nil, err
 	}
@@ -84,30 +84,26 @@ func (b *BpTree) Size() int {
 	return b.bpt.Size()
 }
 
-func (b *BpTree) Add(key, value int) error {
+func (b *BpTree) Add(key, value int32) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k := int64(key)
-	v := int64(value)
-	return b.bpt.Add(slice.Int64AsSlice(&k), slice.Int64AsSlice(&v))
+	return b.bpt.Add(slice.Int32AsSlice(&key), slice.Int32AsSlice(&value))
 }
 
-func (b *BpTree) Count(key int) (int, error) {
+func (b *BpTree) Count(key int32) (int, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k := int64(key)
-	return b.bpt.Count(slice.Int64AsSlice(&k))
+	return b.bpt.Count(slice.Int32AsSlice(&key))
 }
 
-func (b *BpTree) Has(key int) (bool, error) {
+func (b *BpTree) Has(key int32) (bool, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k := int64(key)
-	return b.bpt.Has(slice.Int64AsSlice(&k))
+	return b.bpt.Has(slice.Int32AsSlice(&key))
 }
 
 func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
-	it = func() (key int, value int, err error, _ Iterator) {
+	it = func() (key int32, value int32, err error, _ Iterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
 		var k, v []byte
@@ -118,15 +114,15 @@ func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
 		if kvi == nil {
 			return 0, 0, nil, nil
 		}
-		key = int(*slice.AsInt64(&k))
-		value = int(*slice.AsInt64(&v))
+		key = *slice.AsInt32(&k)
+		value = *slice.AsInt32(&v)
 		return key, value, nil, it
 	}
 	return it
 }
 
 func (b *BpTree) itemIter(raw bptree.Iterator) (it IntIterator) {
-	it = func() (item int, err error, _ IntIterator) {
+	it = func() (item int32, err error, _ IntIterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
 		var i []byte
@@ -137,7 +133,7 @@ func (b *BpTree) itemIter(raw bptree.Iterator) (it IntIterator) {
 		if raw == nil {
 			return 0, nil, nil
 		}
-		item = int(*slice.AsInt64(&i))
+		item = *slice.AsInt32(&i)
 		return item, nil, it
 	}
 	return it
@@ -163,11 +159,10 @@ func (b *BpTree) Values() (it IntIterator, err error) {
 	return b.itemIter(raw), nil
 }
 
-func (b *BpTree) Find(key int) (it Iterator, err error) {
+func (b *BpTree) Find(key int32) (it Iterator, err error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k := int64(key)
-	raw, err := b.bpt.Find(slice.Int64AsSlice(&k))
+	raw, err := b.bpt.Find(slice.Int32AsSlice(&key))
 	if err != nil {
 		return nil, err
 	}
@@ -184,12 +179,11 @@ func (b *BpTree) Iterate() (it Iterator, err error) {
 	return b.kvIter(raw), nil
 }
 
-func (b *BpTree) Remove(key int, where func(int) bool) error {
+func (b *BpTree) Remove(key int32, where func(int32) bool) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	k := int64(key)
-	err := b.bpt.Remove(slice.Int64AsSlice(&k), func(bytes []byte) bool {
-		return where(int(*slice.AsInt64(&bytes)))
+	err := b.bpt.Remove(slice.Int32AsSlice(&key), func(bytes []byte) bool {
+		return where(*slice.AsInt32(&bytes))
 	})
 	if err == nil {
 		return err

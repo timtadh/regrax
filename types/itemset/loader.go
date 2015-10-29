@@ -9,6 +9,8 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/types"
 )
 
 import (
@@ -22,6 +24,7 @@ type MakeLoader func(*ItemSets) lattice.Loader
 
 
 type ItemSets struct {
+	Index intint.MultiMap
 	InvertedIndex intint.MultiMap
 	FrequentItems []*Node
 	makeLoader MakeLoader
@@ -30,16 +33,20 @@ type ItemSets struct {
 
 func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err error) {
 	var index intint.MultiMap
+	var invIndex intint.MultiMap
 	if config.Cache == "" {
 		index, err = intint.AnonBpTree()
+		invIndex, err = intint.AnonBpTree()
 	} else {
-		index, err = intint.NewBpTree(config.CacheFile("itemsets-inverted.bptree"))
+		index, err = intint.NewBpTree(config.CacheFile("itemsets-index.bptree"))
+		invIndex, err = intint.NewBpTree(config.CacheFile("itemsets-inverted.bptree"))
 	}
 	if err != nil {
 		return nil, err
 	}
 	i = &ItemSets{
-		InvertedIndex: index,
+		Index: index,
+		InvertedIndex: invIndex,
 		FrequentItems: make([]*Node, 0, 10),
 		makeLoader: makeLoader,
 		config: config,
@@ -56,7 +63,9 @@ func (i *ItemSets) Loader() lattice.Loader {
 }
 
 func (i *ItemSets) Close() error {
-	return i.InvertedIndex.Delete()
+	i.Index.Close()
+	i.InvertedIndex.Close()
+	return nil
 }
 
 
@@ -72,8 +81,11 @@ func NewIntLoader(sets *ItemSets) lattice.Loader {
 
 func (l *IntLoader) buildIndex(input io.Reader, support int) (error) {
 	scanner := bufio.NewScanner(input)
-	tx := 0
+	tx := int32(0)
 	for scanner.Scan() {
+		if tx % 1000 == 0 {
+			errors.Logf("INFO", "line %d", tx)
+		}
 		line := scanner.Text()
 		for _, col := range strings.Split(line, " ") {
 			if col == "" {
@@ -84,8 +96,15 @@ func (l *IntLoader) buildIndex(input io.Reader, support int) (error) {
 				errors.Logf("WARN", "input line %d contained non int '%s'", tx, col)
 				continue
 			}
-			err = l.sets.InvertedIndex.Add(item, tx)
+			/*
+			err = l.sets.Index.Add(tx, item)
 			if err != nil{
+				return err
+			}
+			*/
+			err = l.sets.InvertedIndex.Add(int32(item), tx)
+			if err != nil {
+				errors.Logf("ERROR", "%v", err)
 				return err
 			}
 		}
@@ -103,17 +122,17 @@ func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node
 		return nil, err
 	}
 	nodes := make([]lattice.Node, 0, 10)
-	citem := -1
-	txs := make([]int, 0, 10)
-	err = intint.Do(l.sets.InvertedIndex.Iterate, func(item, tx int) error {
+	citem := int32(-1)
+	txs := make([]int32, 0, 10)
+	err = intint.Do(l.sets.InvertedIndex.Iterate, func(item, tx int32) error {
 		if len(txs) > 0 && item != citem {
 			n := &Node{
-				items: []int{citem},
+				items: set.FromSlice([]types.Hashable{types.Int32(citem)}),
 				embeddings: txs,
 			}
 			l.sets.FrequentItems = append(l.sets.FrequentItems, n)
 			nodes = append(nodes, n)
-			txs = make([]int, 0, 10)
+			txs = make([]int32, 0, 10)
 		}
 		citem = item
 		txs = append(txs, tx)
@@ -124,7 +143,7 @@ func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node
 	}
 	if len(txs) > 0 {
 		n := &Node{
-			items: []int{citem},
+			items: set.FromSlice([]types.Hashable{types.Int32(citem)}),
 			embeddings: txs,
 		}
 		l.sets.FrequentItems = append(l.sets.FrequentItems, n)
