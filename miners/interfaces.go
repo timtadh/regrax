@@ -1,7 +1,6 @@
 package miners
 
 import (
-	"io"
 )
 
 import (
@@ -9,8 +8,9 @@ import (
 )
 
 
+
 type Miner interface {
-	Mine(io.Reader, lattice.DataType) error
+	Mine(lattice.Input, lattice.DataType) error
 	Close() error
 }
 

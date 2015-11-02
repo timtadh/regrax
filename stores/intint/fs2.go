@@ -5,9 +5,9 @@ import (
 )
 
 import(
+	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/fs2/bptree"
 	"github.com/timtadh/fs2/fmap"
-	"github.com/timtadh/fs2/slice"
 )
 
 
@@ -84,22 +84,45 @@ func (b *BpTree) Size() int {
 	return b.bpt.Size()
 }
 
-func (b *BpTree) Add(key, value int32) error {
+var marshal types.ItemMarshal
+var unmarshal types.ItemUnmarshal
+
+func init() {
+	marshal, unmarshal = types.Int32Marshals()
+}
+
+func (b *BpTree) Add(key, val int32) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	return b.bpt.Add(slice.Int32AsSlice(&key), slice.Int32AsSlice(&value))
+	k, err := marshal(types.Int32(key))
+	if err != nil {
+		return err
+	}
+	v, err := marshal(types.Int32(val))
+	if err != nil {
+		return err
+	}
+	return b.bpt.Add(k, v)
 }
 
 func (b *BpTree) Count(key int32) (int, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	return b.bpt.Count(slice.Int32AsSlice(&key))
+	k, err := marshal(types.Int32(key))
+	if err != nil {
+		return 0, err
+	}
+	return b.bpt.Count(k)
 }
 
 func (b *BpTree) Has(key int32) (bool, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	return b.bpt.Has(slice.Int32AsSlice(&key))
+	k, err := marshal(types.Int32(key))
+	if err != nil {
+		return false, err
+	}
+	return b.bpt.Has(k)
 }
 
 func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
@@ -114,8 +137,16 @@ func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
 		if kvi == nil {
 			return 0, 0, nil, nil
 		}
-		key = *slice.AsInt32(&k)
-		value = *slice.AsInt32(&v)
+		K, err := unmarshal(k)
+		if err != nil {
+			return 0, 0, err, nil
+		}
+		V, err := unmarshal(v)
+		if err != nil {
+			return 0, 0, err, nil
+		}
+		key = int32(K.(types.Int32))
+		value = int32(V.(types.Int32))
 		return key, value, nil, it
 	}
 	return it
@@ -133,7 +164,11 @@ func (b *BpTree) itemIter(raw bptree.Iterator) (it IntIterator) {
 		if raw == nil {
 			return 0, nil, nil
 		}
-		item = *slice.AsInt32(&i)
+		I, err := unmarshal(i)
+		if err != nil {
+			return 0, err, nil
+		}
+		item = int32(I.(types.Int32))
 		return item, nil, it
 	}
 	return it
@@ -162,7 +197,11 @@ func (b *BpTree) Values() (it IntIterator, err error) {
 func (b *BpTree) Find(key int32) (it Iterator, err error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	raw, err := b.bpt.Find(slice.Int32AsSlice(&key))
+	k, err := marshal(types.Int32(key))
+	if err != nil {
+		return nil, err
+	}
+	raw, err := b.bpt.Find(k)
 	if err != nil {
 		return nil, err
 	}
@@ -182,11 +221,27 @@ func (b *BpTree) Iterate() (it Iterator, err error) {
 func (b *BpTree) Remove(key int32, where func(int32) bool) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	err := b.bpt.Remove(slice.Int32AsSlice(&key), func(bytes []byte) bool {
-		return where(*slice.AsInt32(&bytes))
-	})
-	if err == nil {
+	k, err := marshal(types.Int32(key))
+	if err != nil {
 		return err
+	}
+	rerr := b.bpt.Remove(k, func(bytes []byte) bool {
+		I, e := unmarshal(bytes)
+		if e != nil && err == nil {
+			err = e
+		}
+		if e != nil {
+			return false
+		}
+		item := int32(I.(types.Int32))
+		return where(item)
+	})
+	if err != nil {
+		return err
+	}
+	if rerr == nil {
+		return rerr
 	}
 	return nil
 }
+

@@ -1,7 +1,6 @@
 package itemset
 
 import (
-	"io"
 	"bufio"
 	"strconv"
 	"strings"
@@ -25,7 +24,6 @@ type MakeLoader func(*ItemSets) lattice.Loader
 
 type ItemSets struct {
 	Index intint.MultiMap
-	InvertedIndex intint.MultiMap
 	FrequentItems []*Node
 	makeLoader MakeLoader
 	config *config.Config
@@ -33,21 +31,16 @@ type ItemSets struct {
 
 func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err error) {
 	var index intint.MultiMap
-	var invIndex intint.MultiMap
 	if config.Cache == "" {
 		index, err = intint.AnonBpTree()
-		invIndex, err = intint.AnonBpTree()
 	} else {
 		index, err = intint.NewBpTree(config.CacheFile("itemsets-index.bptree"))
-		invIndex, err = intint.NewBpTree(config.CacheFile("itemsets-inverted.bptree"))
 	}
 	if err != nil {
 		return nil, err
 	}
 	i = &ItemSets{
 		Index: index,
-		InvertedIndex: invIndex,
-		FrequentItems: make([]*Node, 0, 10),
 		makeLoader: makeLoader,
 		config: config,
 	}
@@ -64,7 +57,6 @@ func (i *ItemSets) Loader() lattice.Loader {
 
 func (i *ItemSets) Close() error {
 	i.Index.Close()
-	i.InvertedIndex.Close()
 	return nil
 }
 
@@ -79,8 +71,47 @@ func NewIntLoader(sets *ItemSets) lattice.Loader {
 	}
 }
 
-func (l *IntLoader) buildIndex(input io.Reader, support int) (error) {
-	scanner := bufio.NewScanner(input)
+func (l *IntLoader) maxItem(input lattice.Input) (int32, error) {
+	max := int32(0)
+	err := l.items(input, func (tx, item int32) error {
+		if item > max {
+			max = item
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return max, nil
+}
+
+func (l *IntLoader) invert(input lattice.Input) ([][]int32, error) {
+	max, err := l.maxItem(input)
+	if err != nil {
+		return nil, err
+	}
+	inverted := make([][]int32, max+1)
+	err = l.items(input, func (tx, item int32) error {
+		if item >= int32(len(inverted)) {
+			errors.Logf("DEBUG", "item = %v, max = %v", item, max)
+		}
+		inverted[item] = append(inverted[item], tx)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return inverted, nil
+}
+
+func (l *IntLoader) buildIndex(input lattice.Input, inverted [][]int, support int) (error) {
+	return nil
+}
+
+func (l *IntLoader) items(input lattice.Input, do func(tx, item int32) error) error {
+	in, closer := input()
+	defer closer()
+	scanner := bufio.NewScanner(in)
 	tx := int32(0)
 	for scanner.Scan() {
 		if tx % 1000 == 0 {
@@ -96,13 +127,7 @@ func (l *IntLoader) buildIndex(input io.Reader, support int) (error) {
 				errors.Logf("WARN", "input line %d contained non int '%s'", tx, col)
 				continue
 			}
-			/*
-			err = l.sets.Index.Add(tx, item)
-			if err != nil{
-				return err
-			}
-			*/
-			err = l.sets.InvertedIndex.Add(int32(item), tx)
+			err = do(tx, int32(item))
 			if err != nil {
 				errors.Logf("ERROR", "%v", err)
 				return err
@@ -116,38 +141,27 @@ func (l *IntLoader) buildIndex(input io.Reader, support int) (error) {
 	return nil
 }
 
-func (l *IntLoader) StartingPoints(input io.Reader, support int) ([]lattice.Node, error) {
-	err := l.buildIndex(input, support)
+func (l *IntLoader) StartingPoints(input lattice.Input, support int) ([]lattice.Node, error) {
+	inverted, err := l.invert(input)
 	if err != nil {
 		return nil, err
 	}
 	nodes := make([]lattice.Node, 0, 10)
-	citem := int32(-1)
-	txs := make([]int32, 0, 10)
-	err = intint.Do(l.sets.InvertedIndex.Iterate, func(item, tx int32) error {
-		if len(txs) > 0 && item != citem {
-			n := &Node{
-				items: set.FromSlice([]types.Hashable{types.Int32(citem)}),
-				embeddings: txs,
+	for item, txs := range inverted {
+		errors.Logf("INFO", "item %d %d", item, len(txs))
+		if len(txs) >= support {
+			for _, tx := range txs {
+				err := l.sets.Index.Add(tx, int32(item))
+				if err != nil {
+					return nil, err
+				}
 			}
-			l.sets.FrequentItems = append(l.sets.FrequentItems, n)
+			n := &Node{
+				items: set.FromSlice([]types.Hashable{types.Int32(item)}),
+				txs: txs,
+			}
 			nodes = append(nodes, n)
-			txs = make([]int32, 0, 10)
 		}
-		citem = item
-		txs = append(txs, tx)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(txs) > 0 {
-		n := &Node{
-			items: set.FromSlice([]types.Hashable{types.Int32(citem)}),
-			embeddings: txs,
-		}
-		l.sets.FrequentItems = append(l.sets.FrequentItems, n)
-		nodes = append(nodes, n)
 	}
 	return nodes, nil
 }

@@ -280,6 +280,11 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 		}
 	}
 
+	if support <= 0 {
+		fmt.Fprintf(os.Stderr, "Support > 0\n")
+		Usage(ErrorCodes["opts"])
+	}
+
 	miner := absorbing.NewMiner(conf, support, minVertices, maxVertices)
 	return miner, args
 }
@@ -366,10 +371,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
 		Usage(ErrorCodes["opts"])
 	}
-	input, closer := Input(args[0])
-	defer closer()
+	getInput := func() (io.Reader, func()) {
+		return Input(args[0])
+	}
 
-	mode.Mine(input, dt)
+	mode.Mine(getInput, dt)
 	log.Println("Done!")
 }
 
