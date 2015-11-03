@@ -4,6 +4,11 @@ import (
 	"io"
 )
 
+type Lattice struct {
+	V []Node
+	E []Edge
+}
+
 type DataType interface {
 	Metric() SupportMetric
 	Loader() Loader
@@ -17,11 +22,17 @@ type Loader interface {
 type Input func()(reader io.Reader, closer func())
 
 type Node interface {
+	StartingPoint() bool
 	Parents(support int, dt DataType) (NodeIterator, error)
 	Children(support int, dt DataType) (NodeIterator, error)
 	Size() int
 	Label() []byte
 	Embeddings() ([]Embedding, error)
+	Lattice() (*Lattice, error)
+}
+
+type Edge struct {
+	Src, Targ int
 }
 
 type Embedding interface {

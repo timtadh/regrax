@@ -29,6 +29,10 @@ func (n *Node) String() string {
 	return fmt.Sprintf("<Node %v %v>", n.items, len(n.txs))
 }
 
+func (n *Node) StartingPoint() bool {
+	return n.Size() == 1
+}
+
 func (n *Node) Size() int {
 	return n.items.Size()
 }
@@ -124,6 +128,10 @@ func (n *Node) Embeddings() ([]lattice.Embedding, error) {
 		embeddings = append(embeddings, &Embedding{tx:tx})
 	}
 	return embeddings, nil
+}
+
+func (n *Node) Lattice() (*lattice.Lattice, error) {
+	panic("not started")
 }
 
 func (e *Embedding) Components() ([]int, error) {
