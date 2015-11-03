@@ -24,6 +24,7 @@ type MakeLoader func(*ItemSets) lattice.Loader
 
 type ItemSets struct {
 	Index intint.MultiMap
+	InvertedIndex intint.MultiMap
 	FrequentItems []*Node
 	makeLoader MakeLoader
 	config *config.Config
@@ -31,6 +32,7 @@ type ItemSets struct {
 
 func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err error) {
 	var index intint.MultiMap
+	var invIndex intint.MultiMap
 	if config.Cache == "" {
 		index, err = intint.AnonBpTree()
 	} else {
@@ -39,8 +41,17 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err
 	if err != nil {
 		return nil, err
 	}
+	if config.Cache == "" {
+		invIndex, err = intint.AnonBpTree()
+	} else {
+		invIndex, err = intint.NewBpTree(config.CacheFile("itemsets-inv-index.bptree"))
+	}
+	if err != nil {
+		return nil, err
+	}
 	i = &ItemSets{
 		Index: index,
+		InvertedIndex: invIndex,
 		makeLoader: makeLoader,
 		config: config,
 	}
@@ -152,6 +163,10 @@ func (l *IntLoader) StartingPoints(input lattice.Input, support int) ([]lattice.
 		if len(txs) >= support {
 			for _, tx := range txs {
 				err := l.sets.Index.Add(tx, int32(item))
+				if err != nil {
+					return nil, err
+				}
+				err = l.sets.InvertedIndex.Add(int32(item), tx)
 				if err != nil {
 					return nil, err
 				}

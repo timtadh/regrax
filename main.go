@@ -260,32 +260,17 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
-
-	support := 0
-	minVertices := 0
-	maxVertices := int(math.MaxInt32)
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
-		case "--support":
-			support = ParseInt(oa.Arg())
-		case "--min-vertices":
-			minVertices = ParseInt(oa.Arg())
-		case "--max-vertices":
-			maxVertices = ParseInt(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 
-	if support <= 0 {
-		fmt.Fprintf(os.Stderr, "Support > 0\n")
-		Usage(ErrorCodes["opts"])
-	}
-
-	miner := absorbing.NewMiner(conf, support, minVertices, maxVertices)
+	miner := absorbing.NewMiner(conf)
 	return miner, args
 }
 
@@ -312,7 +297,12 @@ func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
 func main() {
 	args, optargs, err := getopt.GetOpt(
 		os.Args[1:],
-		"ho:c:", []string{ "help", "output=", "cache=", "modes", "types" },
+		"ho:c:",
+		[]string{
+			"help", "output=", "cache=", "modes", "types",
+			"support=", "min-size=", "max-size=",
+			"samples=",
+		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -323,6 +313,10 @@ func main() {
 
 	output := ""
 	cache := ""
+	support := 0
+	samples := 0
+	minSize := 0
+	maxSize := int(math.MaxInt32)
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -331,6 +325,14 @@ func main() {
 			output = EmptyDir(oa.Arg())
 		case "-c", "--cache":
 			cache = EmptyDir(oa.Arg())
+		case "--support":
+			support = ParseInt(oa.Arg())
+		case "--samples":
+			samples = ParseInt(oa.Arg())
+		case "--min-size":
+			minSize = ParseInt(oa.Arg())
+		case "--max-size":
+			maxSize = ParseInt(oa.Arg())
 		case "--types":
 			fmt.Fprintf(os.Stderr, "Types")
 			os.Exit(0)
@@ -343,6 +345,16 @@ func main() {
 		}
 	}
 
+	if support <= 0 {
+		fmt.Fprintf(os.Stderr, "Support <= 0, must be > 0\n")
+		Usage(ErrorCodes["opts"])
+	}
+
+	if samples <= 0 {
+		fmt.Fprintf(os.Stderr, "Samples <= 0, must be > 0\n")
+		Usage(ErrorCodes["opts"])
+	}
+
 	if output == "" {
 		fmt.Fprintf(os.Stderr, "You must supply an output dir (-o)\n")
 		Usage(ErrorCodes["opts"])
@@ -351,6 +363,10 @@ func main() {
 	conf := &config.Config{
 		Cache: cache,
 		Output: output,
+		Support: support,
+		Samples: samples,
+		MinSize: minSize,
+		MaxSize: maxSize,
 	}
 
 	if len(args) < 1 {

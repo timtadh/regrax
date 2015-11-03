@@ -29,18 +29,12 @@ func init() {
 
 
 type Miner struct {
-	Support int
-	MinVertices int
-	MaxVertices int
 	config *config.Config
 	start []lattice.Node
 }
 
-func NewMiner(conf *config.Config, support int, minVertices int, maxVertices int) *Miner {
+func NewMiner(conf *config.Config) *Miner {
 	return &Miner{
-		Support: support,
-		MinVertices: minVertices,
-		MaxVertices: maxVertices,
 		config: conf,
 	}
 }
@@ -54,19 +48,25 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 	if err != nil {
 		return err
 	}
-	path, err := m.walk(dt)
-	if err != nil {
-		return err
+	for s := 0; s < m.config.Samples; s++ {
+		sampled, err := m.rejectingWalk(dt)
+		if err != nil {
+			return err
+		}
+		errors.Logf("INFO", "sample %v %v", sampled, sampled.Label())
+		parents, err := lattice.Slice(sampled.Parents, m.config.Support, dt)
+		if err != nil {
+			return err
+		}
+		errors.Logf("DEBUG", "parents %v", parents)
+
 	}
-	for i, n := range path {
-		errors.Logf("INFO", "%d %v", i, n)
-	}
-	panic("unfinished")
+	return nil
 }
 
 func (m *Miner) init(input lattice.Input, dt lattice.DataType) (err error) {
 	errors.Logf("INFO", "loading data")
-	start, err := dt.Loader().StartingPoints(input, m.Support)
+	start, err := dt.Loader().StartingPoints(input, m.config.Support)
 	if err != nil {
 		return err
 	}
@@ -75,22 +75,35 @@ func (m *Miner) init(input lattice.Input, dt lattice.DataType) (err error) {
 	return nil
 }
 
-func (m *Miner) walk(dt lattice.DataType) (path []lattice.Node, err error) {
-	cur, _ := uniform(m.start, nil)
-	next, err := uniform(lattice.Slice(cur.Children, m.Support, dt))
-	if err != nil {
-		return nil, err
-	}
-	path = append(path, cur)
-	for next != nil {
-		cur = next
-		next, err = uniform(lattice.Slice(cur.Children, m.Support, dt))
+func (m *Miner) rejectingWalk(dt lattice.DataType) (max lattice.Node, err error) {
+	for {
+		sampled, err := m.walk(dt)
 		if err != nil {
 			return nil, err
 		}
-		path = append(path, cur)
+		if sampled.Size() >= m.config.MinSize {
+			return sampled, nil
+		}
 	}
-	return path, nil
+}
+
+func (m *Miner) walk(dt lattice.DataType) (max lattice.Node, err error) {
+	cur, _ := uniform(m.start, nil)
+	next, err := uniform(lattice.Slice(cur.Children, m.config.Support, dt))
+	if err != nil {
+		return nil, err
+	}
+	for next != nil {
+		cur = next
+		next, err = uniform(lattice.Slice(cur.Children, m.config.Support, dt))
+		if err != nil {
+			return nil, err
+		}
+		if next != nil && next.Size() > m.config.MaxSize {
+			next = nil
+		}
+	}
+	return cur, nil
 }
 
 func uniform(slice []lattice.Node, err error) (lattice.Node, error) {

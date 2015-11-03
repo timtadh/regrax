@@ -19,7 +19,8 @@ type Input func()(reader io.Reader, closer func())
 type Node interface {
 	Parents(support int, dt DataType) (NodeIterator, error)
 	Children(support int, dt DataType) (NodeIterator, error)
-	Label() ([]byte, error)
+	Size() int
+	Label() []byte
 	Embeddings() ([]Embedding, error)
 }
 
@@ -59,5 +60,18 @@ func Slice(run func(int, DataType) (NodeIterator, error), support int, dt DataTy
 		return nil, err
 	}
 	return nodes, nil
+}
+
+func NodeIteratorFromSlice(nodes []Node) (it NodeIterator, err error) {
+	i := 0
+	it = func() (Node, error, NodeIterator) {
+		if i >= len(nodes) {
+			return nil, nil, nil
+		}
+		n := nodes[i]
+		i++
+		return n, nil, it
+	}
+	return it, nil
 }
 
