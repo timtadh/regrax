@@ -8,6 +8,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/matrix"
 )
 
 import (
@@ -71,6 +72,11 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 		errors.Logf("INFO", "matrix Q %v", Q)
 		errors.Logf("INFO", "matrix R %v", R)
 		errors.Logf("INFO", "matrix u %v", u)
+		pr, err := m.SelectionProbability(Q, R, u)
+		if err != nil {
+			return err
+		}
+		errors.Logf("INFO", "sel pr %v", pr)
 		errors.Logf("INFO", "")
 	}
 	return nil
@@ -114,6 +120,45 @@ func (m *Miner) PrMatrices(n lattice.Node, dt lattice.DataType) (Q, R, u *Sparse
 		}
 	}
 	return Q, R, u, nil
+}
+
+func (m *Sparse) Dense() *matrix.DenseMatrix {
+	d := matrix.Zeros(m.Rows, m.Cols)
+	for _, e := range m.Entries {
+		d.Set(e.Row, e.Col, e.Value)
+	}
+	return d
+}
+
+func (m *Miner) SelectionProbability(Q_, R_, u_ *Sparse) (float64, error) {
+	if Q_.Rows == 0 && Q_.Cols == 0 {
+		return 1.0/float64(len(m.start)), nil
+	}
+	Q := Q_.Dense()
+	R := R_.Dense()
+	u := u_.Dense()
+	I := matrix.Eye(Q.Rows())
+	IQ, err := I.Minus(Q)
+	if err != nil {
+		return 0, err
+	}
+	N := matrix.Inverse(IQ)
+	B, err := N.Times(R)
+	if err != nil {
+		return 0, err
+	}
+	P, err := u.Times(B)
+	if err != nil {
+		return 0, err
+	}
+	if P.Rows() != P.Cols() && P.Rows() != 1 {
+		return 0, errors.Errorf("Unexpected P shape %v %v", P.Rows(), P.Cols())
+	}
+	x := P.Get(0, 0)
+	if x > 1.0 || x != x {
+		return 0, errors.Errorf("could not accurately compute p")
+	}
+	return x, nil
 }
 
 func (m *Miner) probabilities(lat *lattice.Lattice, dt lattice.DataType) ([]int, error) {
