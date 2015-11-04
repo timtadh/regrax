@@ -35,7 +35,7 @@ type SparseEntry struct {
 
 type Sparse struct {
 	Rows, Cols int
-	Entries []*SparseEntry
+	Entries []SparseEntry
 }
 
 type Miner struct {
@@ -64,54 +64,62 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 			return err
 		}
 		errors.Logf("INFO", "sample %v %v", sampled, sampled.Label())
+		Q, R, u, err := m.PrMatrices(sampled, dt)
+		if err != nil {
+			return err
+		}
+		errors.Logf("INFO", "matrix Q %v", Q)
+		errors.Logf("INFO", "matrix R %v", R)
+		errors.Logf("INFO", "matrix u %v", u)
+		errors.Logf("INFO", "")
 	}
 	return nil
 }
 
-func (m *Miner) PrMatrices(n lattice.Node, support int, dt lattice.DataType) (Q, R, u *Sparse, err error) {
-	lat, err := n.Lattice()
+func (m *Miner) PrMatrices(n lattice.Node, dt lattice.DataType) (Q, R, u *Sparse, err error) {
+	lat, err := lattice.MakeLattice(n, m.config.Support, dt)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	p, err := m.probabilities(lat, support, dt)
+	p, err := m.probabilities(lat, dt)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	Q = &Sparse{
 		Rows: len(lat.V)-1,
 		Cols: len(lat.V)-1,
-		Entries: make([]*SparseEntry, 0, len(lat.V)-1),
+		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
 	R = &Sparse{
 		Rows: len(lat.V)-1,
 		Cols: 1,
-		Entries: make([]*SparseEntry, 0, len(lat.V)-1),
+		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
 	u = &Sparse{
 		Rows: 1,
 		Cols: len(lat.V)-1,
-		Entries: make([]*SparseEntry, 0, len(lat.V)-1),
+		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
 	sp := len(m.start)
 	for i, x := range lat.V {
 		if x.StartingPoint() && i < len(lat.V)-1 {
-			u.Entries = append(u.Entries, &SparseEntry{0, i, 1.0/float64(sp), sp})
+			u.Entries = append(u.Entries, SparseEntry{0, i, 1.0/float64(sp), sp})
 		}
 	}
 	for _, e := range lat.E {
 		if e.Targ >= len(lat.V)-1 {
-			R.Entries = append(R.Entries, &SparseEntry{e.Src, 0, 1.0/float64(p[e.Src]), p[e.Src]})
+			R.Entries = append(R.Entries, SparseEntry{e.Src, 0, 1.0/float64(p[e.Src]), p[e.Src]})
 		} else {
-			Q.Entries = append(Q.Entries, &SparseEntry{e.Src, e.Targ, 1.0/float64(p[e.Src]), p[e.Src]})
+			Q.Entries = append(Q.Entries, SparseEntry{e.Src, e.Targ, 1.0/float64(p[e.Src]), p[e.Src]})
 		}
 	}
 	return Q, R, u, nil
 }
 
-func (m *Miner) probabilities(lat *lattice.Lattice, support int, dt lattice.DataType) ([]int, error) {
+func (m *Miner) probabilities(lat *lattice.Lattice, dt lattice.DataType) ([]int, error) {
 	P := make([]int, len(lat.V))
 	for i, node := range lat.V {
-		kids, err := lattice.Slice(node.Children, support, dt)
+		kids, err := node.Children(m.config.Support, dt)
 		if err != nil {
 			return nil, err
 		}
@@ -152,13 +160,13 @@ func (m *Miner) rejectingWalk(dt lattice.DataType) (max lattice.Node, err error)
 
 func (m *Miner) walk(dt lattice.DataType) (max lattice.Node, err error) {
 	cur, _ := uniform(m.start, nil)
-	next, err := uniform(lattice.Slice(cur.Children, m.config.Support, dt))
+	next, err := uniform(cur.Children(m.config.Support, dt))
 	if err != nil {
 		return nil, err
 	}
 	for next != nil {
 		cur = next
-		next, err = uniform(lattice.Slice(cur.Children, m.config.Support, dt))
+		next, err = uniform(cur.Children(m.config.Support, dt))
 		if err != nil {
 			return nil, err
 		}

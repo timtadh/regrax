@@ -37,7 +37,10 @@ func (n *Node) Size() int {
 	return n.items.Size()
 }
 
-func (n *Node) Parents(support int, dtype lattice.DataType) (lattice.NodeIterator, error) {
+func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, error) {
+	if n.items.Size() == 1 {
+		return []lattice.Node{}, nil
+	}
 	dt := dtype.(*ItemSets)
 	parents := make([]*set.SortedSet, 0, n.items.Size())
 	for item, next := n.items.Items()(); next != nil; item, next = next() {
@@ -75,10 +78,10 @@ func (n *Node) Parents(support int, dtype lattice.DataType) (lattice.NodeIterato
 		}
 		nodes = append(nodes, &Node{items, stxs})
 	}
-	return lattice.NodeIteratorFromSlice(nodes)
+	return nodes, nil
 }
 
-func (n *Node) Children(support int, dtype lattice.DataType) (it lattice.NodeIterator, err error) {
+func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, error) {
 	dt := dtype.(*ItemSets)
 	exts := make(map[int32][]int32)
 	for _, tx := range n.txs {
@@ -105,7 +108,7 @@ func (n *Node) Children(support int, dtype lattice.DataType) (it lattice.NodeIte
 			nodes = append(nodes, n)
 		}
 	}
-	return lattice.NodeIteratorFromSlice(nodes)
+	return nodes, nil
 }
 
 func (n *Node) Label() []byte {
@@ -130,8 +133,8 @@ func (n *Node) Embeddings() ([]lattice.Embedding, error) {
 	return embeddings, nil
 }
 
-func (n *Node) Lattice() (*lattice.Lattice, error) {
-	panic("not started")
+func (n *Node) Lattice(support int, dtype lattice.DataType) (*lattice.Lattice, error) {
+	return nil, &lattice.NoLattice{}
 }
 
 func (e *Embedding) Components() ([]int, error) {

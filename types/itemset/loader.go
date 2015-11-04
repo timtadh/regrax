@@ -31,21 +31,11 @@ type ItemSets struct {
 }
 
 func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err error) {
-	var index intint.MultiMap
-	var invIndex intint.MultiMap
-	if config.Cache == "" {
-		index, err = intint.AnonBpTree()
-	} else {
-		index, err = intint.NewBpTree(config.CacheFile("itemsets-index.bptree"))
-	}
+	index, err := config.IntIntMultiMap("itemsets-index")
 	if err != nil {
 		return nil, err
 	}
-	if config.Cache == "" {
-		invIndex, err = intint.AnonBpTree()
-	} else {
-		invIndex, err = intint.NewBpTree(config.CacheFile("itemsets-inv-index.bptree"))
-	}
+	invIndex, err := config.IntIntMultiMap("itemsets-inv-index")
 	if err != nil {
 		return nil, err
 	}
