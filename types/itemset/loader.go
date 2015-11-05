@@ -16,6 +16,7 @@ import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stores/intint"
+	"github.com/timtadh/sfp/stores/itemsets"
 )
 
 
@@ -25,6 +26,8 @@ type MakeLoader func(*ItemSets) lattice.Loader
 type ItemSets struct {
 	Index intint.MultiMap
 	InvertedIndex intint.MultiMap
+	Parents itemsets.MultiMap
+	Children itemsets.MultiMap
 	FrequentItems []*Node
 	makeLoader MakeLoader
 	config *config.Config
@@ -39,9 +42,19 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err
 	if err != nil {
 		return nil, err
 	}
+	parents, err := config.ItemsetsMultiMap("itemsets-parents")
+	if err != nil {
+		return nil, err
+	}
+	children, err := config.ItemsetsMultiMap("itemsets-children")
+	if err != nil {
+		return nil, err
+	}
 	i = &ItemSets{
 		Index: index,
 		InvertedIndex: invIndex,
+		Parents: parents,
+		Children: children,
 		makeLoader: makeLoader,
 		config: config,
 	}
@@ -58,6 +71,9 @@ func (i *ItemSets) Loader() lattice.Loader {
 
 func (i *ItemSets) Close() error {
 	i.Index.Close()
+	i.InvertedIndex.Close()
+	i.Parents.Close()
+	i.Children.Close()
 	return nil
 }
 

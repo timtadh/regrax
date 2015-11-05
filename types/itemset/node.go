@@ -13,6 +13,7 @@ import (
 import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stores/intint"
+	"github.com/timtadh/sfp/stores/itemsets"
 )
 
 
@@ -23,6 +24,33 @@ type Node struct {
 
 type Embedding struct {
 	tx int32
+}
+
+func (n *Node) ItemSet() *itemsets.ItemSet {
+	items := make([]int32, 0, n.items.Size())
+	for i, n := n.items.Items()(); n != nil; i, n = n() {
+		item := int32(i.(types.Int32))
+		items = append(items, item)
+	}
+	txs := make([]int32, len(n.txs))
+	copy(txs, n.txs)
+	return &itemsets.ItemSet{
+		Items: items,
+		Txs: txs,
+	}
+}
+
+func NodeFromItemSet(i *itemsets.ItemSet) *Node {
+	items := set.NewSortedSet(len(i.Items))
+	for _, item := range i.Items {
+		items.Add(types.Int32(item))
+	}
+	txs := make([]int32, len(i.Txs))
+	copy(txs, i.Txs)
+	return &Node {
+		items: items,
+		txs: txs,
+	}
 }
 
 func (n *Node) String() string {
@@ -42,6 +70,12 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 		return []lattice.Node{}, nil
 	}
 	dt := dtype.(*ItemSets)
+	i := n.ItemSet()
+	if has, err := dt.Parents.Has(i); err != nil {
+		return nil, err
+	} else if has {
+		return n.cached(dt.Parents.Find(i))
+	}
 	parents := make([]*set.SortedSet, 0, n.items.Size())
 	for item, next := n.items.Items()(); next != nil; item, next = next() {
 		parent := n.items.Copy()
@@ -78,11 +112,21 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 		}
 		nodes = append(nodes, &Node{items, stxs})
 	}
+	err := n.cache(dt.Parents, i, nodes)
+	if err != nil {
+		return nil, err
+	}
 	return nodes, nil
 }
 
 func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, error) {
 	dt := dtype.(*ItemSets)
+	i := n.ItemSet()
+	if has, err := dt.Children.Has(i); err != nil {
+		return nil, err
+	} else if has {
+		return n.cached(dt.Children.Find(i))
+	}
 	exts := make(map[int32][]int32)
 	for _, tx := range n.txs {
 		err := intint.Do(func() (intint.Iterator, error) {return dt.Index.Find(tx)},
@@ -107,6 +151,34 @@ func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, er
 			}
 			nodes = append(nodes, n)
 		}
+	}
+	err := n.cache(dt.Children, i, nodes)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
+func (n *Node) cache(m itemsets.MultiMap, key *itemsets.ItemSet, nodes []lattice.Node) error {
+	for _, node := range nodes {
+		err := m.Add(key, node.(*Node).ItemSet())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *Node) cached(it itemsets.Iterator, err error) (nodes []lattice.Node, _ error) {
+	nodes = make([]lattice.Node, 0, 10)
+	doerr := itemsets.Do(
+		func()(itemsets.Iterator, error) { return it, err },
+		func(key, value *itemsets.ItemSet) error {
+			nodes = append(nodes, NodeFromItemSet(value))
+			return nil
+		})
+	if doerr != nil {
+		return nil, doerr
 	}
 	return nodes, nil
 }
