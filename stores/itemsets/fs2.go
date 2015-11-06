@@ -4,10 +4,79 @@ import (
 	"sync"
 )
 
-import(
+import (
 	"github.com/timtadh/fs2/bptree"
 	"github.com/timtadh/fs2/fmap"
 )
+
+import (
+	
+)
+
+
+type MultiMap interface {
+	Keys() (KeyIterator, error)
+	Values() (ValueIterator, error)
+	Iterate() (Iterator, error)
+	Find(key *ItemSet) (Iterator, error)
+	Has(key *ItemSet) (bool, error)
+	Count(key *ItemSet) (int, error)
+	Add(key *ItemSet, value *ItemSet) error
+	Remove(key *ItemSet, where func(*ItemSet) bool) error
+	Size() int
+	Close() error
+	Delete() error
+}
+
+type Iterator func() (*ItemSet, *ItemSet, error, Iterator)
+type KeyIterator func() (*ItemSet, error, KeyIterator)
+type ValueIterator func() (*ItemSet, error, ValueIterator)
+
+func Do(run func() (Iterator, error), do func(key *ItemSet, value *ItemSet) error) error {
+	kvi, err := run()
+	if err != nil {
+		return err
+	}
+	var key *ItemSet
+	var value *ItemSet
+	for key, value, err, kvi = kvi(); kvi != nil; key, value, err, kvi = kvi() {
+		e := do(key, value)
+		if e != nil {
+			return e
+		}
+	}
+	return err
+}
+
+func DoKey(run func() (KeyIterator, error), do func(*ItemSet) error) error {
+	it, err := run()
+	if err != nil {
+		return err
+	}
+	var item *ItemSet
+	for item, err, it = it(); it != nil; item, err, it = it() {
+		e := do(item)
+		if e != nil {
+			return e
+		}
+	}
+	return err
+}
+
+func DoValue(run func() (ValueIterator, error), do func(*ItemSet) error) error {
+	it, err := run()
+	if err != nil {
+		return err
+	}
+	var item *ItemSet
+	for item, err, it = it(); it != nil; item, err, it = it() {
+		e := do(item)
+		if e != nil {
+			return e
+		}
+	}
+	return err
+}
 
 
 type BpTree struct {
@@ -83,22 +152,22 @@ func (b *BpTree) Size() int {
 	return b.bpt.Size()
 }
 
-func (b *BpTree) Add(key, val *ItemSet) error {
+func (b *BpTree) Add(key *ItemSet, val *ItemSet) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	return b.bpt.Add(key.Serialize(), val.Serialize())
+	return b.bpt.Add(ItemSetSerialize(key), ItemSetSerialize(val))
 }
 
 func (b *BpTree) Count(key *ItemSet) (int, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	return b.bpt.Count(key.Serialize())
+	return b.bpt.Count(ItemSetSerialize(key))
 }
 
 func (b *BpTree) Has(key *ItemSet) (bool, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	return b.bpt.Has(key.Serialize())
+	return b.bpt.Has(ItemSetSerialize(key))
 }
 
 func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
@@ -113,15 +182,15 @@ func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
 		if kvi == nil {
 			return nil, nil, nil, nil
 		}
-		key = ItemSetFromBytes(k)
-		value = ItemSetFromBytes(v)
+		key = ItemSetDeserialize(k)
+		value = ItemSetDeserialize(v)
 		return key, value, nil, it
 	}
 	return it
 }
 
-func (b *BpTree) itemIter(raw bptree.Iterator) (it ItemSetIterator) {
-	it = func() (item *ItemSet, err error, _ ItemSetIterator) {
+func (b *BpTree) keyIter(raw bptree.Iterator) (it KeyIterator) {
+	it = func() (key *ItemSet, err error, _ KeyIterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
 		var i []byte
@@ -132,36 +201,54 @@ func (b *BpTree) itemIter(raw bptree.Iterator) (it ItemSetIterator) {
 		if raw == nil {
 			return nil, nil, nil
 		}
-		item = ItemSetFromBytes(i)
-		return item, nil, it
+		key = ItemSetDeserialize(i)
+		return key, nil, it
 	}
 	return it
 }
 
-func (b *BpTree) Keys() (it ItemSetIterator, err error) {
+func (b *BpTree) valueIter(raw bptree.Iterator) (it ValueIterator) {
+	it = func() (value *ItemSet, err error, _ ValueIterator) {
+		b.mutex.Lock()
+		defer b.mutex.Unlock()
+		var i []byte
+		i, err, raw = raw()
+		if err != nil {
+			return nil, err, nil
+		}
+		if raw == nil {
+			return nil, nil, nil
+		}
+		value = ItemSetDeserialize(i)
+		return value, nil, it
+	}
+	return it
+}
+
+func (b *BpTree) Keys() (it KeyIterator, err error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	raw, err := b.bpt.Keys()
 	if err != nil {
 		return nil, err
 	}
-	return b.itemIter(raw), nil
+	return b.keyIter(raw), nil
 }
 
-func (b *BpTree) Values() (it ItemSetIterator, err error) {
+func (b *BpTree) Values() (it ValueIterator, err error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	raw, err := b.bpt.Values()
 	if err != nil {
 		return nil, err
 	}
-	return b.itemIter(raw), nil
+	return b.valueIter(raw), nil
 }
 
 func (b *BpTree) Find(key *ItemSet) (it Iterator, err error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	raw, err := b.bpt.Find(key.Serialize())
+	raw, err := b.bpt.Find(ItemSetSerialize(key))
 	if err != nil {
 		return nil, err
 	}
@@ -181,8 +268,8 @@ func (b *BpTree) Iterate() (it Iterator, err error) {
 func (b *BpTree) Remove(key *ItemSet, where func(*ItemSet) bool) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	return b.bpt.Remove(key.Serialize(), func(bytes []byte) bool {
-		return where(ItemSetFromBytes(bytes))
+	return b.bpt.Remove(ItemSetSerialize(key), func(bytes []byte) bool {
+		return where(ItemSetDeserialize(bytes))
 	})
 }
 
