@@ -1,4 +1,4 @@
-//go:generate fs2-generic --output=fs2.go --package-name=itemsets bptree --key-type=*ItemSet --key-serializer=ItemSetSerialize --key-deserializer=ItemSetDeserialize --value-type=*ItemSet --value-serializer=ItemSetSerialize --value-deserializer=ItemSetDeserialize
+//go:generate fs2-generic --output=wrapper.go --package-name=itemsets bptree --key-type=*ItemSet --key-serializer=ItemSetSerialize --key-deserializer=ItemSetDeserialize --value-type=*ItemSet --value-serializer=ItemSetSerialize --value-deserializer=ItemSetDeserialize
 package itemsets
 
 import (

@@ -129,7 +129,7 @@ func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, er
 	}
 	exts := make(map[int32][]int32)
 	for _, tx := range n.txs {
-		err := intint.Do(func() (intint.Iterator, error) {return dt.Index.Find(tx)},
+		err := dt.Index.DoFind(tx,
 			func(tx, item int32) error {
 				if !n.items.Has(types.Int32(item)) {
 					exts[item] = append(exts[item], tx)

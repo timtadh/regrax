@@ -18,7 +18,11 @@ type MultiMap interface {
 	Keys() (KeyIterator, error)
 	Values() (ValueIterator, error)
 	Iterate() (Iterator, error)
+	Backward() (Iterator, error)
 	Find(key *ItemSet) (Iterator, error)
+	DoFind(key *ItemSet, do func(*ItemSet, *ItemSet) error) error
+	Range(from, to *ItemSet) (Iterator, error)
+	DoRange(from, to *ItemSet, do func(*ItemSet, *ItemSet) error) error
 	Has(key *ItemSet) (bool, error)
 	Count(key *ItemSet) (int, error)
 	Add(key *ItemSet, value *ItemSet) error
@@ -255,10 +259,38 @@ func (b *BpTree) Find(key *ItemSet) (it Iterator, err error) {
 	return b.kvIter(raw), nil
 }
 
+func (b *BpTree) DoFind(key *ItemSet, do func(*ItemSet, *ItemSet) error) error {
+	return Do(func()(Iterator, error) { return b.Find(key) }, do)
+}
+
 func (b *BpTree) Iterate() (it Iterator, err error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	raw, err := b.bpt.Iterate()
+	if err != nil {
+		return nil, err
+	}
+	return b.kvIter(raw), nil
+}
+
+func (b *BpTree) Range(from, to *ItemSet) (it Iterator, err error) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	raw, err := b.bpt.Range(ItemSetSerialize(from), ItemSetSerialize(to))
+	if err != nil {
+		return nil, err
+	}
+	return b.kvIter(raw), nil
+}
+
+func (b *BpTree) DoRange(from, to *ItemSet, do func(*ItemSet, *ItemSet) error) error {
+	return Do(func()(Iterator, error) { return b.Range(from, to) }, do)
+}
+
+func (b *BpTree) Backward() (it Iterator, err error) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	raw, err := b.bpt.Backward()
 	if err != nil {
 		return nil, err
 	}
