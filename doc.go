@@ -1,0 +1,4 @@
+/*
+the command
+*/
+package main
