@@ -16,3 +16,12 @@
 [submodule "src/github.com/mattn/go-sqlite3"]
 	path = src/github.com/mattn/go-sqlite3
 	url = git@github.com:mattn/go-sqlite3.git
+[submodule "src/github.com/stretchr/testify"]
+	path = src/github.com/stretchr/testify
+	url = git@github.com:stretchr/testify.git
+[submodule "src/github.com/davecgh/go-spew"]
+	path = src/github.com/davecgh/go-spew
+	url = git@github.com:davecgh/go-spew
+[submodule "src/github.com/pmezard/go-difflib"]
+	path = src/github.com/pmezard/go-difflib
+	url = git@github.com:pmezard/go-difflib
