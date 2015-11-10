@@ -21,6 +21,7 @@ import (
 
 
 type MakeLoader func(*ItemSets) lattice.Loader
+type itemsIter func(func(tx, item int32) error) error
 
 
 type ItemSets struct {
@@ -88,9 +89,9 @@ func NewIntLoader(sets *ItemSets) lattice.Loader {
 	}
 }
 
-func (l *IntLoader) maxItem(input lattice.Input) (int32, error) {
+func (l *IntLoader) maxItem(items itemsIter) (int32, error) {
 	max := int32(0)
-	err := l.items(input, func (tx, item int32) error {
+	err := items(func (tx, item int32) error {
 		if item > max {
 			max = item
 		}
@@ -102,13 +103,13 @@ func (l *IntLoader) maxItem(input lattice.Input) (int32, error) {
 	return max, nil
 }
 
-func (l *IntLoader) invert(input lattice.Input) ([][]int32, error) {
-	max, err := l.maxItem(input)
+func (l *IntLoader) invert(items itemsIter) ([][]int32, error) {
+	max, err := l.maxItem(items)
 	if err != nil {
 		return nil, err
 	}
 	inverted := make([][]int32, max+1)
-	err = l.items(input, func (tx, item int32) error {
+	err = items(func (tx, item int32) error {
 		if item >= int32(len(inverted)) {
 			errors.Logf("DEBUG", "item = %v, max = %v", item, max)
 		}
@@ -125,48 +126,54 @@ func (l *IntLoader) buildIndex(input lattice.Input, inverted [][]int, support in
 	return nil
 }
 
-func (l *IntLoader) items(input lattice.Input, do func(tx, item int32) error) error {
-	in, closer := input()
-	defer closer()
-	scanner := bufio.NewScanner(in)
-	tx := int32(0)
-	for scanner.Scan() {
-		if tx % 1000 == 0 {
-			errors.Logf("INFO", "line %d", tx)
+func (l *IntLoader) items(input lattice.Input) func(do func(tx, item int32) error) error {
+	return func(do func(tx, item int32) error) error {
+		in, closer := input()
+		defer closer()
+		scanner := bufio.NewScanner(in)
+		tx := int32(0)
+		for scanner.Scan() {
+			if tx % 1000 == 0 {
+				errors.Logf("INFO", "line %d", tx)
+			}
+			line := scanner.Text()
+			for _, col := range strings.Split(line, " ") {
+				if col == "" {
+					continue
+				}
+				item, err := strconv.Atoi(col)
+				if err != nil {
+					errors.Logf("WARN", "input line %d contained non int '%s'", tx, col)
+					continue
+				}
+				err = do(tx, int32(item))
+				if err != nil {
+					errors.Logf("ERROR", "%v", err)
+					return err
+				}
+			}
+			tx += 1
 		}
-		line := scanner.Text()
-		for _, col := range strings.Split(line, " ") {
-			if col == "" {
-				continue
-			}
-			item, err := strconv.Atoi(col)
-			if err != nil {
-				errors.Logf("WARN", "input line %d contained non int '%s'", tx, col)
-				continue
-			}
-			err = do(tx, int32(item))
-			if err != nil {
-				errors.Logf("ERROR", "%v", err)
-				return err
-			}
+		if err := scanner.Err(); err != nil {
+			return err
 		}
-		tx += 1
+		return nil
 	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (l *IntLoader) StartingPoints(input lattice.Input, support int) ([]lattice.Node, error) {
-	inverted, err := l.invert(input)
+	return l.startingPoints(l.items(input), support)
+}
+
+func (l *IntLoader) startingPoints(items itemsIter, support int) ([]lattice.Node, error) {
+	inverted, err := l.invert(items)
 	if err != nil {
 		return nil, err
 	}
 	nodes := make([]lattice.Node, 0, 10)
 	for item, txs := range inverted {
-		errors.Logf("INFO", "item %d %d", item, len(txs))
 		if len(txs) >= support {
+			errors.Logf("INFO", "item %d len(txs) %d", item, len(txs))
 			for _, tx := range txs {
 				err := l.sets.Index.Add(tx, int32(item))
 				if err != nil {
