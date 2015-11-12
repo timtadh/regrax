@@ -53,10 +53,6 @@ import (
 	"github.com/timtadh/fs2/fmap"
 )
 
-import (
-	
-)
-
 
 type MultiMap interface {
 	Keys() (KeyIterator, error)
