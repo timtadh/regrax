@@ -164,11 +164,10 @@ func (m *Miner) SelectionProbability(Q_, R_, u_ *Sparse) (float64, error) {
 func (m *Miner) probabilities(lat *lattice.Lattice, dt lattice.DataType) ([]int, error) {
 	P := make([]int, len(lat.V))
 	for i, node := range lat.V {
-		kids, err := node.Children(m.config.Support, dt)
+		count, err := node.ChildCount(m.config.Support, dt)
 		if err != nil {
 			return nil, err
 		}
-		count := len(kids)
 		if i + 1 == len(lat.V) {
 			P[i] = -1
 		} else if count == 0 {

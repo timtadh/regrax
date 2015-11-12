@@ -25,6 +25,8 @@ type Node interface {
 	StartingPoint() bool
 	Parents(support int, dt DataType) ([]Node, error)
 	Children(support int, dt DataType) ([]Node, error)
+	ChildCount(support int, dt DataType) (int, error)
+	Maximal(support int, dt DataType) (bool, error)
 	Size() int
 	Label() []byte
 	Embeddings() ([]Embedding, error)

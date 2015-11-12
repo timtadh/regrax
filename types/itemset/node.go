@@ -13,6 +13,7 @@ import (
 import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stores/intint"
+	"github.com/timtadh/sfp/stores/itemset_int"
 	"github.com/timtadh/sfp/stores/itemsets"
 )
 
@@ -71,7 +72,7 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 	}
 	dt := dtype.(*ItemSets)
 	i := n.ItemSet()
-	if has, err := dt.Parents.Has(i); err != nil {
+	if has, err := dt.ParentCount.Has(i); err != nil {
 		return nil, err
 	} else if has {
 		return n.cached(dt.Parents.Find(i))
@@ -112,7 +113,7 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 		}
 		nodes = append(nodes, &Node{items, stxs})
 	}
-	err := n.cache(dt.Parents, i, nodes)
+	err := n.cache(dt.ParentCount, dt.Parents, i, nodes)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, error) {
 	dt := dtype.(*ItemSets)
 	i := n.ItemSet()
-	if has, err := dt.Children.Has(i); err != nil {
+	if has, err := dt.ChildCount.Has(i); err != nil {
 		return nil, err
 	} else if has {
 		return n.cached(dt.Children.Find(i))
@@ -152,21 +153,43 @@ func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, er
 			nodes = append(nodes, n)
 		}
 	}
-	err := n.cache(dt.Children, i, nodes)
+	err := n.cache(dt.ChildCount, dt.Children, i, nodes)
 	if err != nil {
 		return nil, err
 	}
 	return nodes, nil
 }
 
-func (n *Node) cache(m itemsets.MultiMap, key *itemsets.ItemSet, nodes []lattice.Node) error {
+func (n *Node) ChildCount(support int, dtype lattice.DataType) (int, error) {
+	dt := dtype.(*ItemSets)
+	i := n.ItemSet()
+	var count int32
+	err := dt.ChildCount.DoFind(i, func(_ *itemsets.ItemSet, c int32) error {
+		count = c
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (n *Node) Maximal(support int, dtype lattice.DataType) (bool, error) {
+	count, err := n.ChildCount(support, dtype)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
+func (n *Node) cache(counts itemset_int.MultiMap, m itemsets.MultiMap, key *itemsets.ItemSet, nodes []lattice.Node) error {
 	for _, node := range nodes {
 		err := m.Add(key, node.(*Node).ItemSet())
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return counts.Add(key, int32(len(nodes)))
 }
 
 func (n *Node) cached(it itemsets.Iterator, err error) (nodes []lattice.Node, _ error) {

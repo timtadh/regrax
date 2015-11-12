@@ -6,6 +6,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/stores/intint"
+	"github.com/timtadh/sfp/stores/itemset_int"
 	"github.com/timtadh/sfp/stores/itemsets"
 )
 
@@ -28,6 +29,13 @@ func (c *Config) IntIntMultiMap(name string) (intint.MultiMap, error) {
 	}
 }
 
+func (c *Config) ItemsetIntMultiMap(name string) (itemset_int.MultiMap, error) {
+	if c.Cache == "" {
+		return itemset_int.AnonBpTree()
+	} else {
+		return itemset_int.NewBpTree(c.CacheFile(name + ".bptree"))
+	}
+}
 
 func (c *Config) ItemsetsMultiMap(name string) (itemsets.MultiMap, error) {
 	if c.Cache == "" {
@@ -36,3 +44,4 @@ func (c *Config) ItemsetsMultiMap(name string) (itemsets.MultiMap, error) {
 		return itemsets.NewBpTree(c.CacheFile(name + ".bptree"))
 	}
 }
+
