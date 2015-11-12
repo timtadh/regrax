@@ -111,7 +111,7 @@ func (m *Miner) next(cur lattice.Node, dt lattice.DataType) (lattice.Node, error
 		return nil, err
 	}
 	adjs := append(kids, parents...)
-	errors.Logf("DEBUG", "cur %v parents %v kids %v adjs %v", cur, len(parents), len(kids), len(adjs))
+	// errors.Logf("DEBUG", "cur %v parents %v kids %v adjs %v", cur, len(parents), len(kids), len(adjs))
 	prs, err := m.transPrs(cur, adjs, dt)
 	if err != nil {
 		return nil, err
