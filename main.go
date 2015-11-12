@@ -47,6 +47,7 @@ import (
 	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/types/itemset"
 	"github.com/timtadh/sfp/miners/absorbing"
+	"github.com/timtadh/sfp/miners/musk"
 )
 
 
@@ -253,7 +254,7 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 		argv,
 		"h",
 		[]string{
-			"help", "support=", "min-vertices=", "max-vertices=",
+			"help",
 		},
 	)
 	if err != nil {
@@ -269,8 +270,32 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 			Usage(ErrorCodes["opts"])
 		}
 	}
-
 	miner := absorbing.NewMiner(conf)
+	return miner, args
+}
+
+func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	miner := musk.NewMiner(conf)
 	return miner, args
 }
 
@@ -287,6 +312,7 @@ func types(argv []string, conf *config.Config) (lattice.DataType, []string) {
 func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
 	switch argv[0] {
 	case "absorbing": return absorbingMode(argv[1:], conf)
+	case "musk": return muskMode(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown mining mode '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])
@@ -334,10 +360,10 @@ func main() {
 		case "--max-size":
 			maxSize = ParseInt(oa.Arg())
 		case "--types":
-			fmt.Fprintf(os.Stderr, "Types")
+			fmt.Fprintln(os.Stderr, "Types")
 			os.Exit(0)
 		case "--modes":
-			fmt.Fprintf(os.Stderr, "Modes")
+			fmt.Fprintln(os.Stderr, "Modes")
 			os.Exit(0)
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())

@@ -23,7 +23,9 @@ type Input func()(reader io.Reader, closer func())
 
 type Node interface {
 	StartingPoint() bool
+	AdjacentCount(support int, dt DataType) (int, error)
 	Parents(support int, dt DataType) ([]Node, error)
+	ParentCount(support int, dt DataType) (int, error)
 	Children(support int, dt DataType) ([]Node, error)
 	ChildCount(support int, dt DataType) (int, error)
 	Maximal(support int, dt DataType) (bool, error)

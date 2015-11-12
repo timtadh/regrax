@@ -160,9 +160,53 @@ func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, er
 	return nodes, nil
 }
 
+func (n *Node) AdjacentCount(support int, dtype lattice.DataType) (int, error) {
+	pc, err := n.ParentCount(support, dtype)
+	if err != nil {
+		return 0, err
+	}
+	cc, err := n.ChildCount(support, dtype)
+	if err != nil {
+		return 0, err
+	}
+	return pc + cc, nil
+}
+
+func (n *Node) ParentCount(support int, dtype lattice.DataType) (int, error) {
+	dt := dtype.(*ItemSets)
+	i := n.ItemSet()
+	if has, err := dt.ParentCount.Has(i); err != nil {
+		return 0, err
+	} else if !has {
+		nodes, err := n.Parents(support, dtype)
+		if err != nil {
+			return 0, err
+		}
+		return len(nodes), nil
+	}
+	var count int32
+	err := dt.ParentCount.DoFind(i, func(_ *itemsets.ItemSet, c int32) error {
+		count = c
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
 func (n *Node) ChildCount(support int, dtype lattice.DataType) (int, error) {
 	dt := dtype.(*ItemSets)
 	i := n.ItemSet()
+	if has, err := dt.ChildCount.Has(i); err != nil {
+		return 0, err
+	} else if !has {
+		nodes, err := n.Children(support, dtype)
+		if err != nil {
+			return 0, err
+		}
+		return len(nodes), nil
+	}
 	var count int32
 	err := dt.ChildCount.DoFind(i, func(_ *itemsets.ItemSet, c int32) error {
 		count = c
