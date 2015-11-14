@@ -217,11 +217,13 @@ func (m *Miner) walk(dt lattice.DataType) (max lattice.Node, err error) {
 		if next != nil && next.Size() > m.config.MaxSize {
 			next = nil
 		}
+		// errors.Logf("DEBUG", "cur %v kids %v next %v", cur, kidCount, next)
 	}
 	return cur, nil
 }
 
 func uniform(slice []lattice.Node, err error) (lattice.Node, error) {
+	// errors.Logf("DEBUG", "children %v", slice)
 	if err != nil {
 		return nil, err
 	}

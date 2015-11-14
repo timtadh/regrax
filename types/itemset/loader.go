@@ -16,6 +16,7 @@ import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stores/intint"
+	"github.com/timtadh/sfp/stores/intsints"
 	"github.com/timtadh/sfp/stores/itemset_int"
 	"github.com/timtadh/sfp/stores/itemsets"
 )
@@ -32,6 +33,7 @@ type ItemSets struct {
 	ParentCount itemset_int.MultiMap
 	Children itemsets.MultiMap
 	ChildCount itemset_int.MultiMap
+	Embeddings intsints.MultiMap
 	FrequentItems []*Node
 	makeLoader MakeLoader
 	config *config.Config
@@ -62,6 +64,10 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err
 	if err != nil {
 		return nil, err
 	}
+	embeddings, err := config.IntsIntsMultiMap("itemsets-embeddings")
+	if err != nil {
+		return nil, err
+	}
 	i = &ItemSets{
 		Index: index,
 		InvertedIndex: invIndex,
@@ -69,6 +75,7 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err
 		ParentCount: parentCount,
 		Children: children,
 		ChildCount: childCount,
+		Embeddings: embeddings,
 		makeLoader: makeLoader,
 		config: config,
 	}
