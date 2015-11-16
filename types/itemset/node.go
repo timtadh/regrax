@@ -6,14 +6,15 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 )
 
 import (
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/itemset_int"
-	"github.com/timtadh/sfp/stores/itemsets"
+	"github.com/timtadh/sfp/stores/ints_int"
+	"github.com/timtadh/sfp/stores/ints_ints"
 )
 
 
@@ -43,33 +44,23 @@ func int32sToSet(list []int32) *set.SortedSet {
 	return items
 }
 
-func (n *Node) ItemSet() *itemsets.ItemSet {
-	items := setToInt32s(n.items)
-	txs := make([]int32, len(n.txs))
-	copy(txs, n.txs)
-	return &itemsets.ItemSet{
-		Items: items,
-		Txs: txs,
-	}
-}
-
-func NodeFromItemSet(i *itemsets.ItemSet) *Node {
-	items := int32sToSet(i.Items)
-	txs := make([]int32, len(i.Txs))
-	copy(txs, i.Txs)
-	return &Node {
-		items: items,
-		txs: txs,
-	}
-}
-
-func TryLoadNode(items *set.SortedSet, dt *ItemSets) (n *Node, _ error) {
-	err := dt.Embeddings.DoFind(setToInt32s(items), func(_, txs []int32) error {
-		n = &Node{items, txs}
+func TryLoadNode(items []int32, dt *ItemSets) (n *Node, _ error) {
+	err := dt.Embeddings.DoFind(items, func(key, txs []int32) error {
+		n = &Node{int32sToSet(key), txs}
 		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	return n, nil
+}
+
+func LoadNode(items []int32, dt *ItemSets) (n *Node, err error) {
+	n, err = TryLoadNode(items, dt)
+	if err != nil {
+		return nil, err
+	} else if n == nil {
+		return nil, errors.Errorf("Expected node %v to be in embeddings store but it wasn't", items)
 	}
 	return n, nil
 }
@@ -101,11 +92,11 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 		return []lattice.Node{}, nil
 	}
 	dt := dtype.(*ItemSets)
-	i := n.ItemSet()
+	i := setToInt32s(n.items)
 	if has, err := dt.ParentCount.Has(i); err != nil {
 		return nil, err
 	} else if has {
-		return n.cached(dt.Parents, i)
+		return n.cached(dt, dt.Parents, i)
 	}
 	parents := make([]*set.SortedSet, 0, n.items.Size())
 	for item, next := n.items.Items()(); next != nil; item, next = next() {
@@ -115,7 +106,7 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 	}
 	nodes := make([]lattice.Node, 0, 10)
 	for _, items := range parents {
-		if node, err := TryLoadNode(items, dt); err != nil {
+		if node, err := TryLoadNode(setToInt32s(items), dt); err != nil {
 			return nil, err
 		} else if node != nil {
 			nodes = append(nodes, node)
@@ -159,11 +150,11 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 
 func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, error) {
 	dt := dtype.(*ItemSets)
-	i := n.ItemSet()
+	i := setToInt32s(n.items)
 	if has, err := dt.ChildCount.Has(i); err != nil {
 		return nil, err
 	} else if has {
-		return n.cached(dt.Children, i)
+		return n.cached(dt, dt.Children, i)
 	}
 	exts := make(map[int32][]int32)
 	for _, tx := range n.txs {
@@ -215,7 +206,7 @@ func (n *Node) AdjacentCount(support int, dtype lattice.DataType) (int, error) {
 
 func (n *Node) ParentCount(support int, dtype lattice.DataType) (int, error) {
 	dt := dtype.(*ItemSets)
-	i := n.ItemSet()
+	i := setToInt32s(n.items)
 	if has, err := dt.ParentCount.Has(i); err != nil {
 		return 0, err
 	} else if !has {
@@ -226,7 +217,7 @@ func (n *Node) ParentCount(support int, dtype lattice.DataType) (int, error) {
 		return len(nodes), nil
 	}
 	var count int32
-	err := dt.ParentCount.DoFind(i, func(_ *itemsets.ItemSet, c int32) error {
+	err := dt.ParentCount.DoFind(i, func(_ []int32, c int32) error {
 		count = c
 		return nil
 	})
@@ -238,7 +229,7 @@ func (n *Node) ParentCount(support int, dtype lattice.DataType) (int, error) {
 
 func (n *Node) ChildCount(support int, dtype lattice.DataType) (int, error) {
 	dt := dtype.(*ItemSets)
-	i := n.ItemSet()
+	i := setToInt32s(n.items)
 	if has, err := dt.ChildCount.Has(i); err != nil {
 		return 0, err
 	} else if !has {
@@ -249,7 +240,7 @@ func (n *Node) ChildCount(support int, dtype lattice.DataType) (int, error) {
 		return len(nodes), nil
 	}
 	var count int32
-	err := dt.ChildCount.DoFind(i, func(_ *itemsets.ItemSet, c int32) error {
+	err := dt.ChildCount.DoFind(i, func(_ []int32, c int32) error {
 		count = c
 		return nil
 	})
@@ -267,9 +258,9 @@ func (n *Node) Maximal(support int, dtype lattice.DataType) (bool, error) {
 	return count == 0, nil
 }
 
-func (n *Node) cache(counts itemset_int.MultiMap, m itemsets.MultiMap, key *itemsets.ItemSet, nodes []lattice.Node) error {
+func (n *Node) cache(counts ints_int.MultiMap, m ints_ints.MultiMap, key []int32, nodes []lattice.Node) error {
 	for _, node := range nodes {
-		err := m.Add(key, node.(*Node).ItemSet())
+		err := m.Add(key, setToInt32s(node.(*Node).items))
 		if err != nil {
 			return err
 		}
@@ -277,11 +268,15 @@ func (n *Node) cache(counts itemset_int.MultiMap, m itemsets.MultiMap, key *item
 	return counts.Add(key, int32(len(nodes)))
 }
 
-func (n *Node) cached(m itemsets.MultiMap, key *itemsets.ItemSet) (nodes []lattice.Node, _ error) {
+func (n *Node) cached(dt *ItemSets, m ints_ints.MultiMap, key []int32) (nodes []lattice.Node, _ error) {
 	nodes = make([]lattice.Node, 0, 10)
 	doerr := m.DoFind(key,
-		func(_, value *itemsets.ItemSet) error {
-			nodes = append(nodes, NodeFromItemSet(value))
+		func(_, value []int32) error {
+			node, err := LoadNode(value, dt)
+			if err != nil {
+				return err
+			}
+			nodes = append(nodes, node)
 			return nil
 		})
 	if doerr != nil {

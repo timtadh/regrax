@@ -1,5 +1,5 @@
-//go:generate fs2-generic --output=wrapper.go --package-name=intsints bptree --key-type=[]int32 --key-serializer=SerializeInt32s --key-deserializer=DeserializeInt32s --value-type=[]int32 --value-serializer=SerializeInt32s --value-deserializer=DeserializeInt32s
-package intsints
+//go:generate fs2-generic --output=wrapper.go --package-name=ints_ints bptree --key-type=[]int32 --key-serializer=SerializeInt32s --key-deserializer=DeserializeInt32s --value-type=[]int32 --value-serializer=SerializeInt32s --value-deserializer=DeserializeInt32s
+package ints_ints
 
 import (
 	"encoding/binary"

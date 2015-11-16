@@ -5,10 +5,9 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stores/intint"
-	"github.com/timtadh/sfp/stores/intsints"
-	"github.com/timtadh/sfp/stores/itemset_int"
-	"github.com/timtadh/sfp/stores/itemsets"
+	"github.com/timtadh/sfp/stores/int_int"
+	"github.com/timtadh/sfp/stores/ints_int"
+	"github.com/timtadh/sfp/stores/ints_ints"
 )
 
 
@@ -22,35 +21,27 @@ func (c *Config) CacheFile(name string) string {
 	return filepath.Join(c.Cache, name)
 }
 
-func (c *Config) IntIntMultiMap(name string) (intint.MultiMap, error) {
+func (c *Config) IntIntMultiMap(name string) (int_int.MultiMap, error) {
 	if c.Cache == "" {
-		return intint.AnonBpTree()
+		return int_int.AnonBpTree()
 	} else {
-		return intint.NewBpTree(c.CacheFile(name + ".bptree"))
+		return int_int.NewBpTree(c.CacheFile(name + ".bptree"))
 	}
 }
 
-func (c *Config) IntsIntsMultiMap(name string) (intsints.MultiMap, error) {
+func (c *Config) IntsIntMultiMap(name string) (ints_int.MultiMap, error) {
 	if c.Cache == "" {
-		return intsints.AnonBpTree()
+		return ints_int.AnonBpTree()
 	} else {
-		return intsints.NewBpTree(c.CacheFile(name + ".bptree"))
+		return ints_int.NewBpTree(c.CacheFile(name + ".bptree"))
 	}
 }
 
-func (c *Config) ItemsetIntMultiMap(name string) (itemset_int.MultiMap, error) {
+func (c *Config) IntsIntsMultiMap(name string) (ints_ints.MultiMap, error) {
 	if c.Cache == "" {
-		return itemset_int.AnonBpTree()
+		return ints_ints.AnonBpTree()
 	} else {
-		return itemset_int.NewBpTree(c.CacheFile(name + ".bptree"))
-	}
-}
-
-func (c *Config) ItemsetsMultiMap(name string) (itemsets.MultiMap, error) {
-	if c.Cache == "" {
-		return itemsets.AnonBpTree()
-	} else {
-		return itemsets.NewBpTree(c.CacheFile(name + ".bptree"))
+		return ints_ints.NewBpTree(c.CacheFile(name + ".bptree"))
 	}
 }
 

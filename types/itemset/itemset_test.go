@@ -106,7 +106,7 @@ func TestParents_123(x *testing.T) {
 		txs: []int32{1,2,3},
 	}
 	parents, err := n123.Parents(sup, dt)
-	t.Nil(err)
+	t.Nil(err, "%v", err)
 	expected := set.FromSlice([]types.Hashable{
 		set.FromSlice([]types.Hashable{types.Int32(1), types.Int32(2)}),
 		set.FromSlice([]types.Hashable{types.Int32(1), types.Int32(3)}),

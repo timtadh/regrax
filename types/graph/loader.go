@@ -1,4 +1,4 @@
-package itemset
+package graph
 
 import (
 	"bufio"
@@ -15,66 +15,23 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/int_int"
-	"github.com/timtadh/sfp/stores/ints_int"
-	"github.com/timtadh/sfp/stores/ints_ints"
+	"github.com/timtadh/sfp/stores/intint"
+	"github.com/timtadh/sfp/stores/itemset_int"
+	"github.com/timtadh/sfp/stores/itemsets"
 )
 
 
-type MakeLoader func(*ItemSets) lattice.Loader
+type MakeLoader func(*Graph) lattice.Loader
 type itemsIter func(func(tx, item int32) error) error
 
 
-type ItemSets struct {
-	Index int_int.MultiMap
-	InvertedIndex int_int.MultiMap
-	Parents ints_ints.MultiMap
-	ParentCount ints_int.MultiMap
-	Children ints_ints.MultiMap
-	ChildCount ints_int.MultiMap
-	Embeddings ints_ints.MultiMap
-	FrequentItems []*Node
+type Graph struct {
 	makeLoader MakeLoader
 	config *config.Config
 }
 
-func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err error) {
-	index, err := config.IntIntMultiMap("itemsets-index")
-	if err != nil {
-		return nil, err
-	}
-	invIndex, err := config.IntIntMultiMap("itemsets-inv-index")
-	if err != nil {
-		return nil, err
-	}
-	parents, err := config.IntsIntsMultiMap("itemsets-parents")
-	if err != nil {
-		return nil, err
-	}
-	children, err := config.IntsIntsMultiMap("itemsets-children")
-	if err != nil {
-		return nil, err
-	}
-	childCount, err := config.IntsIntMultiMap("itemsets-child-count")
-	if err != nil {
-		return nil, err
-	}
-	parentCount, err := config.IntsIntMultiMap("itemsets-parent-count")
-	if err != nil {
-		return nil, err
-	}
-	embeddings, err := config.IntsIntsMultiMap("itemsets-embeddings")
-	if err != nil {
-		return nil, err
-	}
-	i = &ItemSets{
-		Index: index,
-		InvertedIndex: invIndex,
-		Parents: parents,
-		ParentCount: parentCount,
-		Children: children,
-		ChildCount: childCount,
-		Embeddings: embeddings,
+func NewGraph(config *config.Config, makeLoader MakeLoader) (g *Graph, err error) {
+	g = &Graph{
 		makeLoader: makeLoader,
 		config: config,
 	}
