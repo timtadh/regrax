@@ -6,6 +6,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/stores/int_int"
+	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/ints_int"
 	"github.com/timtadh/sfp/stores/ints_ints"
 )
@@ -26,6 +27,14 @@ func (c *Config) IntIntMultiMap(name string) (int_int.MultiMap, error) {
 		return int_int.AnonBpTree()
 	} else {
 		return int_int.NewBpTree(c.CacheFile(name + ".bptree"))
+	}
+}
+
+func (c *Config) IntJsonMultiMap(name string) (int_json.MultiMap, error) {
+	if c.Cache == "" {
+		return int_json.AnonBpTree()
+	} else {
+		return int_json.NewBpTree(c.CacheFile(name + ".bptree"))
 	}
 }
 
