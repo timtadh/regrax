@@ -49,6 +49,7 @@ import (
 	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/ospace"
 	"github.com/timtadh/sfp/types/itemset"
+	"github.com/timtadh/sfp/types/graph"
 )
 
 
@@ -250,6 +251,44 @@ func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string
 	return sets, args
 }
 
+func graphType(argv []string, conf *config.Config) (lattice.DataType, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hl:", []string{ "help", "loader="},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+
+	loaderType := "veg"
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		case "-l", "--loader":
+			loaderType = oa.Arg()
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+
+	var loader graph.MakeLoader
+	switch loaderType {
+	case "veg": loader = graph.NewVegLoader
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
+		Usage(ErrorCodes["opts"])
+	}
+
+	g, err := graph.NewGraph(conf, loader)
+	if err != nil {
+		log.Panic(err)
+	}
+	return g, args
+}
+
 func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
@@ -328,6 +367,7 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 func types(argv []string, conf *config.Config) (lattice.DataType, []string) {
 	switch argv[0] {
 	case "itemset": return itemsetType(argv[1:], conf)
+	case "graph": return graphType(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown data type '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])

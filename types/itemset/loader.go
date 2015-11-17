@@ -33,7 +33,6 @@ type ItemSets struct {
 	Children ints_ints.MultiMap
 	ChildCount ints_int.MultiMap
 	Embeddings ints_ints.MultiMap
-	FrequentItems []*Node
 	makeLoader MakeLoader
 	config *config.Config
 }
@@ -81,10 +80,6 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err
 	return i, nil
 }
 
-func (i *ItemSets) Metric() lattice.SupportMetric {
-	return lattice.RawSupport{}
-}
-
 func (i *ItemSets) Loader() lattice.Loader {
 	return i.makeLoader(i)
 }
@@ -93,7 +88,10 @@ func (i *ItemSets) Close() error {
 	i.Index.Close()
 	i.InvertedIndex.Close()
 	i.Parents.Close()
+	i.ParentCount.Close()
 	i.Children.Close()
+	i.ChildCount.Close()
+	i.Embeddings.Close()
 	return nil
 }
 

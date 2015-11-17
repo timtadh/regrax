@@ -10,7 +10,6 @@ type Lattice struct {
 }
 
 type DataType interface {
-	Metric() SupportMetric
 	Loader() Loader
 	Close() error
 }
