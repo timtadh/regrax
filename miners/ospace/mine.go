@@ -148,6 +148,7 @@ func (m *Miner) transPrs(u lattice.Node, adjs []lattice.Node, dt lattice.DataTyp
 		if err != nil {
 			return nil, err
 		}
+		// errors.Logf("DEBUG", "u %v, v %v, weight: %v", u, v, w)
 		prs = append(prs, 1.0/w)
 	}
 	return prs, nil
