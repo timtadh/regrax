@@ -18,6 +18,7 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stores/bytes_subgraph"
 	"github.com/timtadh/sfp/stores/int_json"
 )
 
@@ -37,6 +38,8 @@ type MakeLoader func(*Graph) lattice.Loader
 type Graph struct {
 	G *goiso.Graph
 	NodeAttrs int_json.MultiMap
+	Embeddings bytes_subgraph.MultiMap
+	FrequentVertices []lattice.Node
 	makeLoader MakeLoader
 	config *config.Config
 }
@@ -78,14 +81,42 @@ func (v *VegLoader) StartingPoints(input lattice.Input, support int) (nodes []la
 		return nil, err
 	}
 	v.g.G = G
+	v.g.Embeddings, err = v.g.config.BytesSubgraphMultiMap("graph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
+	if err != nil {
+		return nil, err
+	}
 
 	for i := range G.V {
 		u := &G.V[i]
 		if G.ColorFrequency(u.Color) >= v.g.config.Support {
 			sg := G.SubGraph([]int{u.Idx}, nil)
-			nodes = append(nodes, &Node{sg})
+			err := v.g.Embeddings.Add(sg.ShortLabel(), sg)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+
+	err = bytes_subgraph.DoKey(v.g.Embeddings.Keys, func(label []byte) error {
+		sgs := make([]*goiso.SubGraph, 0, 10)
+		err := v.g.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
+			sgs = append(sgs, sg)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		if len(sgs) >= support {
+			nodes = append(nodes, &Node{label: label, sgs: sgs})
+			errors.Logf("INFO", "start %v %v", sgs[0].Label(), len(sgs))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	v.g.FrequentVertices = nodes
 
 	return nodes, nil
 }

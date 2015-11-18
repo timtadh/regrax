@@ -129,14 +129,13 @@ func DoValue(run func() (ValueIterator, error), do func(int32) error) error {
 	return err
 }
 
-
 type BpTree struct {
 	bf *fmap.BlockFile
 	bpt *bptree.BpTree
 	mutex sync.Mutex
 }
 
-func AnonBpTree() (*BpTree, error) {
+func AnonBpTree() (*BpTree, error) { 
 	bf, err := fmap.Anonymous(fmap.BLOCKSIZE)
 	if err != nil {
 		return nil, err
@@ -144,7 +143,7 @@ func AnonBpTree() (*BpTree, error) {
 	return newBpTree(bf)
 }
 
-func NewBpTree(path string) (*BpTree, error) {
+func NewBpTree(path string) (*BpTree, error) { 
 	bf, err := fmap.CreateBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -152,7 +151,7 @@ func NewBpTree(path string) (*BpTree, error) {
 	return newBpTree(bf)
 }
 
-func OpenBpTree(path string) (*BpTree, error) {
+func OpenBpTree(path string) (*BpTree, error) { 
 	bf, err := fmap.OpenBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -168,7 +167,7 @@ func OpenBpTree(path string) (*BpTree, error) {
 	return b, nil
 }
 
-func newBpTree(bf *fmap.BlockFile) (*BpTree, error) {
+func newBpTree(bf *fmap.BlockFile) (*BpTree, error) { 
 	bpt, err := bptree.New(bf, -1, 4)
 	if err != nil {
 		return nil, err

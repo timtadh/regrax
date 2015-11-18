@@ -5,6 +5,11 @@ import (
 )
 
 import (
+	"github.com/timtadh/goiso"
+)
+
+import (
+	"github.com/timtadh/sfp/stores/bytes_subgraph"
 	"github.com/timtadh/sfp/stores/int_int"
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/ints_int"
@@ -54,3 +59,13 @@ func (c *Config) IntsIntsMultiMap(name string) (ints_ints.MultiMap, error) {
 	}
 }
 
+func (c *Config) BytesSubgraphMultiMap(
+	name string,
+	deserializeValue func([]byte) *goiso.SubGraph,
+) (bytes_subgraph.MultiMap, error) {
+	if c.Cache == "" {
+		return bytes_subgraph.AnonBpTree(bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
+	} else {
+		return bytes_subgraph.NewBpTree(c.CacheFile(name + ".bptree"), bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
+	}
+}
