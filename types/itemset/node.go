@@ -88,10 +88,12 @@ func (n *Node) Size() int {
 }
 
 func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, error) {
-	if n.items.Size() == 1 {
-		return []lattice.Node{}, nil
-	}
 	dt := dtype.(*ItemSets)
+	if n.items.Size() == 0 {
+		return []lattice.Node{}, nil
+	} else if n.items.Size() == 1 {
+		return []lattice.Node{dt.Empty}, nil
+	}
 	i := setToInt32s(n.items)
 	if has, err := dt.ParentCount.Has(i); err != nil {
 		return nil, err
@@ -112,15 +114,16 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 			nodes = append(nodes, node)
 			continue
 		}
+		ctxs := int32sToSet(n.txs)
 		var txs types.Set
 		for item, next := items.Items()(); next != nil; item, next = next() {
 			mytxs := set.NewSortedSet(len(n.txs)+10)
-			err := dt.InvertedIndex.DoFind(int32(item.(types.Int32)), func(item, tx int32) error {
-				return mytxs.Add(types.Int32(tx))
-			})
-			if err != nil {
-				return nil, err
+			for _, tx := range dt.InvertedIndex[item.(types.Int32)] {
+				if !ctxs.Has(types.Int32(tx)) {
+					mytxs.Add(types.Int32(tx))
+				}
 			}
+			var err error
 			if txs == nil {
 				txs = mytxs
 			} else {
@@ -130,12 +133,16 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 				}
 			}
 		}
+		txs, err := txs.Union(ctxs)
+		if err != nil {
+			return nil, err
+		}
 		stxs := make([]int32, 0, txs.Size())
 		for item, next := txs.Items()(); next != nil; item, next = next() {
 			stxs = append(stxs, int32(item.(types.Int32)))
 		}
 		node := &Node{items, stxs}
-		err := node.Save(dt)
+		err = node.Save(dt)
 		if err != nil {
 			return nil, err
 		}
@@ -150,6 +157,9 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 
 func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, error) {
 	dt := dtype.(*ItemSets)
+	if n.items.Size() == 0 {
+		return dt.FrequentItems, nil
+	}
 	i := setToInt32s(n.items)
 	if has, err := dt.ChildCount.Has(i); err != nil {
 		return nil, err
@@ -158,15 +168,10 @@ func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, er
 	}
 	exts := make(map[int32][]int32)
 	for _, tx := range n.txs {
-		err := dt.Index.DoFind(tx,
-			func(tx, item int32) error {
-				if !n.items.Has(types.Int32(item)) {
-					exts[item] = append(exts[item], tx)
-				}
-				return nil
-			})
-		if err != nil {
-			return nil, err
+		for _, item := range dt.Index[tx] {
+			if !n.items.Has(types.Int32(item)) {
+				exts[item] = append(exts[item], tx)
+			}
 		}
 	}
 	nodes := make([]lattice.Node, 0, 10)
