@@ -65,7 +65,6 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 			return err
 		}
 		errors.Logf("INFO", "sample %v %v", sampled, sampled.Label())
-		/*
 		Q, R, u, err := m.PrMatrices(sampled, dt)
 		if err != nil {
 			return err
@@ -79,7 +78,6 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 		}
 		errors.Logf("INFO", "sel pr %v", pr)
 		errors.Logf("INFO", "")
-		*/
 	}
 	return nil
 }
