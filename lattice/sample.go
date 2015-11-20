@@ -20,7 +20,7 @@ func init() {
 	}
 }
 
-func srange(size int) []int {
+func Srange(size int) []int {
 	sample := make([]int, 0, size)
 	for i := 0; i < size; i++ {
 		sample = append(sample, i)
@@ -28,9 +28,9 @@ func srange(size int) []int {
 	return sample
 }
 
-func sample(size, populationSize int) (sample []int) {
+func Sample(size, populationSize int) (sample []int) {
 	if size >= populationSize {
-		return srange(populationSize)
+		return Srange(populationSize)
 	}
 	in := func(x int, items []int) bool {
 		for _, y := range items {
@@ -51,9 +51,9 @@ func sample(size, populationSize int) (sample []int) {
 	return sample
 }
 
-func replacingSample(size, populationSize int) (sample []int) {
+func ReplacingSample(size, populationSize int) (sample []int) {
 	if size >= populationSize {
-		return srange(populationSize)
+		return Srange(populationSize)
 	}
 	sample = make([]int, 0, size)
 	for i := 0; i < size; i++ {
@@ -63,7 +63,7 @@ func replacingSample(size, populationSize int) (sample []int) {
 	return sample
 }
 
-func min(items []int, f func(item int) float64) (arg int, min float64) {
+func Min(items []int, f func(item int) float64) (arg int, min float64) {
 	arg = -1
 	for _, i := range items {
 		d := f(i)
@@ -75,7 +75,7 @@ func min(items []int, f func(item int) float64) (arg int, min float64) {
 	return arg, min
 }
 
-func max(items []int, f func(item int) float64) (arg int, max float64) {
+func Max(items []int, f func(item int) float64) (arg int, max float64) {
 	arg = -1
 	for _, i := range items {
 		d := f(i)

@@ -484,7 +484,13 @@ func main() {
 		return Input(args[0])
 	}
 
-	mode.Mine(getInput, dt)
-	log.Println("Done!")
+	err = mode.Mine(getInput, dt)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "There was error during the mining process\n")
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	} else {
+		log.Println("Done!")
+	}
 }
 

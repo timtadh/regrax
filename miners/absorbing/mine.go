@@ -65,6 +65,7 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 			return err
 		}
 		errors.Logf("INFO", "sample %v %v", sampled, sampled.Label())
+		/*
 		Q, R, u, err := m.PrMatrices(sampled, dt)
 		if err != nil {
 			return err
@@ -78,6 +79,7 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 		}
 		errors.Logf("INFO", "sel pr %v", pr)
 		errors.Logf("INFO", "")
+		*/
 	}
 	return nil
 }
@@ -204,6 +206,7 @@ func (m *Miner) rejectingWalk(dt lattice.DataType) (max lattice.Node, err error)
 
 func (m *Miner) walk(dt lattice.DataType) (max lattice.Node, err error) {
 	cur, _ := uniform(m.start, nil)
+	// errors.Logf("DEBUG", "start %v", cur)
 	next, err := uniform(cur.Children(m.config.Support, dt))
 	if err != nil {
 		return nil, err
@@ -211,6 +214,7 @@ func (m *Miner) walk(dt lattice.DataType) (max lattice.Node, err error) {
 	for next != nil {
 		cur = next
 		next, err = uniform(cur.Children(m.config.Support, dt))
+		// errors.Logf("DEBUG", "compute next %v %v", next, err)
 		if err != nil {
 			return nil, err
 		}

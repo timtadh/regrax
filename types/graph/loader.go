@@ -18,6 +18,7 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
 	"github.com/timtadh/sfp/stores/int_json"
 )
@@ -39,6 +40,10 @@ type Graph struct {
 	G *goiso.Graph
 	NodeAttrs int_json.MultiMap
 	Embeddings bytes_subgraph.MultiMap
+	Parents bytes_subgraph.MultiMap
+	ParentCount bytes_int.MultiMap
+	Children bytes_subgraph.MultiMap
+	ChildCount bytes_int.MultiMap
 	FrequentVertices []lattice.Node
 	makeLoader MakeLoader
 	config *config.Config
@@ -49,8 +54,18 @@ func NewGraph(config *config.Config, makeLoader MakeLoader) (g *Graph, err error
 	if err != nil {
 		return nil, err
 	}
+	childCount, err := config.BytesIntMultiMap("graph-child-count")
+	if err != nil {
+		return nil, err
+	}
+	parentCount, err := config.BytesIntMultiMap("graph-parent-count")
+	if err != nil {
+		return nil, err
+	}
 	g = &Graph{
 		NodeAttrs: nodeAttrs,
+		ParentCount: parentCount,
+		ChildCount: childCount,
 		makeLoader: makeLoader,
 		config: config,
 	}
@@ -82,6 +97,14 @@ func (v *VegLoader) StartingPoints(input lattice.Input, support int) (nodes []la
 	}
 	v.g.G = G
 	v.g.Embeddings, err = v.g.config.BytesSubgraphMultiMap("graph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
+	if err != nil {
+		return nil, err
+	}
+	v.g.Parents, err = v.g.config.BytesSubgraphMultiMap("graph-parents", bytes_subgraph.DeserializeSubGraph(G))
+	if err != nil {
+		return nil, err
+	}
+	v.g.Children, err = v.g.config.BytesSubgraphMultiMap("graph-children", bytes_subgraph.DeserializeSubGraph(G))
 	if err != nil {
 		return nil, err
 	}
