@@ -5,6 +5,9 @@ import (
 )
 
 import (
+	"github.com/timtadh/fs2"
+	"github.com/timtadh/fs2/bptree"
+	"github.com/timtadh/fs2/fmap"
 	"github.com/timtadh/goiso"
 )
 
@@ -26,6 +29,50 @@ type Config struct {
 
 func (c *Config) CacheFile(name string) string {
 	return filepath.Join(c.Cache, name)
+}
+
+func AnonBpTree() (fs2.MultiMap, error) { 
+	bf, err := fmap.Anonymous(fmap.BLOCKSIZE)
+	if err != nil {
+		return nil, err
+	}
+	return newBpTree(bf)
+}
+
+func NewBpTree(path string) (fs2.MultiMap, error) { 
+	bf, err := fmap.CreateBlockFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return newBpTree(bf)
+}
+
+func OpenBpTree(path string) (fs2.MultiMap, error) { 
+	bf, err := fmap.OpenBlockFile(path)
+	if err != nil {
+		return nil, err
+	}
+	bpt, err := bptree.Open(bf)
+	if err != nil {
+		return nil, err
+	}
+	return bpt, nil
+}
+
+func newBpTree(bf *fmap.BlockFile) (fs2.MultiMap, error) { 
+	bpt, err := bptree.New(bf, -1, -1)
+	if err != nil {
+		return nil, err
+	}
+	return bpt, nil
+}
+
+func (c *Config) MultiMap(name string,) (fs2.MultiMap, error) {
+	if c.Cache == "" {
+		return AnonBpTree()
+	} else {
+		return NewBpTree(c.CacheFile(name + ".bptree"))
+	}
 }
 
 func (c *Config) BytesSubgraphMultiMap(

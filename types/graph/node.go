@@ -8,11 +8,13 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/fs2"
 	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
 
@@ -90,6 +92,11 @@ func (n *Node) Size() int {
 
 func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, error) {
 	dt := dtype.(*Graph)
+	if nodes, has, err := n.cached(dt, dt.ParentCount, dt.Parents, n.label); err != nil {
+		return nil, err
+	} else if has {
+		return nodes, nil
+	}
 	parents := make([]lattice.Node, 0, 10)
 	for _, parent := range n.sgs[0].SubGraphs() {
 		p, err := n.Parent(support, dt, parent)
@@ -98,16 +105,16 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 		}
 		parents = append(parents, p)
 	}
-	return parents, nil
+	return parents, n.cache(dt, dt.ParentCount, dt.Parents, n.label, parents)
 }
 
 func (n *Node) Parent(support int, dt *Graph, target *goiso.SubGraph) (*Node, error) {
-	errors.Logf("DEBUG", "target %v", target.Label())
+	// errors.Logf("DEBUG", "target %v", target.Label())
 	cur, err := n.parentStart(dt, target)
 	if err != nil {
 		return nil, err
 	}
-	errors.Logf("DEBUG", "start %v", cur)
+	// errors.Logf("DEBUG", "start %v", cur[0].Label())
 	dequeue := func(queue []*goiso.Edge) ([]*goiso.Edge, *goiso.Edge) {
 		e := queue[0]
 		copy(queue[0:len(queue)-1], queue[1:])
@@ -117,6 +124,7 @@ func (n *Node) Parent(support int, dt *Graph, target *goiso.SubGraph) (*Node, er
 	for i := range target.E {
 		queue = append(queue, &target.E[i])
 	}
+	unchanged := 0
 	for len(queue) > 0 {
 		var e *goiso.Edge
 		queue, e = dequeue(queue)
@@ -125,15 +133,21 @@ func (n *Node) Parent(support int, dt *Graph, target *goiso.SubGraph) (*Node, er
 			if err != nil {
 				return nil, err
 			}
-			errors.Logf("DEBUG", "cur %v", cur)
+			// errors.Logf("DEBUG", "cur %v", cur[0].Label())
+			unchanged = 0
+		} else if unchanged > len(queue) + 1 {
+			queue = append(queue, e)
+			errors.Logf("ERROR", "cannot find any of the edges %v for target %v\n cur %v", len(queue), target, cur[0])
+			return nil, errors.Errorf("cannot find any of the edges %v for target %v", len(queue), target)
 		} else {
 			queue = append(queue, e)
+			unchanged++
 		}
 	}
-	return cur, nil
+	return &Node{cur[0].ShortLabel(), MinImgSupported(cur)}, nil
 }
 
-func (n *Node) parentStart(dt *Graph, target *goiso.SubGraph) (*Node, error) {
+func (n *Node) parentStart(dt *Graph, target *goiso.SubGraph) (SubGraphs, error) {
 	startLabel := dt.G.SubGraph([]int{target.V[target.E[0].Src].Id}, nil).ShortLabel()
 	var sgs SubGraphs
 	err := dt.Embeddings.DoFind(startLabel, func(_ []byte, sg *goiso.SubGraph) error {
@@ -143,13 +157,13 @@ func (n *Node) parentStart(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Node{startLabel, sgs}, nil
+	return sgs, nil
 }
 
-func (n *Node) findEdge(target *goiso.SubGraph, e *goiso.Edge) (srcIdx, targIdx int, found bool) {
+func (sgs SubGraphs) findEdge(target *goiso.SubGraph, e *goiso.Edge) (srcIdx, targIdx int, found bool) {
 	src := target.V[e.Src]
 	targ := target.V[e.Targ]
-	for _, sg := range n.sgs {
+	for _, sg := range sgs {
 		for idx, u := range sg.V {
 			if src.Id == u.Id {
 				return idx, -1, true
@@ -161,11 +175,11 @@ func (n *Node) findEdge(target *goiso.SubGraph, e *goiso.Edge) (srcIdx, targIdx 
 	return -1, -1, false
 }
 
-func (n *Node) extendWith(dt *Graph, target *goiso.SubGraph, e *goiso.Edge, srcIdx, targIdx int) (*Node, error) {
+func (sgs SubGraphs) extendWith(dt *Graph, target *goiso.SubGraph, e *goiso.Edge, srcIdx, targIdx int) (SubGraphs, error) {
 	src := target.V[e.Src]
 	targ := target.V[e.Targ]
-	sgs := make(SubGraphs, 0, len(n.sgs))
-	for _, sg := range n.sgs {
+	ext := make(SubGraphs, 0, len(sgs))
+	for _, sg := range sgs {
 		if srcIdx >= 0 {
 			u := sg.V[srcIdx]
 			for _, x := range dt.G.Kids[u.Id] {
@@ -174,7 +188,7 @@ func (n *Node) extendWith(dt *Graph, target *goiso.SubGraph, e *goiso.Edge, srcI
 				} else if x.Color != e.Color {
 					continue
 				}
-				sgs = append(sgs, sg.EdgeExtend(x))
+				ext = append(ext, sg.EdgeExtend(x))
 			}
 		} else if targIdx >= 0{
 			u := sg.V[targIdx]
@@ -184,18 +198,22 @@ func (n *Node) extendWith(dt *Graph, target *goiso.SubGraph, e *goiso.Edge, srcI
 				} else if x.Color != e.Color {
 					continue
 				}
-				sgs = append(sgs, sg.EdgeExtend(x))
+				ext = append(ext, sg.EdgeExtend(x))
 			}
 		} else {
-			return nil, errors.Errorf("Could not find the edge %v from %v in %v", e, target.Label(), n)
+			return nil, errors.Errorf("Could not find the edge %v from %v in %v", e, target.Label(), sgs[0].Label())
 		}
 	}
-	sgs = MinImgSupported(sgs)
-	return &Node{sgs[0].ShortLabel(), sgs}, nil
+	return ext, nil
 }
 
 func (n *Node) Children(support int, dtype lattice.DataType) (nodes []lattice.Node, err error) {
 	dt := dtype.(*Graph)
+	if nodes, has, err := n.cached(dt, dt.ChildCount, dt.Children, n.label); err != nil {
+		return nil, err
+	} else if has {
+		return nodes, nil
+	}
 	exts := make(SubGraphs, 0, 10)
 	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) SubGraphs {
 		if dt.G.ColorFrequency(e.Color) < support {
@@ -228,25 +246,110 @@ func (n *Node) Children(support int, dtype lattice.DataType) (nodes []lattice.No
 			nodes = append(nodes, &Node{label, sgs})
 		}
 	}
+	return nodes, n.cache(dt, dt.ChildCount, dt.Children, n.label, nodes)
+}
+
+func (n *Node) cache(dt *Graph, count bytes_int.MultiMap, cache fs2.MultiMap, key []byte, nodes []lattice.Node) (err error) {
+	if has, err := count.Has(key); err != nil {
+		return err
+	} else if has {
+		return nil
+	}
+	err = count.Add(key, int32(len(nodes)))
+	if err != nil {
+		return err
+	}
 	for _, node := range nodes {
-		err := node.(*Node).Save(dt)
+		err = node.(*Node).Save(dt)
 		if err != nil {
-			return nil, err
+			return err
+		}
+		err = cache.Add(key, node.(*Node).label)
+		if err != nil {
+			return err
 		}
 	}
-	return nodes, nil
+	return nil
+}
+
+func (n *Node) cached(dt *Graph, count bytes_int.MultiMap, cache fs2.MultiMap, key []byte) (nodes []lattice.Node, has bool, err error) {
+	if has, err := count.Has(key); err != nil {
+		return nil, false, err
+	} else if !has {
+		return nil, false, nil
+	}
+	err = cache.DoFind(key, func(_, adj []byte) error {
+		sgs := make(SubGraphs, 0, 10)
+		err := dt.Embeddings.DoFind(adj, func(_ []byte, sg *goiso.SubGraph) error {
+			sgs = append(sgs, sg)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		nodes = append(nodes, &Node{adj, sgs})
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return nodes, true, nil
 }
 
 func (n *Node) AdjacentCount(support int, dtype lattice.DataType) (int, error) {
-	return 0, errors.Errorf("unimplemented")
+	pc, err := n.ParentCount(support, dtype)
+	if err != nil {
+		return 0, err
+	}
+	cc, err := n.ChildCount(support, dtype)
+	if err != nil {
+		return 0, err
+	}
+	return pc + cc, nil
 }
 
 func (n *Node) ParentCount(support int, dtype lattice.DataType) (int, error) {
-	return 0, errors.Errorf("unimplemented")
+	dt := dtype.(*Graph)
+	if has, err := dt.ParentCount.Has(n.label); err != nil {
+		return 0, err
+	} else if !has {
+		nodes, err := n.Parents(support, dt)
+		if err != nil {
+			return 0, err
+		}
+		return len(nodes), nil
+	}
+	var count int32
+	err := dt.ParentCount.DoFind(n.label, func(_ []byte, c int32) error {
+		count = c
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 func (n *Node) ChildCount(support int, dtype lattice.DataType) (int, error) {
-	return 0, errors.Errorf("unimplemented")
+	dt := dtype.(*Graph)
+	if has, err := dt.ChildCount.Has(n.label); err != nil {
+		return 0, err
+	} else if !has {
+		nodes, err := n.Children(support, dt)
+		if err != nil {
+			return 0, err
+		}
+		return len(nodes), nil
+	}
+	var count int32
+	err := dt.ChildCount.DoFind(n.label, func(_ []byte, c int32) error {
+		count = c
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 func (n *Node) Maximal(support int, dtype lattice.DataType) (bool, error) {

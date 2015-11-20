@@ -51,6 +51,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/fs2"
 	"github.com/timtadh/fs2/bptree"
 	"github.com/timtadh/fs2/fmap"
 )
@@ -220,7 +221,7 @@ func (b *BpTree) Has(key []byte) (bool, error) {
 	return b.bpt.Has(bytes_subgraph.Identity(key))
 }
 
-func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
+func (b *BpTree) kvIter(kvi fs2.Iterator) (it Iterator) {
 	it = func() (key []byte, value int32, err error, _ Iterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
@@ -239,7 +240,7 @@ func (b *BpTree) kvIter(kvi bptree.KVIterator) (it Iterator) {
 	return it
 }
 
-func (b *BpTree) keyIter(raw bptree.Iterator) (it KeyIterator) {
+func (b *BpTree) keyIter(raw fs2.ItemIterator) (it KeyIterator) {
 	it = func() (key []byte, err error, _ KeyIterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
@@ -257,7 +258,7 @@ func (b *BpTree) keyIter(raw bptree.Iterator) (it KeyIterator) {
 	return it
 }
 
-func (b *BpTree) valueIter(raw bptree.Iterator) (it ValueIterator) {
+func (b *BpTree) valueIter(raw fs2.ItemIterator) (it ValueIterator) {
 	it = func() (value int32, err error, _ ValueIterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
