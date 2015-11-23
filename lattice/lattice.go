@@ -1,5 +1,9 @@
 package lattice
 
+import (
+	"github.com/timtadh/data-structures/errors"
+)
+
 func MakeLattice(n Node, support int, dt DataType) (*Lattice, error) {
 	lat, err := n.Lattice(support, dt)
 	if err != nil {
@@ -30,6 +34,7 @@ func lattice(node Node, support int, dt DataType) (*Lattice, error) {
 		queued[string(n.Label())] = true
 		rlattice = append(rlattice, n)
 		parents, err := n.Parents(support, dt)
+		errors.Logf("DEBUG", "parents of %v are %v", n, parents)
 		if err != nil {
 			return nil, err
 		}

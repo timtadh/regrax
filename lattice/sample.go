@@ -90,3 +90,48 @@ func Max(items []int, f func(item int) float64) (arg int, max float64) {
 	return arg, max
 }
 
+
+func Permutations(size int) (results [][]int) {
+	slice := make([]int, size)
+	indices := make([]int, size)
+	cycles := make([]int, size)
+	cur := make([]int, size)
+	prev := cur
+	for i := 0; i < size; i++ {
+		slice[i] = i
+		indices[i] = i
+		cycles[i] = size - i
+		cur[i] = i
+	}
+	results = append(results, cur)
+	for {
+		prev = cur
+		cur = make([]int, size)
+		copy(cur, prev)
+		i := size - 1
+		for ; i >= 0; i -= 1 {
+			cycles[i] -= 1
+			if cycles[i] == 0 {
+				index := indices[i]
+				for j := i; j < size-1; j += 1 {
+					indices[j] = indices[j+1]
+				}
+				indices[size-1] = index
+				cycles[i] = size - i
+			} else {
+				j := cycles[i]
+				indices[i], indices[size-j] = indices[size-j], indices[i]
+				for k := i; k < size; k += 1 {
+					cur[k] = slice[indices[k]]
+				}
+				results = append(results, cur)
+				break
+			}
+		}
+		if i < 0 {
+			break
+		}
+	}
+	return results
+}
+

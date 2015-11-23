@@ -171,7 +171,8 @@ func (m *Miner) probabilities(lat *lattice.Lattice, dt lattice.DataType) ([]int,
 		if i + 1 == len(lat.V) {
 			P[i] = -1
 		} else if count == 0 {
-			return nil, errors.Errorf("0 count for %v", node)
+			P[i] = 1
+			errors.Logf("INFO", "0 count for %v", node)
 		} else {
 			P[i] = count
 		}

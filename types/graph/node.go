@@ -42,24 +42,36 @@ func (sgs SubGraphs) Swap(i, j int) {
 	sgs[i], sgs[j] = sgs[j], sgs[i]
 }
 
+func (sgs SubGraphs) Verify() {
+	label := sgs[0].ShortLabel()
+	for _, sg := range sgs {
+		if !bytes.Equal(label, sg.ShortLabel()) {
+			panic(fmt.Errorf("bad partition %v %v", sgs[0].Label(), sg.Label()))
+		}
+	}
+}
+
 func (sgs SubGraphs) Partition() []SubGraphs {
 	sort.Sort(sgs)
-	part := make([]SubGraphs, 0, 10)
+	parts := make([]SubGraphs, 0, 10)
 	buf := make(SubGraphs, 0, 10)
 	var ckey []byte = nil
 	for _, sg := range sgs {
 		label := sg.ShortLabel()
 		if ckey != nil && !bytes.Equal(ckey, label) {
-			part = append(part, buf)
+			parts = append(parts, buf)
 			buf = make(SubGraphs, 0, 10)
 		}
 		ckey = label
 		buf = append(buf, sg)
 	}
 	if len(buf) > 0 {
-		part = append(part, buf)
+		parts = append(parts, buf)
 	}
-	return part
+	for _, part := range parts {
+		part.Verify()
+	}
+	return parts
 }
 
 
@@ -79,7 +91,11 @@ func (n *Node) Save(dt *Graph) error {
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("<Node %v %v>", len(n.sgs), n.sgs[0].Label())
+	if len(n.sgs) > 0 {
+		return fmt.Sprintf("<Node %v %v>", len(n.sgs), n.sgs[0].Label())
+	} else {
+		return fmt.Sprintf("<Node %v {}>", len(n.sgs))
+	}
 }
 
 func (n *Node) StartingPoint() bool {
@@ -92,6 +108,12 @@ func (n *Node) Size() int {
 
 func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, error) {
 	dt := dtype.(*Graph)
+	if len(n.sgs) == 0 {
+		return []lattice.Node{}, nil
+	}
+	if len(n.sgs[0].V) == 1 && len(n.sgs[0].E) == 0 {
+		return []lattice.Node{&Node{}}, nil
+	}
 	if nodes, has, err := n.cached(dt, dt.ParentCount, dt.Parents, n.label); err != nil {
 		return nil, err
 	} else if has {
@@ -110,10 +132,11 @@ func (n *Node) Parents(support int, dtype lattice.DataType) ([]lattice.Node, err
 
 func (n *Node) Parent(support int, dt *Graph, target *goiso.SubGraph) (*Node, error) {
 	// errors.Logf("DEBUG", "target %v", target.Label())
-	cur, err := n.parentStart(dt, target)
+	csg, cur, err := n.parentStart(dt, target)
 	if err != nil {
 		return nil, err
 	}
+	cur.Verify()
 	// errors.Logf("DEBUG", "start %v", cur[0].Label())
 	dequeue := func(queue []*goiso.Edge) ([]*goiso.Edge, *goiso.Edge) {
 		e := queue[0]
@@ -128,87 +151,118 @@ func (n *Node) Parent(support int, dt *Graph, target *goiso.SubGraph) (*Node, er
 	for len(queue) > 0 {
 		var e *goiso.Edge
 		queue, e = dequeue(queue)
-		if s, t, found := cur.findEdge(target, e); found {
-			cur, err = cur.extendWith(dt, target, e, s, t)
-			if err != nil {
-				return nil, err
-			}
-			// errors.Logf("DEBUG", "cur %v", cur[0].Label())
-			unchanged = 0
-		} else if unchanged > len(queue) + 1 {
+		if unchanged > len(queue) + 1 {
 			queue = append(queue, e)
 			errors.Logf("ERROR", "cannot find any of the edges %v for target %v\n cur %v", len(queue), target, cur[0])
 			return nil, errors.Errorf("cannot find any of the edges %v for target %v", len(queue), target)
+		} else if nsg := cur.nextSg(target, csg, e); nsg != nil {
+			errors.Logf("DEBUG", "extend to %v", nsg.Label())
+			next, err := cur.extendWith(dt, target, nsg, e)
+			if err != nil {
+				return nil, err
+			}
+			if len(next) <= 0 {
+				queue = append(queue, e)
+				unchanged++
+			} else {
+				csg = nsg
+				cur = next
+				cur.Verify()
+				unchanged = 0
+			}
 		} else {
 			queue = append(queue, e)
 			unchanged++
 		}
 	}
-	return &Node{cur[0].ShortLabel(), MinImgSupported(cur)}, nil
+	if len(cur) - 1 < support {
+		return &Node{cur[0].ShortLabel(), MaxIndepSupported(cur)}, nil
+	} else {
+		return &Node{cur[0].ShortLabel(), MinImgSupported(cur)}, nil
+	}
 }
 
-func (n *Node) parentStart(dt *Graph, target *goiso.SubGraph) (SubGraphs, error) {
-	startLabel := dt.G.SubGraph([]int{target.V[target.E[0].Src].Id}, nil).ShortLabel()
+func (n *Node) parentStart(dt *Graph, target *goiso.SubGraph) (*goiso.SubGraph, SubGraphs, error) {
+	start := dt.G.SubGraph([]int{target.V[0].Id}, nil)
+	startLabel := start.ShortLabel()
 	var sgs SubGraphs
 	err := dt.Embeddings.DoFind(startLabel, func(_ []byte, sg *goiso.SubGraph) error {
 		sgs = append(sgs, sg)
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sgs, nil
+	return start, sgs, nil
 }
 
-func (sgs SubGraphs) findEdge(target *goiso.SubGraph, e *goiso.Edge) (srcIdx, targIdx int, found bool) {
+func (sgs SubGraphs) nextSg(target, csg *goiso.SubGraph, e *goiso.Edge) (nsg *goiso.SubGraph) {
 	src := target.V[e.Src]
 	targ := target.V[e.Targ]
-	for _, sg := range sgs {
-		for idx, u := range sg.V {
-			if src.Id == u.Id {
-				return idx, -1, true
-			} else if targ.Id == u.Id {
-				return -1, idx, true
-			}
-		}
+	if !(csg.HasVertex(src.Id) || csg.HasVertex(targ.Id)) {
+		return nil
 	}
-	return -1, -1, false
+	nsg = csg.EdgeExtend(&goiso.Edge{
+		Color: e.Color,
+		Arc: goiso.Arc{
+			Src: src.Id,
+			Targ: targ.Id,
+		},
+	})
+	return nsg
 }
 
-func (sgs SubGraphs) extendWith(dt *Graph, target *goiso.SubGraph, e *goiso.Edge, srcIdx, targIdx int) (SubGraphs, error) {
+func (sgs SubGraphs) extendWith(dt *Graph, target, ref *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
 	src := target.V[e.Src]
 	targ := target.V[e.Targ]
-	ext := make(SubGraphs, 0, len(sgs))
+	mkexts := func(sg *goiso.SubGraph) (exts []*goiso.SubGraph, err error) {
+		for _, u := range sg.V {
+			if u.Color == src.Color {
+				for _, x := range dt.G.Kids[u.Id] {
+					if dt.G.V[x.Targ].Color != targ.Color {
+						continue
+					} else if x.Color != e.Color {
+						continue
+					}
+					exts = append(exts, sg.EdgeExtend(x))
+				}
+			} else if u.Color == targ.Color {
+				for _, x := range dt.G.Parents[u.Id] {
+					if dt.G.V[x.Src].Color != src.Color {
+						continue
+					} else if x.Color != e.Color {
+						continue
+					}
+					exts = append(exts, sg.EdgeExtend(x))
+				}
+			}
+		}
+		return exts, nil
+	}
+	refLabel := ref.ShortLabel()
+	exts := make(SubGraphs, 0, len(sgs))
 	for _, sg := range sgs {
-		if srcIdx >= 0 {
-			u := sg.V[srcIdx]
-			for _, x := range dt.G.Kids[u.Id] {
-				if dt.G.V[x.Targ].Color != targ.Color {
-					continue
-				} else if x.Color != e.Color {
-					continue
-				}
-				ext = append(ext, sg.EdgeExtend(x))
+		es, err := mkexts(sg)
+		if err != nil {
+			return nil, err
+		}
+		for _, ext := range es {
+			errors.Logf("DEBUG", "\n    ref %v\n    new %v", ref.Label(), ext.Label())
+			if !bytes.Equal(refLabel, ext.ShortLabel()) {
+				continue
 			}
-		} else if targIdx >= 0{
-			u := sg.V[targIdx]
-			for _, x := range dt.G.Parents[u.Id] {
-				if dt.G.V[x.Src].Color != src.Color {
-					continue
-				} else if x.Color != e.Color {
-					continue
-				}
-				ext = append(ext, sg.EdgeExtend(x))
-			}
-		} else {
-			return nil, errors.Errorf("Could not find the edge %v from %v in %v", e, target.Label(), sgs[0].Label())
+			exts = append(exts, ext)
+			// errors.Logf("DEBUG", "added %v", ext.Label())
 		}
 	}
-	return ext, nil
+	return DedupSupported(exts), nil
 }
 
 func (n *Node) Children(support int, dtype lattice.DataType) (nodes []lattice.Node, err error) {
 	dt := dtype.(*Graph)
+	if len(n.sgs) == 0 {
+		return dt.FrequentVertices, nil
+	}
 	if nodes, has, err := n.cached(dt, dt.ChildCount, dt.Children, n.label); err != nil {
 		return nil, err
 	} else if has {
@@ -246,6 +300,7 @@ func (n *Node) Children(support int, dtype lattice.DataType) (nodes []lattice.No
 			nodes = append(nodes, &Node{label, sgs})
 		}
 	}
+	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
 	return nodes, n.cache(dt, dt.ChildCount, dt.Children, n.label, nodes)
 }
 
@@ -310,6 +365,9 @@ func (n *Node) AdjacentCount(support int, dtype lattice.DataType) (int, error) {
 
 func (n *Node) ParentCount(support int, dtype lattice.DataType) (int, error) {
 	dt := dtype.(*Graph)
+	if len(n.sgs) == 0 {
+		return 0, nil
+	}
 	if has, err := dt.ParentCount.Has(n.label); err != nil {
 		return 0, err
 	} else if !has {
@@ -332,6 +390,9 @@ func (n *Node) ParentCount(support int, dtype lattice.DataType) (int, error) {
 
 func (n *Node) ChildCount(support int, dtype lattice.DataType) (int, error) {
 	dt := dtype.(*Graph)
+	if len(n.sgs) == 0 {
+		return len(dt.FrequentVertices), nil
+	}
 	if has, err := dt.ChildCount.Has(n.label); err != nil {
 		return 0, err
 	} else if !has {
@@ -353,11 +414,15 @@ func (n *Node) ChildCount(support int, dtype lattice.DataType) (int, error) {
 }
 
 func (n *Node) Maximal(support int, dtype lattice.DataType) (bool, error) {
-	return false, errors.Errorf("unimplemented")
+	cc, err := n.ChildCount(support, dtype)
+	if err != nil {
+		return false, err
+	}
+	return cc == 0, nil
 }
 
 func (n *Node) Label() []byte {
-	return nil
+	return n.label
 }
 
 func (n *Node) Embeddings() ([]lattice.Embedding, error) {
