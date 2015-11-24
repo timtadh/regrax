@@ -34,7 +34,9 @@ func lattice(node Node, support int, dt DataType) (*Lattice, error) {
 		queued[string(n.Label())] = true
 		rlattice = append(rlattice, n)
 		parents, err := n.Parents(support, dt)
-		errors.Logf("DEBUG", "parents of %v are %v", n, parents)
+		if node.Size() > 15 {
+			errors.Logf("DEBUG", "parents of %v are %v", n, parents)
+		}
 		if err != nil {
 			return nil, err
 		}
