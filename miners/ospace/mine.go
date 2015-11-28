@@ -1,9 +1,7 @@
 package ospace
 
 import (
-	"encoding/binary"
 	"math/rand"
-	"os"
 )
 
 import (
@@ -13,20 +11,9 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stats"
 )
 
-
-func init() {
-	if urandom, err := os.Open("/dev/urandom"); err != nil {
-		panic(err)
-	} else {
-		seed := make([]byte, 8)
-		if _, err := urandom.Read(seed); err == nil {
-			rand.Seed(int64(binary.BigEndian.Uint64(seed)))
-		}
-		urandom.Close()
-	}
-}
 
 type Miner struct {
 	config *config.Config
@@ -114,31 +101,12 @@ func (m *Miner) next(cur lattice.Node, dt lattice.DataType) (lattice.Node, error
 	}
 	adjs = append(adjs, cur)
 	prs = append(prs, m.selfPr(prs))
-	i := sample(prs)
+	i := stats.WeightedSample(prs)
 	return adjs[i], nil
 }
 
-func sample(prs []float64) int {
-	total := sum(prs)
-	i := 0
-	x := total * (1 - rand.Float64())
-	for x > prs[i] {
-		x -= prs[i]
-		i += 1
-	}
-	return i
-}
-
-func sum(list []float64) float64 {
-	var sum float64
-	for _, item := range list {
-		sum += item
-	}
-	return sum
-}
-
 func (m *Miner) selfPr(prs []float64) float64 {
-	return 1.0 - sum(prs)
+	return 1.0 - stats.Sum(prs)
 }
 
 func (m *Miner) transPrs(u lattice.Node, adjs []lattice.Node, dt lattice.DataType) ([]float64, error) {

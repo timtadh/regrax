@@ -10,7 +10,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stats"
 )
 
 func vertexMapSets(sgs SubGraphs) []*set.MapSet {
@@ -51,7 +51,7 @@ func MinImgSupported(sgs SubGraphs) SubGraphs {
 		return sgs
 	}
 	sets := vertexMapSets(sgs)
-	arg, size := lattice.Min(lattice.Srange(len(sets)), func(i int) float64 {
+	arg, size := stats.Min(stats.Srange(len(sets)), func(i int) float64 {
 		return float64(sets[i].Size())
 	})
 	supported := make(SubGraphs, 0, int(size)+1)
@@ -80,8 +80,8 @@ func MaxIndepSupported(sgs SubGraphs) SubGraphs {
 		return sgs
 	}
 	sets := subgraphVertexSets(sgs)
-	perms := lattice.Permutations(len(sets))
-	arg, max := lattice.Max(lattice.Srange(len(perms)), func(idx int) float64 {
+	perms := stats.Permutations(len(sets))
+	arg, max := stats.Max(stats.Srange(len(perms)), func(idx int) float64 {
 		perm := make([]*set.SortedSet, 0, len(sets))
 		for _, idx := range perms[idx] {
 			perm = append(perm, sets[idx])

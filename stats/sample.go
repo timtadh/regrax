@@ -1,4 +1,4 @@
-package lattice
+package stats
 
 import (
 	"encoding/binary"
@@ -63,6 +63,17 @@ func ReplacingSample(size, populationSize int) (sample []int) {
 	return sample
 }
 
+func WeightedSample(prs []float64) int {
+	total := Sum(prs)
+	i := 0
+	x := total * (1 - rand.Float64())
+	for x > prs[i] {
+		x -= prs[i]
+		i += 1
+	}
+	return i
+}
+
 func Min(items []int, f func(item int) float64) (arg int, min float64) {
 	arg = -1
 	for _, i := range items {
@@ -90,6 +101,13 @@ func Max(items []int, f func(item int) float64) (arg int, max float64) {
 	return arg, max
 }
 
+func Sum(list []float64) float64 {
+	var sum float64
+	for _, item := range list {
+		sum += item
+	}
+	return sum
+}
 
 func Permutations(size int) (results [][]int) {
 	slice := make([]int, size)
