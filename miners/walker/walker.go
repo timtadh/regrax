@@ -51,13 +51,19 @@ func (w *Walker) Mine(input lattice.Input, dt lattice.DataType) error {
 		return err
 	}
 	samples, errs := w.Walk(w)
-	go func() {
-		for sampled := range samples {
+	loop: for {
+		select {
+		case sampled, open := <-samples:
+			if !open {
+				break loop
+			}
 			errors.Logf("INFO", "sample %v", sampled)
+		case err, open := <-errs:
+			if !open {
+				break loop
+			}
+			return err
 		}
-	}()
-	for err := range errs {
-		return err
 	}
 	return nil
 }
