@@ -1,7 +1,6 @@
 package lattice
 
 import (
-	"github.com/timtadh/data-structures/errors"
 )
 
 func MakeLattice(n Node, support int, dt DataType) (*Lattice, error) {
@@ -24,19 +23,16 @@ func lattice(node Node, support int, dt DataType) (*Lattice, error) {
 		queue = queue[0:len(queue)-1]
 		return n, queue
 	}
-	queue := make([]Node, 0, node.Size())
+	queue := make([]Node, 0, 10)
 	queue = append(queue, node)
 	queued := make(map[string]bool)
-	rlattice := make([]Node, 0, node.Size())
+	rlattice := make([]Node, 0, 10)
 	for len(queue) > 0 {
 		var n Node
 		n, queue = pop(queue)
 		queued[string(n.Label())] = true
 		rlattice = append(rlattice, n)
 		parents, err := n.Parents(support, dt)
-		if node.Size() > 15 {
-			errors.Logf("DEBUG", "parents of %v are %v", n, parents)
-		}
 		if err != nil {
 			return nil, err
 		}

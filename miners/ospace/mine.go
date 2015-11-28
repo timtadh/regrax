@@ -15,30 +15,34 @@ import (
 )
 
 
-func UniformWalk(w *walker.Walker) (chan lattice.Node, chan error) {
-	nodes := make(chan lattice.Node)
+func UniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
+	samples := make(chan lattice.Node)
+	terminate := make(chan bool)
 	errs := make(chan error)
-	count := 0
 	go func() {
 		cur := w.Start[rand.Intn(len(w.Start))]
-		for count < w.Config.Samples {
-			count++
-			nodes <- cur
+		loop: for {
+			select {
+			case <-terminate:
+				break loop
+			case samples<-cur:
+			}
 			next, err := Next(w, cur)
 			if err != nil {
 				errs <- err
-				break
+				break loop
 			}
 			if next == nil {
 				errs <- errors.Errorf("next was nil!!")
-				break
+				break loop
 			}
 			cur = next
 		}
-		close(nodes)
+		close(samples)
 		close(errs)
+		close(terminate)
 	}()
-	return nodes, errs
+	return samples, terminate, errs
 }
 
 func Next(w *walker.Walker, cur lattice.Node) (lattice.Node, error) {

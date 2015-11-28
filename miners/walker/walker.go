@@ -13,7 +13,7 @@ import (
 )
 
 
-type Walk func(w *Walker) (chan lattice.Node, chan error)
+type Walk func(w *Walker) (chan lattice.Node, chan bool, chan error)
 
 type Walker struct {
 	Config *config.Config
@@ -50,7 +50,8 @@ func (w *Walker) Mine(input lattice.Input, dt lattice.DataType) error {
 	if err != nil {
 		return err
 	}
-	samples, errs := w.Walk(w)
+	samples, terminate, errs := w.Walk(w)
+	samples = w.RejectingWalk(samples, terminate)
 	loop: for {
 		select {
 		case sampled, open := <-samples:
@@ -66,4 +67,26 @@ func (w *Walker) Mine(input lattice.Input, dt lattice.DataType) error {
 		}
 	}
 	return nil
+}
+
+func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) (chan lattice.Node) {
+	nodes := make(chan lattice.Node)
+	go func() {
+		i := 0
+		for sampled := range samples {
+			if w.Dt.Acceptable(sampled) {
+				nodes<-sampled
+				i++
+			} else {
+				errors.Logf("INFO", "rejected %v", sampled)
+			}
+			if i >= w.Config.Samples {
+				break
+			}
+		}
+		terminate<-true
+		<-samples
+		close(nodes)
+	}()
+	return nodes
 }

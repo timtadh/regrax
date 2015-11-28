@@ -38,6 +38,7 @@ func (self ErrorList) Error() string {
 type MakeLoader func(*Graph) lattice.Loader
 
 type Graph struct {
+	MinEdges, MaxEdges, MinVertices, MaxVertices int
 	G *goiso.Graph
 	NodeAttrs int_json.MultiMap
 	Embeddings bytes_subgraph.MultiMap
@@ -50,7 +51,7 @@ type Graph struct {
 	config *config.Config
 }
 
-func NewGraph(config *config.Config, makeLoader MakeLoader) (g *Graph, err error) {
+func NewGraph(config *config.Config, makeLoader MakeLoader, minE, maxE, minV, maxV int) (g *Graph, err error) {
 	nodeAttrs, err := config.IntJsonMultiMap("graph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -72,6 +73,10 @@ func NewGraph(config *config.Config, makeLoader MakeLoader) (g *Graph, err error
 		return nil, err
 	}
 	g = &Graph{
+		MinEdges: minE,
+		MaxEdges: maxE,
+		MinVertices: minV,
+		MaxVertices: maxV,
 		NodeAttrs: nodeAttrs,
 		Parents: parents,
 		ParentCount: parentCount,
@@ -81,6 +86,26 @@ func NewGraph(config *config.Config, makeLoader MakeLoader) (g *Graph, err error
 		config: config,
 	}
 	return g, nil
+}
+
+func (g *Graph) Acceptable(node lattice.Node) bool {
+	n := node.(*Node)
+	if len(n.sgs) <= 0 {
+		return g.MinEdges <= 0 && g.MinVertices <= 0
+	}
+	E := len(n.sgs[0].E)
+	V := len(n.sgs[0].V)
+	return g.MinEdges <= E && E <= g.MaxEdges && g.MinVertices <= V && V <= g.MaxVertices
+}
+
+func (g *Graph) TooLarge(node lattice.Node) bool {
+	n := node.(*Node)
+	if len(n.sgs) <= 0 {
+		return false
+	}
+	E := len(n.sgs[0].E)
+	V := len(n.sgs[0].V)
+	return E > g.MaxEdges || V > g.MaxVertices
 }
 
 func (g *Graph) Loader() lattice.Loader {

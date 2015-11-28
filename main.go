@@ -218,7 +218,7 @@ func AssertFile(fname string) string {
 func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hl:", []string{ "help", "loader="},
+		"hl:", []string{ "help", "loader=", "min-items=", "max-items="},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -226,12 +226,18 @@ func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string
 	}
 
 	loaderType := "int"
+	min := 0
+	max := int(math.MaxInt32)
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
 		case "-l", "--loader":
 			loaderType = oa.Arg()
+		case "--min-items":
+			min = ParseInt(oa.Arg())
+		case "--max-items":
+			max = ParseInt(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -246,7 +252,7 @@ func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string
 		Usage(ErrorCodes["opts"])
 	}
 
-	sets, err := itemset.NewItemSets(conf, loader)
+	sets, err := itemset.NewItemSets(conf, loader, min, max)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -256,7 +262,12 @@ func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string
 func graphType(argv []string, conf *config.Config) (lattice.DataType, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hl:", []string{ "help", "loader="},
+		"hl:", []string{ "help", "loader=",
+			"min-edges=",
+			"max-edges=",
+			"min-vertices=",
+			"max-vertices=",
+		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -264,12 +275,24 @@ func graphType(argv []string, conf *config.Config) (lattice.DataType, []string) 
 	}
 
 	loaderType := "veg"
+	minE := 0
+	maxE := int(math.MaxInt32)
+	minV := 0
+	maxV := int(math.MaxInt32)
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
 		case "-l", "--loader":
 			loaderType = oa.Arg()
+		case "--min-edges":
+			minE = ParseInt(oa.Arg())
+		case "--max-edges":
+			maxE = ParseInt(oa.Arg())
+		case "--min-vertices":
+			minV = ParseInt(oa.Arg())
+		case "--max-vertices":
+			maxV = ParseInt(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -284,7 +307,7 @@ func graphType(argv []string, conf *config.Config) (lattice.DataType, []string) 
 		Usage(ErrorCodes["opts"])
 	}
 
-	g, err := graph.NewGraph(conf, loader)
+	g, err := graph.NewGraph(conf, loader, minE, maxE, minV, maxV)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -423,7 +446,7 @@ func main() {
 		"ho:c:",
 		[]string{
 			"help", "output=", "cache=", "modes", "types",
-			"support=", "min-size=", "max-size=",
+			"support=",
 			"samples=",
 		},
 	)
@@ -438,8 +461,6 @@ func main() {
 	cache := ""
 	support := 0
 	samples := 0
-	minSize := 0
-	maxSize := int(math.MaxInt32)
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -452,10 +473,6 @@ func main() {
 			support = ParseInt(oa.Arg())
 		case "--samples":
 			samples = ParseInt(oa.Arg())
-		case "--min-size":
-			minSize = ParseInt(oa.Arg())
-		case "--max-size":
-			maxSize = ParseInt(oa.Arg())
 		case "--types":
 			fmt.Fprintln(os.Stderr, "Types")
 			os.Exit(0)
@@ -488,8 +505,6 @@ func main() {
 		Output: output,
 		Support: support,
 		Samples: samples,
-		MinSize: minSize,
-		MaxSize: maxSize,
 	}
 
 	if len(args) < 1 {

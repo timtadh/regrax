@@ -160,6 +160,9 @@ func (n *Node) Children(support int, dtype lattice.DataType) ([]lattice.Node, er
 	if n.items.Size() == 0 {
 		return dt.FrequentItems, nil
 	}
+	if n.items.Size() >= dt.MaxItems {
+		return []lattice.Node{}, nil
+	}
 	i := setToInt32s(n.items)
 	if has, err := dt.ChildCount.Has(i); err != nil {
 		return nil, err

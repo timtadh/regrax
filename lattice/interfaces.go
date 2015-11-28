@@ -11,6 +11,8 @@ type Lattice struct {
 
 type DataType interface {
 	Loader() Loader
+	Acceptable(Node) bool
+	TooLarge(Node) bool
 	Close() error
 }
 
@@ -28,7 +30,6 @@ type Node interface {
 	Children(support int, dt DataType) ([]Node, error)
 	ChildCount(support int, dt DataType) (int, error)
 	Maximal(support int, dt DataType) (bool, error)
-	Size() int
 	Label() []byte
 	Embeddings() ([]Embedding, error)
 	Lattice(support int, dt DataType) (*Lattice, error)

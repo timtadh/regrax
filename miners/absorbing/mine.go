@@ -153,24 +153,28 @@ func probabilities(w *walker.Walker, lat *lattice.Lattice) ([]int, error) {
 	return P, nil
 }
 
-func RejectingWalk(w *walker.Walker) (chan lattice.Node, chan error) {
-	nodes := make(chan lattice.Node)
+func RejectingWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
+	samples := make(chan lattice.Node)
+	terminate := make(chan bool)
 	errors := make(chan error)
 	go func() {
-		i := 0
-		for i < w.Config.Samples {
-			if sampled, err := walk(w); err != nil {
+		loop: for {
+			sampled, err := walk(w)
+			if err != nil {
 				errors<-err
-				break
-			} else if sampled.Size() >= w.Config.MinSize {
-				nodes<-sampled
-				i++
+				break loop
+			}
+			select {
+			case <-terminate:
+				break loop
+			case samples<-sampled:
 			}
 		}
-		close(nodes)
+		close(samples)
 		close(errors)
+		close(terminate)
 	}()
-	return nodes, errors
+	return samples, terminate, errors
 }
 
 func walk(w *walker.Walker) (max lattice.Node, err error) {
@@ -186,9 +190,6 @@ func walk(w *walker.Walker) (max lattice.Node, err error) {
 		// errors.Logf("DEBUG", "compute next %v %v", next, err)
 		if err != nil {
 			return nil, err
-		}
-		if next != nil && next.Size() > w.Config.MaxSize {
-			next = nil
 		}
 		// errors.Logf("DEBUG", "cur %v kids %v next %v", cur, kidCount, next)
 	}

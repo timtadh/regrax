@@ -26,6 +26,7 @@ type itemsIter func(func(tx, item int32) error) error
 type index [][]int32
 
 type ItemSets struct {
+	MinItems, MaxItems int
 	Index index
 	InvertedIndex index
 	Parents ints_ints.MultiMap
@@ -62,7 +63,7 @@ func (i index) add(idx, value int32) index {
 	return i
 }
 
-func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err error) {
+func NewItemSets(config *config.Config, makeLoader MakeLoader, min, max int) (i *ItemSets, err error) {
 	parents, err := config.IntsIntsMultiMap("itemsets-parents")
 	if err != nil {
 		return nil, err
@@ -84,6 +85,8 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err
 		return nil, err
 	}
 	i = &ItemSets{
+		MinItems: min,
+		MaxItems: max,
 		Parents: parents,
 		ParentCount: parentCount,
 		Children: children,
@@ -93,6 +96,18 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader) (i *ItemSets, err
 		config: config,
 	}
 	return i, nil
+}
+
+func (i *ItemSets) Acceptable(node lattice.Node) bool {
+	n := node.(*Node)
+	items := n.items.Size()
+	return i.MinItems <= items && items <= i.MaxItems
+}
+
+func (i *ItemSets) TooLarge(node lattice.Node) bool {
+	n := node.(*Node)
+	items := n.items.Size()
+	return items > i.MaxItems
 }
 
 func (i *ItemSets) Loader() lattice.Loader {

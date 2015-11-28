@@ -240,6 +240,9 @@ func (n *Node) Children(support int, dtype lattice.DataType) (nodes []lattice.No
 	if len(n.sgs) == 0 {
 		return dt.FrequentVertices, nil
 	}
+	if len(n.sgs[0].V) >= dt.MaxVertices || len(n.sgs[0].E) >= dt.MaxEdges {
+		return []lattice.Node{}, nil
+	}
 	if nodes, has, err := n.cached(dt, dt.ChildCount, dt.Children, n.label); err != nil {
 		return nil, err
 	} else if has {

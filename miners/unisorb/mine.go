@@ -15,36 +15,45 @@ import (
 )
 
 
-func MaxUniformWalk(w *walker.Walker) (chan lattice.Node, chan error) {
-	nodes := make(chan lattice.Node)
+func MaxUniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
+	samples := make(chan lattice.Node)
+	terminate := make(chan bool)
 	errs := make(chan error)
-	count := 0
 	go func() {
 		cur := w.Start[rand.Intn(len(w.Start))]
-		for count < w.Config.Samples {
-			if ismax, err := cur.Maximal(w.Config.Support, w.Dt); err != nil {
-				errs <- err
-			} else if ismax {
-				count++
-				nodes <- cur
-				cur = w.Start[rand.Intn(len(w.Start))]
-			} else {
-				next, err := Next(w, cur)
-				if err != nil {
+		loop: for {
+			var sampled lattice.Node = nil
+			for sampled == nil {
+				if ismax, err := cur.Maximal(w.Config.Support, w.Dt); err != nil {
 					errs <- err
-					break
+					break loop
+				} else if ismax {
+					sampled = cur
+					cur = w.Start[rand.Intn(len(w.Start))]
+				} else {
+					next, err := Next(w, cur)
+					if err != nil {
+						errs <- err
+						break loop
+					}
+					if next == nil {
+						errs <- errors.Errorf("next was nil!!")
+						break loop
+					}
+					cur = next
 				}
-				if next == nil {
-					errs <- errors.Errorf("next was nil!!")
-					break
-				}
-				cur = next
+			}
+			select {
+			case <-terminate:
+				break loop
+			case samples<-sampled:
 			}
 		}
-		close(nodes)
+		close(samples)
 		close(errs)
+		close(terminate)
 	}()
-	return nodes, errs
+	return samples, terminate, errs
 }
 
 func Next(w *walker.Walker, cur lattice.Node) (lattice.Node, error) {
@@ -52,7 +61,7 @@ func Next(w *walker.Walker, cur lattice.Node) (lattice.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
+	// errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
 	prs, err := transPrs(w, cur, kids)
 	if err != nil {
 		return nil, err
