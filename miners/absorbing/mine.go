@@ -1,9 +1,7 @@
 package absorbing
 
 import (
-	"encoding/binary"
 	"math/rand"
-	"os"
 )
 
 import (
@@ -12,21 +10,10 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/miners/walker"
 )
 
-func init() {
-	if urandom, err := os.Open("/dev/urandom"); err != nil {
-		panic(err)
-	} else {
-		seed := make([]byte, 8)
-		if _, err := urandom.Read(seed); err == nil {
-			rand.Seed(int64(binary.BigEndian.Uint64(seed)))
-		}
-		urandom.Close()
-	}
-}
 
 type SparseEntry struct {
 	Row, Col int
@@ -39,21 +26,7 @@ type Sparse struct {
 	Entries []SparseEntry
 }
 
-type Miner struct {
-	config *config.Config
-	start []lattice.Node
-}
-
-func NewMiner(conf *config.Config) *Miner {
-	return &Miner{
-		config: conf,
-	}
-}
-
-func (m *Miner) Close() error {
-	return nil
-}
-
+/*
 func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 	err := m.init(input, dt)
 	if err != nil {
@@ -80,14 +53,14 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 		errors.Logf("INFO", "")
 	}
 	return nil
-}
+}*/
 
-func (m *Miner) PrMatrices(n lattice.Node, dt lattice.DataType) (Q, R, u *Sparse, err error) {
-	lat, err := lattice.MakeLattice(n, m.config.Support, dt)
+func PrMatrices(w *walker.Walker, n lattice.Node) (Q, R, u *Sparse, err error) {
+	lat, err := lattice.MakeLattice(n, w.Config.Support, w.Dt)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	p, err := m.probabilities(lat, dt)
+	p, err := probabilities(w, lat)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -106,7 +79,7 @@ func (m *Miner) PrMatrices(n lattice.Node, dt lattice.DataType) (Q, R, u *Sparse
 		Cols: len(lat.V)-1,
 		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
-	sp := len(m.start)
+	sp := len(w.Start)
 	for i, x := range lat.V {
 		if x.StartingPoint() && i < len(lat.V)-1 {
 			u.Entries = append(u.Entries, SparseEntry{0, i, 1.0/float64(sp), sp})
@@ -130,9 +103,9 @@ func (m *Sparse) Dense() *matrix.DenseMatrix {
 	return d
 }
 
-func (m *Miner) SelectionProbability(Q_, R_, u_ *Sparse) (float64, error) {
+func SelectionProbability(w *walker.Walker, Q_, R_, u_ *Sparse) (float64, error) {
 	if Q_.Rows == 0 && Q_.Cols == 0 {
-		return 1.0/float64(len(m.start)), nil
+		return 1.0/float64(len(w.Start)), nil
 	}
 	Q := Q_.Dense()
 	R := R_.Dense()
@@ -161,10 +134,10 @@ func (m *Miner) SelectionProbability(Q_, R_, u_ *Sparse) (float64, error) {
 	return x, nil
 }
 
-func (m *Miner) probabilities(lat *lattice.Lattice, dt lattice.DataType) ([]int, error) {
+func probabilities(w *walker.Walker, lat *lattice.Lattice) ([]int, error) {
 	P := make([]int, len(lat.V))
 	for i, node := range lat.V {
-		count, err := node.ChildCount(m.config.Support, dt)
+		count, err := node.ChildCount(w.Config.Support, w.Dt)
 		if err != nil {
 			return nil, err
 		}
@@ -180,44 +153,41 @@ func (m *Miner) probabilities(lat *lattice.Lattice, dt lattice.DataType) ([]int,
 	return P, nil
 }
 
-func (m *Miner) init(input lattice.Input, dt lattice.DataType) (err error) {
-	errors.Logf("INFO", "loading data")
-	start, err := dt.Loader().StartingPoints(input, m.config.Support)
-	if err != nil {
-		return err
-	}
-	errors.Logf("INFO", "loaded data, about to start mining")
-	m.start = start
-	return nil
+func RejectingWalk(w *walker.Walker) (chan lattice.Node, chan error) {
+	nodes := make(chan lattice.Node)
+	errors := make(chan error)
+	go func() {
+		i := 0
+		for i < w.Config.Samples {
+			if sampled, err := walk(w); err != nil {
+				errors<-err
+				break
+			} else if sampled.Size() >= w.Config.MinSize {
+				nodes<-sampled
+				i++
+			}
+		}
+		close(nodes)
+		close(errors)
+	}()
+	return nodes, errors
 }
 
-func (m *Miner) rejectingWalk(dt lattice.DataType) (max lattice.Node, err error) {
-	for {
-		sampled, err := m.walk(dt)
-		if err != nil {
-			return nil, err
-		}
-		if sampled.Size() >= m.config.MinSize {
-			return sampled, nil
-		}
-	}
-}
-
-func (m *Miner) walk(dt lattice.DataType) (max lattice.Node, err error) {
-	cur, _ := uniform(m.start, nil)
+func walk(w *walker.Walker) (max lattice.Node, err error) {
+	cur, _ := uniform(w.Start, nil)
 	// errors.Logf("DEBUG", "start %v", cur)
-	next, err := uniform(cur.Children(m.config.Support, dt))
+	next, err := uniform(cur.Children(w.Config.Support, w.Dt))
 	if err != nil {
 		return nil, err
 	}
 	for next != nil {
 		cur = next
-		next, err = uniform(cur.Children(m.config.Support, dt))
+		next, err = uniform(cur.Children(w.Config.Support, w.Dt))
 		// errors.Logf("DEBUG", "compute next %v %v", next, err)
 		if err != nil {
 			return nil, err
 		}
-		if next != nil && next.Size() > m.config.MaxSize {
+		if next != nil && next.Size() > w.Config.MaxSize {
 			next = nil
 		}
 		// errors.Logf("DEBUG", "cur %v kids %v next %v", cur, kidCount, next)

@@ -48,6 +48,7 @@ import (
 	"github.com/timtadh/sfp/miners/absorbing"
 	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/ospace"
+	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/types/itemset"
 	"github.com/timtadh/sfp/types/graph"
 )
@@ -310,7 +311,7 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := absorbing.NewMiner(conf)
+	miner := walker.NewWalker(conf, absorbing.RejectingWalk)
 	return miner, args
 }
 
@@ -335,7 +336,7 @@ func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := musk.NewMiner(conf)
+	miner := walker.NewWalker(conf, musk.MaxUniformWalk)
 	return miner, args
 }
 
@@ -360,7 +361,7 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := ospace.NewMiner(conf)
+	miner := walker.NewWalker(conf, ospace.UniformWalk)
 	return miner, args
 }
 
