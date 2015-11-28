@@ -48,6 +48,7 @@ import (
 	"github.com/timtadh/sfp/miners/absorbing"
 	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/ospace"
+	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/miners/unisorb"
 	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/types/itemset"
@@ -529,7 +530,7 @@ func main() {
 		return Input(args[0])
 	}
 
-	err = mode.Mine(getInput, dt)
+	err = mode.Mine(getInput, dt, &reporters.LoggingReporter{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error during the mining process\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)

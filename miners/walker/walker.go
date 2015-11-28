@@ -10,6 +10,7 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/miners"
 )
 
 
@@ -45,7 +46,7 @@ func (w *Walker) Close() error {
 	return nil
 }
 
-func (w *Walker) Mine(input lattice.Input, dt lattice.DataType) error {
+func (w *Walker) Mine(input lattice.Input, dt lattice.DataType, rptr miners.Reporter) error {
 	err := w.Init(input, dt)
 	if err != nil {
 		return err
@@ -58,7 +59,9 @@ func (w *Walker) Mine(input lattice.Input, dt lattice.DataType) error {
 			if !open {
 				break loop
 			}
-			errors.Logf("INFO", "sample %v", sampled)
+			if err := rptr.Report(sampled); err != nil {
+				return err
+			}
 		case err, open := <-errs:
 			if !open {
 				break loop
@@ -78,7 +81,7 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) (
 				nodes<-sampled
 				i++
 			} else {
-				errors.Logf("INFO", "rejected %v", sampled)
+				// errors.Logf("INFO", "rejected %v", sampled)
 			}
 			if i >= w.Config.Samples {
 				break

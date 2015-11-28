@@ -240,7 +240,7 @@ func (n *Node) Children(support int, dtype lattice.DataType) (nodes []lattice.No
 	if len(n.sgs) == 0 {
 		return dt.FrequentVertices, nil
 	}
-	if len(n.sgs[0].V) >= dt.MaxVertices || len(n.sgs[0].E) >= dt.MaxEdges {
+	if len(n.sgs[0].E) >= dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
 	if nodes, has, err := n.cached(dt, dt.ChildCount, dt.Children, n.label); err != nil {
@@ -258,7 +258,10 @@ func (n *Node) Children(support int, dtype lattice.DataType) (nodes []lattice.No
 			return exts
 		}
 		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
-			exts = append(exts, sg.EdgeExtend(e))
+			ext := sg.EdgeExtend(e)
+			if len(ext.V) <= dt.MaxVertices {
+				exts = append(exts, ext)
+			}
 		}
 		return exts
 	}
