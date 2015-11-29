@@ -24,7 +24,7 @@ func MaxUniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error)
 		loop: for {
 			var sampled lattice.Node = nil
 			for sampled == nil {
-				if ismax, err := cur.Maximal(w.Config.Support, w.Dt); err != nil {
+				if ismax, err := cur.Maximal(); err != nil {
 					errs <- err
 					break loop
 				} else if ismax {
@@ -57,7 +57,7 @@ func MaxUniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error)
 }
 
 func Next(w *walker.Walker, cur lattice.Node) (lattice.Node, error) {
-	kids, err := cur.Children(w.Config.Support, w.Dt)
+	kids, err := cur.Children()
 	if err != nil {
 		return nil, err
 	}
@@ -89,11 +89,11 @@ func transPrs(w *walker.Walker, u lattice.Node, adjs []lattice.Node) ([]float64,
 }
 
 func weight(w *walker.Walker, v lattice.Node) (float64, error) {
-	vmax, err := v.Maximal(w.Config.Support, w.Dt)
+	vmax, err := v.Maximal()
 	if err != nil {
 		return 0, err
 	}
-	vdeg, err := v.ParentCount(w.Config.Support, w.Dt)
+	vdeg, err := v.ParentCount()
 	if err != nil {
 		return 0, err
 	}

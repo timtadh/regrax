@@ -3,8 +3,8 @@ package lattice
 import (
 )
 
-func MakeLattice(n Node, support int, dt DataType) (*Lattice, error) {
-	lat, err := n.Lattice(support, dt)
+func MakeLattice(n Node) (*Lattice, error) {
+	lat, err := n.Lattice()
 	if err != nil {
 		_, ok := err.(*NoLattice)
 		if !ok {
@@ -13,10 +13,10 @@ func MakeLattice(n Node, support int, dt DataType) (*Lattice, error) {
 	} else {
 		return lat, nil
 	}
-	return lattice(n, support, dt)
+	return lattice(n)
 }
 
-func lattice(node Node, support int, dt DataType) (*Lattice, error) {
+func lattice(node Node) (*Lattice, error) {
 	pop := func(queue []Node) (Node, []Node) {
 		n := queue[0]
 		copy(queue[0:len(queue)-1],queue[1:len(queue)])
@@ -32,7 +32,7 @@ func lattice(node Node, support int, dt DataType) (*Lattice, error) {
 		n, queue = pop(queue)
 		queued[string(n.Label())] = true
 		rlattice = append(rlattice, n)
-		parents, err := n.Parents(support, dt)
+		parents, err := n.Parents()
 		if err != nil {
 			return nil, err
 		}
@@ -52,7 +52,7 @@ func lattice(node Node, support int, dt DataType) (*Lattice, error) {
 	}
 	edges := make([]Edge, 0, len(lattice)*2)
 	for i, n := range lattice {
-		kids, err := n.Children(support, dt)
+		kids, err := n.Children()
 		if err != nil {
 			return nil, err
 		}

@@ -10,6 +10,7 @@ type Lattice struct {
 }
 
 type DataType interface {
+	Support() int
 	Loader() Loader
 	Acceptable(Node) bool
 	TooLarge(Node) bool
@@ -17,22 +18,20 @@ type DataType interface {
 }
 
 type Loader interface {
-	StartingPoints(input Input, support int) ([]Node, error)
+	StartingPoints(input Input) ([]Node, error)
 }
 
 type Input func()(reader io.Reader, closer func())
 
 type Node interface {
-	StartingPoint() bool
-	AdjacentCount(support int, dt DataType) (int, error)
-	Parents(support int, dt DataType) ([]Node, error)
-	ParentCount(support int, dt DataType) (int, error)
-	Children(support int, dt DataType) ([]Node, error)
-	ChildCount(support int, dt DataType) (int, error)
-	Maximal(support int, dt DataType) (bool, error)
+	AdjacentCount() (int, error)
+	Parents() ([]Node, error)
+	ParentCount() (int, error)
+	Children() ([]Node, error)
+	ChildCount() (int, error)
+	Maximal() (bool, error)
 	Label() []byte
-	Embeddings() ([]Embedding, error)
-	Lattice(support int, dt DataType) (*Lattice, error)
+	Lattice() (*Lattice, error)
 }
 
 type NoLattice struct{}

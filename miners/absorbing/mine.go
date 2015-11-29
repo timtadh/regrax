@@ -56,7 +56,7 @@ func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
 }*/
 
 func PrMatrices(w *walker.Walker, n lattice.Node) (Q, R, u *Sparse, err error) {
-	lat, err := lattice.MakeLattice(n, w.Config.Support, w.Dt)
+	lat, err := lattice.MakeLattice(n)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -79,10 +79,11 @@ func PrMatrices(w *walker.Walker, n lattice.Node) (Q, R, u *Sparse, err error) {
 		Cols: len(lat.V)-1,
 		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
-	sp := len(w.Start)
 	for i, x := range lat.V {
-		if x.StartingPoint() && i < len(lat.V)-1 {
-			u.Entries = append(u.Entries, SparseEntry{0, i, 1.0/float64(sp), sp})
+		if c, err := x.ParentCount(); err != nil {
+			return nil, nil, nil, err
+		} else if c == 0 {
+			u.Entries = append(u.Entries, SparseEntry{0, i, 1.0, 1})
 		}
 	}
 	for _, e := range lat.E {
@@ -137,7 +138,7 @@ func SelectionProbability(w *walker.Walker, Q_, R_, u_ *Sparse) (float64, error)
 func probabilities(w *walker.Walker, lat *lattice.Lattice) ([]int, error) {
 	P := make([]int, len(lat.V))
 	for i, node := range lat.V {
-		count, err := node.ChildCount(w.Config.Support, w.Dt)
+		count, err := node.ChildCount()
 		if err != nil {
 			return nil, err
 		}
@@ -180,13 +181,13 @@ func RejectingWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) 
 func walk(w *walker.Walker) (max lattice.Node, err error) {
 	cur, _ := uniform(w.Start, nil)
 	// errors.Logf("DEBUG", "start %v", cur)
-	next, err := uniform(cur.Children(w.Config.Support, w.Dt))
+	next, err := uniform(cur.Children())
 	if err != nil {
 		return nil, err
 	}
 	for next != nil {
 		cur = next
-		next, err = uniform(cur.Children(w.Config.Support, w.Dt))
+		next, err = uniform(cur.Children())
 		// errors.Logf("DEBUG", "compute next %v %v", next, err)
 		if err != nil {
 			return nil, err

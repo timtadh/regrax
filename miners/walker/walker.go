@@ -32,7 +32,7 @@ func NewWalker(conf *config.Config, walk Walk) *Walker {
 
 func (w *Walker) Init(input lattice.Input, dt lattice.DataType) error {
 	errors.Logf("INFO", "loading data")
-	start, err := dt.Loader().StartingPoints(input, w.Config.Support)
+	start, err := dt.Loader().StartingPoints(input)
 	if err != nil {
 		return err
 	}

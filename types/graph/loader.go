@@ -88,6 +88,10 @@ func NewGraph(config *config.Config, makeLoader MakeLoader, minE, maxE, minV, ma
 	return g, nil
 }
 
+func (g *Graph) Support() int {
+	return g.config.Support
+}
+
 func (g *Graph) Acceptable(node lattice.Node) bool {
 	n := node.(*Node)
 	if len(n.sgs) <= 0 {
@@ -126,7 +130,7 @@ func NewVegLoader(g *Graph) lattice.Loader {
 	}
 }
 
-func (v *VegLoader) StartingPoints(input lattice.Input, support int) (nodes []lattice.Node, err error) {
+func (v *VegLoader) StartingPoints(input lattice.Input) (nodes []lattice.Node, err error) {
 	G, err := v.loadGraph(input)
 	if err != nil {
 		return nil, err
@@ -157,8 +161,8 @@ func (v *VegLoader) StartingPoints(input lattice.Input, support int) (nodes []la
 		if err != nil {
 			return err
 		}
-		if len(sgs) >= support {
-			nodes = append(nodes, &Node{label: label, sgs: sgs})
+		if len(sgs) >= v.g.Support() {
+			nodes = append(nodes, &Node{dt: v.g, label: label, sgs: sgs})
 			errors.Logf("INFO", "start %v %v", sgs[0].Label(), len(sgs))
 		}
 		return nil

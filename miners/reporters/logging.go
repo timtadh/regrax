@@ -28,3 +28,4 @@ func (lr *LoggingReporter) Close() error {
 	}
 	return nil
 }
+

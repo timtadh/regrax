@@ -98,6 +98,10 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader, min, max int) (i 
 	return i, nil
 }
 
+func (i *ItemSets) Support() int {
+	return i.config.Support
+}
+
 func (i *ItemSets) Acceptable(node lattice.Node) bool {
 	n := node.(*Node)
 	items := n.items.Size()
@@ -148,7 +152,7 @@ func (l *IntLoader) max(items itemsIter) (max_tx, max_item int32, err error) {
 	return max_tx, max_item, nil
 }
 
-func (l *IntLoader) indices(items itemsIter, support int) (idx, inv index, err error) {
+func (l *IntLoader) indices(items itemsIter) (idx, inv index, err error) {
 	max_tx, max_item, err := l.max(items)
 	if err != nil {
 		return nil, nil, err
@@ -165,7 +169,7 @@ func (l *IntLoader) indices(items itemsIter, support int) (idx, inv index, err e
 	idx = make(index, max_tx + 1)
 	inv = make(index, max_item + 1)
 	err = items(func (tx, item int32) error {
-		if counts[item] > support {
+		if counts[item] > l.sets.Support() {
 			idx = idx.add(tx, item)
 			inv = inv.add(item, tx)
 		}
@@ -212,12 +216,12 @@ func (l *IntLoader) items(input lattice.Input) func(do func(tx, item int32) erro
 	}
 }
 
-func (l *IntLoader) StartingPoints(input lattice.Input, support int) ([]lattice.Node, error) {
-	return l.startingPoints(l.items(input), support)
+func (l *IntLoader) StartingPoints(input lattice.Input) ([]lattice.Node, error) {
+	return l.startingPoints(l.items(input))
 }
 
-func (l *IntLoader) startingPoints(items itemsIter, support int) ([]lattice.Node, error) {
-	idx, inv, err := l.indices(items, support)
+func (l *IntLoader) startingPoints(items itemsIter) ([]lattice.Node, error) {
+	idx, inv, err := l.indices(items)
 	if err != nil {
 		return nil, err
 	}
@@ -225,9 +229,10 @@ func (l *IntLoader) startingPoints(items itemsIter, support int) ([]lattice.Node
 	l.sets.InvertedIndex = inv
 	nodes := make([]lattice.Node, 0, 10)
 	for item, txs := range inv {
-		if len(txs) >= support {
+		if len(txs) >= l.sets.Support() {
 			errors.Logf("INFO", "item %d len(txs) %d", item, len(txs))
 			n := &Node{
+				dt: l.sets,
 				items: set.FromSlice([]types.Hashable{types.Int32(item)}),
 				txs: txs,
 			}
@@ -235,7 +240,7 @@ func (l *IntLoader) startingPoints(items itemsIter, support int) ([]lattice.Node
 		}
 	}
 	l.sets.FrequentItems = nodes
-	l.sets.Empty = &Node{int32sToSet([]int32{}), []int32{}}
+	l.sets.Empty = &Node{l.sets, int32sToSet([]int32{}), []int32{}}
 	return nodes, nil
 }
 
