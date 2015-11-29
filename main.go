@@ -217,7 +217,7 @@ func AssertFile(fname string) string {
 	return fname
 }
 
-func itemsetType(argv []string, conf *config.Config) (lattice.Loader, []string) {
+func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{ "help", "loader=", "min-items=", "max-items="},
@@ -256,10 +256,13 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, []string) 
 	if err != nil {
 		log.Panic(err)
 	}
-	return loader, args
+	fmtr := func(_ lattice.DataType) lattice.Formatter {
+		return itemset.Formatter{}
+	}
+	return loader, fmtr, args
 }
 
-func graphType(argv []string, conf *config.Config) (lattice.Loader, []string) {
+func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{ "help", "loader=",
@@ -309,7 +312,11 @@ func graphType(argv []string, conf *config.Config) (lattice.Loader, []string) {
 	if err != nil {
 		log.Panic(err)
 	}
-	return loader, args
+	fmtr := func(dt lattice.DataType) lattice.Formatter {
+		g := dt.(*graph.Graph)
+		return graph.NewFormatter(g)
+	}
+	return loader, fmtr, args
 }
 
 func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) {
@@ -414,7 +421,7 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return miner, args
 }
 
-func types(argv []string, conf *config.Config) (lattice.Loader, []string) {
+func types(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 	switch argv[0] {
 	case "itemset": return itemsetType(argv[1:], conf)
 	case "graph": return graphType(argv[1:], conf)
@@ -509,7 +516,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "You must supply a type and a mode)\n")
 		Usage(ErrorCodes["opts"])
 	}
-	loader, args := types(args, conf)
+	loader, fmtr, args := types(args, conf)
 
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a mode\n")
@@ -536,8 +543,19 @@ func main() {
 	}
 	defer dt.Close()
 
+	fr, err := reporters.NewFileReporter(conf, fmtr(dt))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	rptr := &reporters.ChainReporter{[]miners.Reporter{
+		&reporters.LoggingReporter{}, fr,
+	}}
+	defer rptr.Close()
+
 	errors.Logf("INFO", "loaded data, about to start mining")
-	err = mode.Mine(dt, &reporters.LoggingReporter{})
+	err = mode.Mine(dt, rptr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error during the mining process\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)

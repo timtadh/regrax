@@ -24,11 +24,15 @@ import (
 type Config struct {
 	Cache string
 	Output string
-	Support, Samples, MinSize, MaxSize int
+	Support, Samples int
 }
 
 func (c *Config) CacheFile(name string) string {
 	return filepath.Join(c.Cache, name)
+}
+
+func (c *Config) OutputFile(name string) string {
+	return filepath.Join(c.Output, name)
 }
 
 func AnonBpTree() (fs2.MultiMap, error) { 

@@ -9,6 +9,12 @@ type Lattice struct {
 	E []Edge
 }
 
+type Input func()(reader io.Reader, closer func())
+
+type Loader interface {
+	Load(input Input) (DataType, error)
+}
+
 type DataType interface {
 	Support() int
 	Acceptable(Node) bool
@@ -16,12 +22,6 @@ type DataType interface {
 	Singletons() ([]Node, error)
 	Close() error
 }
-
-type Loader interface {
-	Load(input Input) (DataType, error)
-}
-
-type Input func()(reader io.Reader, closer func())
 
 type Node interface {
 	AdjacentCount() (int, error)
@@ -32,6 +32,13 @@ type Node interface {
 	Maximal() (bool, error)
 	Label() []byte
 	Lattice() (*Lattice, error)
+}
+
+type Formatter interface {
+	FileExt() string
+	PatternName(Node) string
+	FormatPattern(Node) string
+	FormatEmbeddings(Node) []string
 }
 
 type NoLattice struct{}
