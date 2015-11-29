@@ -11,14 +11,14 @@ type Lattice struct {
 
 type DataType interface {
 	Support() int
-	Loader() Loader
 	Acceptable(Node) bool
 	TooLarge(Node) bool
+	Singletons() ([]Node, error)
 	Close() error
 }
 
 type Loader interface {
-	StartingPoints(input Input) ([]Node, error)
+	Load(input Input) (DataType, error)
 }
 
 type Input func()(reader io.Reader, closer func())

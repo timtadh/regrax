@@ -38,6 +38,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/getopt"
 )
 
@@ -216,7 +217,7 @@ func AssertFile(fname string) string {
 	return fname
 }
 
-func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string) {
+func itemsetType(argv []string, conf *config.Config) (lattice.Loader, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{ "help", "loader=", "min-items=", "max-items="},
@@ -245,22 +246,20 @@ func itemsetType(argv []string, conf *config.Config) (lattice.DataType, []string
 		}
 	}
 
-	var loader itemset.MakeLoader
+	var loader lattice.Loader
 	switch loaderType {
-	case "int": loader = itemset.NewIntLoader
+	case "int": loader, err = itemset.NewIntLoader(conf, min, max)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
 	}
-
-	sets, err := itemset.NewItemSets(conf, loader, min, max)
 	if err != nil {
 		log.Panic(err)
 	}
-	return sets, args
+	return loader, args
 }
 
-func graphType(argv []string, conf *config.Config) (lattice.DataType, []string) {
+func graphType(argv []string, conf *config.Config) (lattice.Loader, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{ "help", "loader=",
@@ -300,19 +299,17 @@ func graphType(argv []string, conf *config.Config) (lattice.DataType, []string) 
 		}
 	}
 
-	var loader graph.MakeLoader
+	var loader lattice.Loader
 	switch loaderType {
-	case "veg": loader = graph.NewVegLoader
+	case "veg": loader, err = graph.NewVegLoader(conf, minE, maxE, minV, maxV)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
 	}
-
-	g, err := graph.NewGraph(conf, loader, minE, maxE, minV, maxV)
 	if err != nil {
 		log.Panic(err)
 	}
-	return g, args
+	return loader, args
 }
 
 func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) {
@@ -417,7 +414,7 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return miner, args
 }
 
-func types(argv []string, conf *config.Config) (lattice.DataType, []string) {
+func types(argv []string, conf *config.Config) (lattice.Loader, []string) {
 	switch argv[0] {
 	case "itemset": return itemsetType(argv[1:], conf)
 	case "graph": return graphType(argv[1:], conf)
@@ -512,8 +509,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "You must supply a type and a mode)\n")
 		Usage(ErrorCodes["opts"])
 	}
-	dt, args := types(args, conf)
-	defer dt.Close()
+	loader, args := types(args, conf)
 
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a mode\n")
@@ -526,11 +522,22 @@ func main() {
 		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
 		Usage(ErrorCodes["opts"])
 	}
+
 	getInput := func() (io.Reader, func()) {
 		return Input(args[0])
 	}
 
-	err = mode.Mine(getInput, dt, &reporters.LoggingReporter{})
+	errors.Logf("INFO", "Got configuration about to load dataset")
+	dt, err := loader.Load(getInput)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "There was error during the loading process\n")
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	defer dt.Close()
+
+	errors.Logf("INFO", "loaded data, about to start mining")
+	err = mode.Mine(dt, &reporters.LoggingReporter{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error during the mining process\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)

@@ -36,7 +36,6 @@ type ItemSets struct {
 	Embeddings ints_ints.MultiMap
 	FrequentItems []lattice.Node
 	Empty lattice.Node
-	makeLoader MakeLoader
 	config *config.Config
 }
 
@@ -63,7 +62,7 @@ func (i index) add(idx, value int32) index {
 	return i
 }
 
-func NewItemSets(config *config.Config, makeLoader MakeLoader, min, max int) (i *ItemSets, err error) {
+func NewItemSets(config *config.Config, min, max int) (i *ItemSets, err error) {
 	parents, err := config.IntsIntsMultiMap("itemsets-parents")
 	if err != nil {
 		return nil, err
@@ -92,10 +91,13 @@ func NewItemSets(config *config.Config, makeLoader MakeLoader, min, max int) (i 
 		Children: children,
 		ChildCount: childCount,
 		Embeddings: embeddings,
-		makeLoader: makeLoader,
 		config: config,
 	}
 	return i, nil
+}
+
+func (i *ItemSets) Singletons() ([]lattice.Node, error) {
+	return i.FrequentItems, nil
 }
 
 func (i *ItemSets) Support() int {
@@ -114,10 +116,6 @@ func (i *ItemSets) TooLarge(node lattice.Node) bool {
 	return items > i.MaxItems
 }
 
-func (i *ItemSets) Loader() lattice.Loader {
-	return i.makeLoader(i)
-}
-
 func (i *ItemSets) Close() error {
 	i.Parents.Close()
 	i.ParentCount.Close()
@@ -132,10 +130,15 @@ type IntLoader struct {
 	sets *ItemSets
 }
 
-func NewIntLoader(sets *ItemSets) lattice.Loader {
-	return &IntLoader{
+func NewIntLoader(config *config.Config, min, max int) (lattice.Loader, error) {
+	sets, err := NewItemSets(config, min, max)
+	if err != nil {
+		return nil, err
+	}
+	l := &IntLoader{
 		sets: sets,
 	}
+	return l, nil
 }
 
 func (l *IntLoader) max(items itemsIter) (max_tx, max_item int32, err error) {
@@ -216,8 +219,14 @@ func (l *IntLoader) items(input lattice.Input) func(do func(tx, item int32) erro
 	}
 }
 
-func (l *IntLoader) StartingPoints(input lattice.Input) ([]lattice.Node, error) {
-	return l.startingPoints(l.items(input))
+func (l *IntLoader) Load(input lattice.Input) (lattice.DataType, error) {
+	start, err := l.startingPoints(l.items(input))
+	if err != nil {
+		return nil, err
+	}
+	l.sets.Empty = &Node{l.sets, int32sToSet([]int32{}), []int32{}}
+	l.sets.FrequentItems = start
+	return l.sets, nil
 }
 
 func (l *IntLoader) startingPoints(items itemsIter) ([]lattice.Node, error) {
@@ -239,8 +248,6 @@ func (l *IntLoader) startingPoints(items itemsIter) ([]lattice.Node, error) {
 			nodes = append(nodes, n)
 		}
 	}
-	l.sets.FrequentItems = nodes
-	l.sets.Empty = &Node{l.sets, int32sToSet([]int32{}), []int32{}}
 	return nodes, nil
 }
 

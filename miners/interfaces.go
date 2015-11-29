@@ -10,7 +10,7 @@ import (
 
 
 type Miner interface {
-	Mine(lattice.Input, lattice.DataType, Reporter) error
+	Mine(lattice.DataType, Reporter) error
 	Close() error
 }
 

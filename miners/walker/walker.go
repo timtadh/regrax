@@ -30,27 +30,23 @@ func NewWalker(conf *config.Config, walk Walk) *Walker {
 	}
 }
 
-func (w *Walker) Init(input lattice.Input, dt lattice.DataType) error {
-	errors.Logf("INFO", "loading data")
-	start, err := dt.Loader().StartingPoints(input)
-	if err != nil {
-		return err
-	}
-	errors.Logf("INFO", "loaded data, about to start mining")
-	w.Start = start
+func (w *Walker) Init(dt lattice.DataType) (err error) {
+	errors.Logf("INFO", "about to load singleton nodes")
 	w.Dt = dt
-	return nil
+	w.Start, err = w.Dt.Singletons()
+	return err
 }
 
 func (w *Walker) Close() error {
 	return nil
 }
 
-func (w *Walker) Mine(input lattice.Input, dt lattice.DataType, rptr miners.Reporter) error {
-	err := w.Init(input, dt)
+func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
+	err := w.Init(dt)
 	if err != nil {
 		return err
 	}
+	errors.Logf("INFO", "finished initialization, starting walk")
 	samples, terminate, errs := w.Walk(w)
 	samples = w.RejectingWalk(samples, terminate)
 	loop: for {

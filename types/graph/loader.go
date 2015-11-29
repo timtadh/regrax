@@ -35,8 +35,6 @@ func (self ErrorList) Error() string {
 	return "Errors [" + strings.Join(s, ", ") + "]"
 }
 
-type MakeLoader func(*Graph) lattice.Loader
-
 type Graph struct {
 	MinEdges, MaxEdges, MinVertices, MaxVertices int
 	G *goiso.Graph
@@ -47,11 +45,10 @@ type Graph struct {
 	Children fs2.MultiMap
 	ChildCount bytes_int.MultiMap
 	FrequentVertices []lattice.Node
-	makeLoader MakeLoader
 	config *config.Config
 }
 
-func NewGraph(config *config.Config, makeLoader MakeLoader, minE, maxE, minV, maxV int) (g *Graph, err error) {
+func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err error) {
 	nodeAttrs, err := config.IntJsonMultiMap("graph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -82,10 +79,13 @@ func NewGraph(config *config.Config, makeLoader MakeLoader, minE, maxE, minV, ma
 		ParentCount: parentCount,
 		Children: children,
 		ChildCount: childCount,
-		makeLoader: makeLoader,
 		config: config,
 	}
 	return g, nil
+}
+
+func (g *Graph) Singletons() ([]lattice.Node, error) {
+	return g.FrequentVertices, nil
 }
 
 func (g *Graph) Support() int {
@@ -112,25 +112,36 @@ func (g *Graph) TooLarge(node lattice.Node) bool {
 	return E > g.MaxEdges || V > g.MaxVertices
 }
 
-func (g *Graph) Loader() lattice.Loader {
-	return g.makeLoader(g)
-}
-
 func (g *Graph) Close() error {
 	return nil
 }
+
 
 type VegLoader struct {
 	g *Graph
 }
 
-func NewVegLoader(g *Graph) lattice.Loader {
-	return &VegLoader{
+func NewVegLoader(config *config.Config, minE, maxE, minV, maxV int) (lattice.Loader, error) {
+	g, err := NewGraph(config, minE, maxE, minV, maxV)
+	if err != nil {
+		return nil, err
+	}
+	v := &VegLoader{
 		g: g,
 	}
+	return v, nil
 }
 
-func (v *VegLoader) StartingPoints(input lattice.Input) (nodes []lattice.Node, err error) {
+func (v *VegLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
+	start, err := v.startingPoints(input)
+	if err != nil {
+		return nil, err
+	}
+	v.g.FrequentVertices = start
+	return v.g, nil
+}
+
+func (v *VegLoader) startingPoints(input lattice.Input) (nodes []lattice.Node, err error) {
 	G, err := v.loadGraph(input)
 	if err != nil {
 		return nil, err
@@ -170,8 +181,6 @@ func (v *VegLoader) StartingPoints(input lattice.Input) (nodes []lattice.Node, e
 	if err != nil {
 		return nil, err
 	}
-
-	v.g.FrequentVertices = nodes
 
 	return nodes, nil
 }
