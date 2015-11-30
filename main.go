@@ -543,15 +543,13 @@ func main() {
 	}
 	defer dt.Close()
 
-	fr, err := reporters.NewFileReporter(conf, fmtr(dt))
+	fr, err := reporters.NewFile(conf, fmtr(dt))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	rptr := &reporters.ChainReporter{[]miners.Reporter{
-		&reporters.LoggingReporter{}, fr,
-	}}
+	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, fr}}
 	defer rptr.Close()
 
 	errors.Logf("INFO", "loaded data, about to start mining")

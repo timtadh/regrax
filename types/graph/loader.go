@@ -241,7 +241,7 @@ func (v *VegLoader) loadVertex(g *goiso.Graph, vids types.Map, data []byte) (err
 		return err
 	}
 	if v.g.NodeAttrs != nil {
-		err = v.g.NodeAttrs.Add(int32(vertex.Idx), obj)
+		err = v.g.NodeAttrs.Add(int32(vertex.Id), obj)
 		if err != nil {
 			return err
 		}

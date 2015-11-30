@@ -15,7 +15,7 @@ import (
 )
 
 
-type FileReporter struct {
+type File struct {
 	config *config.Config
 	fmt lattice.Formatter
 	patterns io.WriteCloser
@@ -23,7 +23,7 @@ type FileReporter struct {
 }
 
 
-func NewFileReporter(c *config.Config, fmt lattice.Formatter) (*FileReporter, error) {
+func NewFile(c *config.Config, fmt lattice.Formatter) (*File, error) {
 	patterns, err := os.Create(c.OutputFile("patterns" + fmt.FileExt()))
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func NewFileReporter(c *config.Config, fmt lattice.Formatter) (*FileReporter, er
 	if err != nil {
 		return nil, err
 	}
-	r := &FileReporter{
+	r := &File{
 		config: c,
 		fmt: fmt,
 		patterns: patterns,
@@ -41,7 +41,7 @@ func NewFileReporter(c *config.Config, fmt lattice.Formatter) (*FileReporter, er
 	return r, nil
 }
 
-func (r *FileReporter) Report(n lattice.Node) error {
+func (r *File) Report(n lattice.Node) error {
 	name := r.fmt.PatternName(n)
 	_, err := fmt.Fprintf(r.patterns, "\\\\ %s\n\n%s\n", name, r.fmt.FormatPattern(n))
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *FileReporter) Report(n lattice.Node) error {
 	return nil
 }
 
-func (r *FileReporter) Close() error {
+func (r *File) Close() error {
 	err := r.patterns.Close()
 	if err != nil {
 		return err

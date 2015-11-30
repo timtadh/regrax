@@ -9,15 +9,15 @@ import (
 )
 
 
-type LoggingReporter struct {
+type Log struct {
 }
 
-func (lr *LoggingReporter) Report(n lattice.Node) error {
+func (lr *Log) Report(n lattice.Node) error {
 	errors.Logf("INFO", "sample %v", n)
 	return nil
 }
 
-func (lr *LoggingReporter) Close() error {
+func (lr *Log) Close() error {
 	return nil
 }
 

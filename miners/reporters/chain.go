@@ -9,11 +9,11 @@ import (
 )
 
 
-type ChainReporter struct {
+type Chain struct {
 	Reporters []miners.Reporter
 }
 
-func (r *ChainReporter) Report(n lattice.Node) error {
+func (r *Chain) Report(n lattice.Node) error {
 	for _, rpt := range r.Reporters {
 		err := rpt.Report(n)
 		if err != nil {
@@ -23,7 +23,7 @@ func (r *ChainReporter) Report(n lattice.Node) error {
 	return nil
 }
 
-func (r *ChainReporter) Close() error {
+func (r *Chain) Close() error {
 	for _, rpt := range r.Reporters {
 		err := rpt.Close()
 		if err != nil {
