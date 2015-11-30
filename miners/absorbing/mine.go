@@ -11,7 +11,9 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/walker"
+	"github.com/timtadh/sfp/miners/reporters"
 )
 
 
@@ -26,41 +28,18 @@ type Sparse struct {
 	Entries []SparseEntry
 }
 
-/*
-func (m *Miner) Mine(input lattice.Input, dt lattice.DataType) error {
-	err := m.init(input, dt)
-	if err != nil {
-		return err
-	}
-	for s := 0; s < m.config.Samples; s++ {
-		sampled, err := m.rejectingWalk(dt)
-		if err != nil {
-			return err
-		}
-		errors.Logf("INFO", "sample %v %v", sampled, sampled.Label())
-		Q, R, u, err := m.PrMatrices(sampled, dt)
-		if err != nil {
-			return err
-		}
-		errors.Logf("INFO", "matrix Q %v", Q)
-		errors.Logf("INFO", "matrix R %v", R)
-		errors.Logf("INFO", "matrix u %v", u)
-		pr, err := m.SelectionProbability(Q, R, u)
-		if err != nil {
-			return err
-		}
-		errors.Logf("INFO", "sel pr %v", pr)
-		errors.Logf("INFO", "")
-	}
-	return nil
-}*/
+type Walker struct {
+	walker.Walker
+	Errors chan error
+}
 
-func PrMatrices(w *walker.Walker, n lattice.Node) (Q, R, u *Sparse, err error) {
+
+func (w *Walker) PrMatrices(n lattice.Node) (Q, R, u *Sparse, err error) {
 	lat, err := lattice.MakeLattice(n)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	p, err := probabilities(w, lat)
+	p, err := w.probabilities(lat)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -104,7 +83,7 @@ func (m *Sparse) Dense() *matrix.DenseMatrix {
 	return d
 }
 
-func SelectionProbability(w *walker.Walker, Q_, R_, u_ *Sparse) (float64, error) {
+func (w *Walker) SelectionProbability(Q_, R_, u_ *Sparse) (float64, error) {
 	if Q_.Rows == 0 && Q_.Cols == 0 {
 		return 1.0/float64(len(w.Start)), nil
 	}
@@ -135,7 +114,7 @@ func SelectionProbability(w *walker.Walker, Q_, R_, u_ *Sparse) (float64, error)
 	return x, nil
 }
 
-func probabilities(w *walker.Walker, lat *lattice.Lattice) ([]int, error) {
+func (w *Walker) probabilities(lat *lattice.Lattice) ([]int, error) {
 	P := make([]int, len(lat.V))
 	for i, node := range lat.V {
 		count, err := node.ChildCount()
@@ -154,15 +133,23 @@ func probabilities(w *walker.Walker, lat *lattice.Lattice) ([]int, error) {
 	return P, nil
 }
 
-func RejectingWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
+func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
+	w.Errors = make(chan error)
+	mr, err := NewMatrixReporter(w, w.Errors)
+	if err != nil {
+		return err
+	}
+	return (w.Walker).Mine(dt, &reporters.Chain{[]miners.Reporter{rptr,mr}})
+}
+
+func (w *Walker) RejectingWalk(wlkr *walker.Walker) (chan lattice.Node, chan bool, chan error) {
 	samples := make(chan lattice.Node)
 	terminate := make(chan bool)
-	errors := make(chan error)
 	go func() {
 		loop: for {
-			sampled, err := walk(w)
+			sampled, err := w.walk(wlkr)
 			if err != nil {
-				errors<-err
+				w.Errors<-err
 				break loop
 			}
 			select {
@@ -172,13 +159,13 @@ func RejectingWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) 
 			}
 		}
 		close(samples)
-		close(errors)
+		close(w.Errors)
 		close(terminate)
 	}()
-	return samples, terminate, errors
+	return samples, terminate, w.Errors
 }
 
-func walk(w *walker.Walker) (max lattice.Node, err error) {
+func (w *Walker) walk(wlkr *walker.Walker) (max lattice.Node, err error) {
 	cur, _ := uniform(w.Start, nil)
 	// errors.Logf("DEBUG", "start %v", cur)
 	next, err := uniform(cur.Children())

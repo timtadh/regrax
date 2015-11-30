@@ -8,12 +8,12 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/fs2"
 	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
@@ -286,7 +286,7 @@ func (n *Node) Children() (nodes []lattice.Node, err error) {
 	return nodes, n.cache(n.dt.ChildCount, n.dt.Children, n.label, nodes)
 }
 
-func (n *Node) cache(count bytes_int.MultiMap, cache fs2.MultiMap, key []byte, nodes []lattice.Node) (err error) {
+func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
 	if has, err := count.Has(key); err != nil {
 		return err
 	} else if has {
@@ -309,7 +309,7 @@ func (n *Node) cache(count bytes_int.MultiMap, cache fs2.MultiMap, key []byte, n
 	return nil
 }
 
-func (n *Node) cached(count bytes_int.MultiMap, cache fs2.MultiMap, key []byte) (nodes []lattice.Node, has bool, err error) {
+func (n *Node) cached(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte) (nodes []lattice.Node, has bool, err error) {
 	if has, err := count.Has(key); err != nil {
 		return nil, false, err
 	} else if !has {

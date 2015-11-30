@@ -12,13 +12,13 @@ import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/types"
-	"github.com/timtadh/fs2"
 	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
 	"github.com/timtadh/sfp/stores/int_json"
@@ -40,9 +40,9 @@ type Graph struct {
 	G *goiso.Graph
 	NodeAttrs int_json.MultiMap
 	Embeddings bytes_subgraph.MultiMap
-	Parents fs2.MultiMap
+	Parents bytes_bytes.MultiMap
 	ParentCount bytes_int.MultiMap
-	Children fs2.MultiMap
+	Children bytes_bytes.MultiMap
 	ChildCount bytes_int.MultiMap
 	FrequentVertices []lattice.Node
 	config *config.Config

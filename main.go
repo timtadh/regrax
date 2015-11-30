@@ -340,7 +340,8 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := walker.NewWalker(conf, absorbing.RejectingWalk)
+	miner := &absorbing.Walker{}
+	miner.Walker = *walker.NewWalker(conf, miner.RejectingWalk)
 	return miner, args
 }
 

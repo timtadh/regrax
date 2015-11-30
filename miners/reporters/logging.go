@@ -10,10 +10,12 @@ import (
 
 
 type Log struct {
+	count int
 }
 
 func (lr *Log) Report(n lattice.Node) error {
-	errors.Logf("INFO", "sample %v", n)
+	lr.count++
+	errors.Logf("INFO", "sample %v %v", lr.count, n)
 	return nil
 }
 
