@@ -19,12 +19,11 @@ import (
 	"github.com/timtadh/sfp/stores/ints_ints"
 )
 
-
 type Config struct {
-	Cache string
-	Output string
+	Cache            string
+	Output           string
 	Support, Samples int
-	AsyncTasks sync.WaitGroup
+	AsyncTasks       sync.WaitGroup
 }
 
 func (c *Config) CacheFile(name string) string {
@@ -35,7 +34,7 @@ func (c *Config) OutputFile(name string) string {
 	return filepath.Join(c.Output, name)
 }
 
-func (c *Config) MultiMap(name string,) (bytes_bytes.MultiMap, error) {
+func (c *Config) MultiMap(name string) (bytes_bytes.MultiMap, error) {
 	if c.Cache == "" {
 		return bytes_bytes.AnonBpTree()
 	} else {
@@ -50,7 +49,7 @@ func (c *Config) BytesSubgraphMultiMap(
 	if c.Cache == "" {
 		return bytes_subgraph.AnonBpTree(bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
 	} else {
-		return bytes_subgraph.NewBpTree(c.CacheFile(name + ".bptree"), bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
+		return bytes_subgraph.NewBpTree(c.CacheFile(name+".bptree"), bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
 	}
 }
 

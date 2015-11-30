@@ -14,4 +14,3 @@ func SerializeInt32(i int32) []byte {
 func DeserializeInt32(bytes []byte) int32 {
 	return int32(binary.BigEndian.Uint32(bytes))
 }
-

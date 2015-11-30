@@ -9,7 +9,7 @@ type Lattice struct {
 	E []Edge
 }
 
-type Input func()(reader io.Reader, closer func())
+type Input func() (reader io.Reader, closer func())
 
 type Loader interface {
 	Load(input Input) (DataType, error)
@@ -59,4 +59,4 @@ type SupportMetric interface {
 	Supported([]Embedding) ([]Embedding, error)
 }
 
-type NodeIterator func()(Node, error, NodeIterator)
+type NodeIterator func() (Node, error, NodeIterator)

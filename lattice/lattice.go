@@ -1,7 +1,6 @@
 package lattice
 
-import (
-)
+import ()
 
 func MakeLattice(n Node) (*Lattice, error) {
 	lat, err := n.Lattice()
@@ -19,8 +18,8 @@ func MakeLattice(n Node) (*Lattice, error) {
 func lattice(node Node) (*Lattice, error) {
 	pop := func(queue []Node) (Node, []Node) {
 		n := queue[0]
-		copy(queue[0:len(queue)-1],queue[1:len(queue)])
-		queue = queue[0:len(queue)-1]
+		copy(queue[0:len(queue)-1], queue[1:len(queue)])
+		queue = queue[0 : len(queue)-1]
 		return n, queue
 	}
 	queue := make([]Node, 0, 10)
@@ -45,10 +44,10 @@ func lattice(node Node) (*Lattice, error) {
 		}
 	}
 	lattice := make([]Node, 0, len(rlattice))
-	labels := make(map[string]int,len(lattice))
-	for i := len(rlattice)-1; i >= 0; i-- {
+	labels := make(map[string]int, len(lattice))
+	for i := len(rlattice) - 1; i >= 0; i-- {
 		lattice = append(lattice, rlattice[i])
-		labels[string(lattice[len(lattice)-1].Label())] = len(lattice)-1
+		labels[string(lattice[len(lattice)-1].Label())] = len(lattice) - 1
 	}
 	edges := make([]Edge, 0, len(lattice)*2)
 	for i, n := range lattice {

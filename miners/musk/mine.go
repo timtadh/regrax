@@ -14,14 +14,14 @@ import (
 	"github.com/timtadh/sfp/stats"
 )
 
-
 func MaxUniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
 	samples := make(chan lattice.Node)
 	terminate := make(chan bool)
 	errs := make(chan error)
 	go func() {
 		cur := w.Start[rand.Intn(len(w.Start))]
-		loop: for {
+	loop:
+		for {
 			var sampled lattice.Node = nil
 			for sampled == nil {
 				if ismax, err := cur.Maximal(); err != nil {
@@ -44,7 +44,7 @@ func MaxUniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error)
 			select {
 			case <-terminate:
 				break loop
-			case samples<-sampled:
+			case samples <- sampled:
 			}
 		}
 		close(samples)
@@ -111,11 +111,10 @@ func weight(w *walker.Walker, u, v lattice.Node) (float64, error) {
 	if umax && vmax {
 		return 0, nil
 	} else if !umax && vmax {
-		return 1.0/float64(vdeg), nil
+		return 1.0 / float64(vdeg), nil
 	} else if umax && !vmax {
-		return 1.0/float64(udeg), nil
+		return 1.0 / float64(udeg), nil
 	} else {
 		return 1.0, nil
 	}
 }
-

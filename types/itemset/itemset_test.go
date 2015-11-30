@@ -12,27 +12,26 @@ import (
 	"github.com/timtadh/sfp/config"
 )
 
-
 var items = [][]int32{
 	{0},
-	{1,2,3},
-	{1,2,3},
-	{1,2,3},
-	{2,3,4},
-	{2,3,4},
-	{2,3,4},
-	{7,8,9,10},
-	{7,8,9,11},
-	{7,8,9,12},
-	{1,12},
-	{1,11},
-	{1,10},
-	{1,8,10},
-	{1,9,11},
-	{1,4,12},
-	{1,12,7},
-	{1,11,8},
-	{1,10,12},
+	{1, 2, 3},
+	{1, 2, 3},
+	{1, 2, 3},
+	{2, 3, 4},
+	{2, 3, 4},
+	{2, 3, 4},
+	{7, 8, 9, 10},
+	{7, 8, 9, 11},
+	{7, 8, 9, 12},
+	{1, 12},
+	{1, 11},
+	{1, 10},
+	{1, 8, 10},
+	{1, 9, 11},
+	{1, 4, 12},
+	{1, 12, 7},
+	{1, 11, 8},
+	{1, 10, 12},
 }
 
 func iterItems(items [][]int32) itemsIter {
@@ -94,8 +93,8 @@ func TestKids_1(x *testing.T) {
 	t.Nil(err)
 	t.True(len(kids) == 1, "len(kids) %d != 1", len(kids))
 	t.True(kids[0].(*Node).items.Equals(
-	       set.FromSlice([]types.Hashable{types.Int32(1), types.Int32(2),
-	                                      types.Int32(3)})))
+		set.FromSlice([]types.Hashable{types.Int32(1), types.Int32(2),
+			types.Int32(3)})))
 }
 
 func TestParents_123(x *testing.T) {
@@ -103,7 +102,7 @@ func TestParents_123(x *testing.T) {
 	_, dt, sup := startingPoints(t)
 	n123 := &Node{
 		items: set.FromSlice([]types.Hashable{types.Int32(1), types.Int32(2), types.Int32(3)}),
-		txs: []int32{1,2,3},
+		txs:   []int32{1, 2, 3},
 	}
 	parents, err := n123.Parents(sup, dt)
 	t.Nil(err, "%v", err)
@@ -117,4 +116,3 @@ func TestParents_123(x *testing.T) {
 		t.True(has, "%v not in %v", p.(*Node).items, expected)
 	}
 }
-

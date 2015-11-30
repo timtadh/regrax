@@ -8,7 +8,6 @@ import (
 	"github.com/timtadh/sfp/lattice"
 )
 
-
 type Log struct {
 	count int
 }
@@ -22,4 +21,3 @@ func (lr *Log) Report(n lattice.Node) error {
 func (lr *Log) Close() error {
 	return nil
 }
-

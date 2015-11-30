@@ -1,13 +1,11 @@
 package reporters
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners"
 )
-
 
 type Chain struct {
 	Reporters []miners.Reporter
@@ -32,6 +30,3 @@ func (r *Chain) Close() error {
 	}
 	return nil
 }
-
-
-

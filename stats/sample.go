@@ -7,7 +7,6 @@ import (
 	"os"
 )
 
-
 func init() {
 	if urandom, err := os.Open("/dev/urandom"); err != nil {
 		panic(err)
@@ -44,7 +43,7 @@ func Sample(size, populationSize int) (sample []int) {
 	for i := 0; i < size; i++ {
 		j := rand.Intn(populationSize)
 		for in(j, sample) {
-			j = rand.Intn(populationSize) 
+			j = rand.Intn(populationSize)
 		}
 		sample = append(sample, j)
 	}
@@ -152,4 +151,3 @@ func Permutations(size int) (results [][]int) {
 	}
 	return results
 }
-

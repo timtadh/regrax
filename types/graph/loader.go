@@ -24,7 +24,6 @@ import (
 	"github.com/timtadh/sfp/stores/int_json"
 )
 
-
 type ErrorList []error
 
 func (self ErrorList) Error() string {
@@ -37,15 +36,15 @@ func (self ErrorList) Error() string {
 
 type Graph struct {
 	MinEdges, MaxEdges, MinVertices, MaxVertices int
-	G *goiso.Graph
-	NodeAttrs int_json.MultiMap
-	Embeddings bytes_subgraph.MultiMap
-	Parents bytes_bytes.MultiMap
-	ParentCount bytes_int.MultiMap
-	Children bytes_bytes.MultiMap
-	ChildCount bytes_int.MultiMap
-	FrequentVertices []lattice.Node
-	config *config.Config
+	G                                            *goiso.Graph
+	NodeAttrs                                    int_json.MultiMap
+	Embeddings                                   bytes_subgraph.MultiMap
+	Parents                                      bytes_bytes.MultiMap
+	ParentCount                                  bytes_int.MultiMap
+	Children                                     bytes_bytes.MultiMap
+	ChildCount                                   bytes_int.MultiMap
+	FrequentVertices                             []lattice.Node
+	config                                       *config.Config
 }
 
 func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err error) {
@@ -70,16 +69,16 @@ func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err 
 		return nil, err
 	}
 	g = &Graph{
-		MinEdges: minE,
-		MaxEdges: maxE,
+		MinEdges:    minE,
+		MaxEdges:    maxE,
 		MinVertices: minV,
 		MaxVertices: maxV,
-		NodeAttrs: nodeAttrs,
-		Parents: parents,
+		NodeAttrs:   nodeAttrs,
+		Parents:     parents,
 		ParentCount: parentCount,
-		Children: children,
-		ChildCount: childCount,
-		config: config,
+		Children:    children,
+		ChildCount:  childCount,
+		config:      config,
 	}
 	return g, nil
 }
@@ -122,7 +121,6 @@ func (g *Graph) Close() error {
 	g.NodeAttrs.Close()
 	return nil
 }
-
 
 type VegLoader struct {
 	g *Graph
@@ -326,4 +324,3 @@ func graphSize(input lattice.Input) (V, E int, err error) {
 	}
 	return V, E, nil
 }
-

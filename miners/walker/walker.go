@@ -1,7 +1,6 @@
 package walker
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -12,7 +11,6 @@ import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners"
 )
-
 
 type Walk func(w *Walker) (chan lattice.Node, chan bool, chan error)
 
@@ -27,7 +25,7 @@ type Walker struct {
 func NewWalker(conf *config.Config, walk Walk) *Walker {
 	return &Walker{
 		Config: conf,
-		Walk: walk,
+		Walk:   walk,
 	}
 }
 
@@ -42,10 +40,10 @@ func (w *Walker) Init(dt lattice.DataType, rptr miners.Reporter) (err error) {
 func (w *Walker) Close() error {
 	errors := make(chan error)
 	go func() {
-		errors<-w.Dt.Close()
+		errors <- w.Dt.Close()
 	}()
 	go func() {
-		errors<-w.Rptr.Close()
+		errors <- w.Rptr.Close()
 	}()
 	for i := 0; i < 2; i++ {
 		err := <-errors
@@ -64,7 +62,8 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 	errors.Logf("INFO", "finished initialization, starting walk")
 	samples, terminate, errs := w.Walk(w)
 	samples = w.RejectingWalk(samples, terminate)
-	loop: for {
+loop:
+	for {
 		select {
 		case sampled, open := <-samples:
 			if !open {
@@ -83,13 +82,13 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 	return nil
 }
 
-func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) (chan lattice.Node) {
+func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) chan lattice.Node {
 	nodes := make(chan lattice.Node)
 	go func() {
 		i := 0
 		for sampled := range samples {
 			if w.Dt.Acceptable(sampled) {
-				nodes<-sampled
+				nodes <- sampled
 				i++
 			} else {
 				// errors.Logf("INFO", "rejected %v", sampled)
@@ -98,7 +97,7 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) (
 				break
 			}
 		}
-		terminate<-true
+		terminate <- true
 		<-samples
 		close(nodes)
 	}()

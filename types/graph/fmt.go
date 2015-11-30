@@ -8,7 +8,6 @@ import (
 	"github.com/timtadh/sfp/lattice"
 )
 
-
 type Formatter struct {
 	g *Graph
 }
@@ -53,5 +52,3 @@ func (f *Formatter) FormatEmbeddings(node lattice.Node) []string {
 	}
 	return embs
 }
-
-

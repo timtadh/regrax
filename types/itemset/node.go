@@ -17,11 +17,10 @@ import (
 	"github.com/timtadh/sfp/stores/ints_ints"
 )
 
-
 type Node struct {
-	dt *ItemSets
+	dt    *ItemSets
 	items *set.SortedSet
-	txs []int32
+	txs   []int32
 }
 
 type Embedding struct {
@@ -117,7 +116,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 		ctxs := int32sToSet(n.txs)
 		var txs types.Set
 		for item, next := items.Items()(); next != nil; item, next = next() {
-			mytxs := set.NewSortedSet(len(n.txs)+10)
+			mytxs := set.NewSortedSet(len(n.txs) + 10)
 			for _, tx := range n.dt.InvertedIndex[item.(types.Int32)] {
 				if !ctxs.Has(types.Int32(tx)) {
 					mytxs.Add(types.Int32(tx))
@@ -182,9 +181,9 @@ func (n *Node) Children() ([]lattice.Node, error) {
 			items := n.items.Copy()
 			items.Add(types.Int32(item))
 			node := &Node{
-				dt: n.dt,
+				dt:    n.dt,
 				items: items,
-				txs: txs,
+				txs:   txs,
 			}
 			err := node.Save()
 			if err != nil {
@@ -293,7 +292,7 @@ func (n *Node) cached(m ints_ints.MultiMap, key []int32) (nodes []lattice.Node, 
 
 func (n *Node) Label() []byte {
 	size := uint32(n.items.Size())
-	bytes := make([]byte, 4*(size + 1))
+	bytes := make([]byte, 4*(size+1))
 	binary.BigEndian.PutUint32(bytes[0:4], size)
 	s := 4
 	e := s + 4
@@ -308,7 +307,7 @@ func (n *Node) Label() []byte {
 func (n *Node) Embeddings() ([]lattice.Embedding, error) {
 	embeddings := make([]lattice.Embedding, 0, len(n.txs))
 	for _, tx := range n.txs {
-		embeddings = append(embeddings, &Embedding{tx:tx})
+		embeddings = append(embeddings, &Embedding{tx: tx})
 	}
 	return embeddings, nil
 }
@@ -320,4 +319,3 @@ func (n *Node) Lattice() (*lattice.Lattice, error) {
 func (e *Embedding) Components() ([]int, error) {
 	return []int{int(e.tx)}, nil
 }
-

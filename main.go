@@ -52,10 +52,9 @@ import (
 	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/miners/unisorb"
 	"github.com/timtadh/sfp/miners/walker"
-	"github.com/timtadh/sfp/types/itemset"
 	"github.com/timtadh/sfp/types/graph"
+	"github.com/timtadh/sfp/types/itemset"
 )
-
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -308,7 +307,7 @@ func AssertFile(fname string) string {
 func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hl:", []string{ "help", "loader=", "min-items=", "max-items="},
+		"hl:", []string{"help", "loader=", "min-items=", "max-items="},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -336,7 +335,8 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 
 	var loader lattice.Loader
 	switch loaderType {
-	case "int": loader, err = itemset.NewIntLoader(conf, min, max)
+	case "int":
+		loader, err = itemset.NewIntLoader(conf, min, max)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
@@ -353,7 +353,7 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hl:", []string{ "help", "loader=",
+		"hl:", []string{"help", "loader=",
 			"min-edges=",
 			"max-edges=",
 			"min-vertices=",
@@ -392,7 +392,8 @@ func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice
 
 	var loader lattice.Loader
 	switch loaderType {
-	case "veg": loader, err = graph.NewVegLoader(conf, minE, maxE, minV, maxV)
+	case "veg":
+		loader, err = graph.NewVegLoader(conf, minE, maxE, minV, maxV)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
@@ -510,8 +511,10 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 
 func types(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 	switch argv[0] {
-	case "itemset": return itemsetType(argv[1:], conf)
-	case "graph": return graphType(argv[1:], conf)
+	case "itemset":
+		return itemsetType(argv[1:], conf)
+	case "graph":
+		return graphType(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown data type '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])
@@ -521,10 +524,14 @@ func types(argv []string, conf *config.Config) (lattice.Loader, func(lattice.Dat
 
 func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
 	switch argv[0] {
-	case "absorbing": return absorbingMode(argv[1:], conf)
-	case "unisorb": return unisorbMode(argv[1:], conf)
-	case "musk": return muskMode(argv[1:], conf)
-	case "ospace": return ospaceMode(argv[1:], conf)
+	case "absorbing":
+		return absorbingMode(argv[1:], conf)
+	case "unisorb":
+		return unisorbMode(argv[1:], conf)
+	case "musk":
+		return muskMode(argv[1:], conf)
+	case "ospace":
+		return ospaceMode(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown mining mode '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])
@@ -593,8 +600,8 @@ func main() {
 	}
 
 	conf := &config.Config{
-		Cache: cache,
-		Output: output,
+		Cache:   cache,
+		Output:  output,
 		Support: support,
 		Samples: samples,
 	}
@@ -654,4 +661,3 @@ func main() {
 	}
 	os.Exit(code)
 }
-

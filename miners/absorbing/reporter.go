@@ -15,15 +15,13 @@ import (
 	"github.com/timtadh/sfp/lattice"
 )
 
-
 type MatrixReporter struct {
-	w *Walker
+	w        *Walker
 	matrices io.WriteCloser
-	prs io.WriteCloser
-	reports chan lattice.Node
-	errors chan error
+	prs      io.WriteCloser
+	reports  chan lattice.Node
+	errors   chan error
 }
-
 
 func NewMatrixReporter(w *Walker, errors chan error) (*MatrixReporter, error) {
 	matrices, err := os.Create(w.Config.OutputFile("pr-matrices.jsons"))
@@ -35,18 +33,18 @@ func NewMatrixReporter(w *Walker, errors chan error) (*MatrixReporter, error) {
 		return nil, err
 	}
 	r := &MatrixReporter{
-		w: w,
+		w:        w,
 		matrices: matrices,
-		prs: prs,
-		reports: make(chan lattice.Node),
-		errors: errors,
+		prs:      prs,
+		reports:  make(chan lattice.Node),
+		errors:   errors,
 	}
 	go r.processReports()
 	return r, nil
 }
 
 func (r *MatrixReporter) Report(n lattice.Node) error {
-	r.reports<-n
+	r.reports <- n
 	return nil
 }
 
@@ -56,7 +54,7 @@ func (r *MatrixReporter) processReports() {
 		err := r.report(n)
 		if err != nil {
 			errors.Logf("ERROR", "%v", err)
-			r.errors<-err
+			r.errors <- err
 			break
 		}
 	}
@@ -69,9 +67,9 @@ func (r *MatrixReporter) report(n lattice.Node) error {
 		return err
 	}
 	bytes, err := json.Marshal(map[string]interface{}{
-		"Q": Q,
-		"R": R,
-		"u": u,
+		"Q":              Q,
+		"R":              R,
+		"u":              u,
 		"startingPoints": 1,
 	})
 	if err != nil {
@@ -111,6 +109,3 @@ func (r *MatrixReporter) Close() error {
 	}
 	return nil
 }
-
-
-

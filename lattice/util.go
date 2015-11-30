@@ -1,6 +1,5 @@
 package lattice
 
-
 func Do(run func(int, DataType) (NodeIterator, error), support int, dt DataType, do func(Node) error) error {
 	it, err := run(support, dt)
 	if err != nil {
@@ -41,4 +40,3 @@ func NodeIteratorFromSlice(nodes []Node) (it NodeIterator, err error) {
 	}
 	return it, nil
 }
-

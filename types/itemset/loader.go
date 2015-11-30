@@ -19,7 +19,6 @@ import (
 	"github.com/timtadh/sfp/stores/ints_ints"
 )
 
-
 type MakeLoader func(*ItemSets) lattice.Loader
 type itemsIter func(func(tx, item int32) error) error
 
@@ -27,21 +26,21 @@ type index [][]int32
 
 type ItemSets struct {
 	MinItems, MaxItems int
-	Index index
-	InvertedIndex index
-	Parents ints_ints.MultiMap
-	ParentCount ints_int.MultiMap
-	Children ints_ints.MultiMap
-	ChildCount ints_int.MultiMap
-	Embeddings ints_ints.MultiMap
-	FrequentItems []lattice.Node
-	Empty lattice.Node
-	config *config.Config
+	Index              index
+	InvertedIndex      index
+	Parents            ints_ints.MultiMap
+	ParentCount        ints_int.MultiMap
+	Children           ints_ints.MultiMap
+	ChildCount         ints_int.MultiMap
+	Embeddings         ints_ints.MultiMap
+	FrequentItems      []lattice.Node
+	Empty              lattice.Node
+	config             *config.Config
 }
 
 func (i index) grow(size int32) index {
 	newcap := len(i) + 1
-	for newcap - 1 <= int(size) {
+	for newcap-1 <= int(size) {
 		if len(i) < 10000 {
 			newcap *= 2
 		} else {
@@ -84,14 +83,14 @@ func NewItemSets(config *config.Config, min, max int) (i *ItemSets, err error) {
 		return nil, err
 	}
 	i = &ItemSets{
-		MinItems: min,
-		MaxItems: max,
-		Parents: parents,
+		MinItems:    min,
+		MaxItems:    max,
+		Parents:     parents,
 		ParentCount: parentCount,
-		Children: children,
-		ChildCount: childCount,
-		Embeddings: embeddings,
-		config: config,
+		Children:    children,
+		ChildCount:  childCount,
+		Embeddings:  embeddings,
+		config:      config,
 	}
 	return i, nil
 }
@@ -126,7 +125,6 @@ func (i *ItemSets) Close() error {
 	return nil
 }
 
-
 type IntLoader struct {
 	sets *ItemSets
 }
@@ -143,7 +141,7 @@ func NewIntLoader(config *config.Config, min, max int) (lattice.Loader, error) {
 }
 
 func (l *IntLoader) max(items itemsIter) (max_tx, max_item int32, err error) {
-	err = items(func (tx, item int32) error {
+	err = items(func(tx, item int32) error {
 		max_tx++
 		if item > max_item {
 			max_item = item
@@ -161,8 +159,8 @@ func (l *IntLoader) indices(items itemsIter) (idx, inv index, err error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	counts := make([]int, max_item + 1)
-	err = items(func (tx, item int32) error {
+	counts := make([]int, max_item+1)
+	err = items(func(tx, item int32) error {
 		counts[item]++
 		return nil
 	})
@@ -170,9 +168,9 @@ func (l *IntLoader) indices(items itemsIter) (idx, inv index, err error) {
 		return nil, nil, err
 	}
 	errors.Logf("DEBUG", "max tx : %v, max item : %v", max_tx, max_item)
-	idx = make(index, max_tx + 1)
-	inv = make(index, max_item + 1)
-	err = items(func (tx, item int32) error {
+	idx = make(index, max_tx+1)
+	inv = make(index, max_item+1)
+	err = items(func(tx, item int32) error {
 		if counts[item] > l.sets.Support() {
 			idx = idx.add(tx, item)
 			inv = inv.add(item, tx)
@@ -192,7 +190,7 @@ func (l *IntLoader) items(input lattice.Input) func(do func(tx, item int32) erro
 		scanner := bufio.NewScanner(in)
 		tx := int32(0)
 		for scanner.Scan() {
-			if tx % 1000 == 0 {
+			if tx%1000 == 0 {
 				errors.Logf("INFO", "line %d", tx)
 			}
 			line := scanner.Text()
@@ -242,13 +240,12 @@ func (l *IntLoader) startingPoints(items itemsIter) ([]lattice.Node, error) {
 		if len(txs) >= l.sets.Support() {
 			errors.Logf("INFO", "item %d len(txs) %d", item, len(txs))
 			n := &Node{
-				dt: l.sets,
+				dt:    l.sets,
 				items: set.FromSlice([]types.Hashable{types.Int32(item)}),
-				txs: txs,
+				txs:   txs,
 			}
 			nodes = append(nodes, n)
 		}
 	}
 	return nodes, nil
 }
-

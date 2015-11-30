@@ -17,12 +17,10 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
-
-
 type Node struct {
-	dt *Graph
+	dt    *Graph
 	label []byte
-	sgs SubGraphs
+	sgs   SubGraphs
 }
 
 type Embedding struct {
@@ -74,7 +72,6 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 	}
 	return parts
 }
-
 
 func (n *Node) Save() error {
 	if has, err := n.dt.Embeddings.Has(n.label); err != nil {
@@ -201,7 +198,7 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 		}
 	}
 	// for i, g := range graphs {
-		// errors.Logf("DEBUG", "graph %v %v", i, g.Label())
+	// errors.Logf("DEBUG", "graph %v %v", i, g.Label())
 	// }
 	startSg := dt.G.VertexSubGraph(cur.V[0].Id)
 	startLabel := startSg.ShortLabel()
@@ -416,4 +413,3 @@ func (n *Node) Lattice() (*lattice.Lattice, error) {
 func (e *Embedding) Components() ([]int, error) {
 	return nil, errors.Errorf("unimplemented")
 }
-

@@ -7,7 +7,7 @@ import (
 
 func Identity(in []byte) []byte { return in }
 
-func DeserializeSubGraph(g *goiso.Graph) func([]byte) *goiso.SubGraph{
+func DeserializeSubGraph(g *goiso.Graph) func([]byte) *goiso.SubGraph {
 	return func(bytes []byte) *goiso.SubGraph {
 		return goiso.DeserializeSubGraph(g, bytes)
 	}
@@ -16,4 +16,3 @@ func DeserializeSubGraph(g *goiso.Graph) func([]byte) *goiso.SubGraph{
 func SerializeSubGraph(sg *goiso.SubGraph) []byte {
 	return sg.Serialize()
 }
-

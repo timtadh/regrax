@@ -1,7 +1,6 @@
 package graph
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -114,5 +113,3 @@ func intersect(sets []*set.SortedSet) *set.SortedSet {
 	}
 	return s
 }
-
-

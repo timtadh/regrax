@@ -6,22 +6,19 @@ import (
 	"os"
 )
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 )
 
-
 type File struct {
-	config *config.Config
-	fmt lattice.Formatter
-	patterns io.WriteCloser
+	config     *config.Config
+	fmt        lattice.Formatter
+	patterns   io.WriteCloser
 	embeddings io.WriteCloser
 }
-
 
 func NewFile(c *config.Config, fmt lattice.Formatter) (*File, error) {
 	patterns, err := os.Create(c.OutputFile("patterns" + fmt.FileExt()))
@@ -33,9 +30,9 @@ func NewFile(c *config.Config, fmt lattice.Formatter) (*File, error) {
 		return nil, err
 	}
 	r := &File{
-		config: c,
-		fmt: fmt,
-		patterns: patterns,
+		config:     c,
+		fmt:        fmt,
+		patterns:   patterns,
 		embeddings: embeddings,
 	}
 	return r, nil
@@ -71,5 +68,3 @@ func (r *File) Close() error {
 	}
 	return nil
 }
-
-

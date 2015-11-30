@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 )
 
-
 func SerializeJson(obj map[string]interface{}) []byte {
 	data, err := json.Marshal(obj)
 	if err != nil {
@@ -23,4 +22,3 @@ func DeserializeJson(data []byte) (obj map[string]interface{}) {
 	}
 	return obj
 }
-

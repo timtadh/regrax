@@ -8,9 +8,7 @@ import (
 	"github.com/timtadh/sfp/lattice"
 )
 
-
-type Formatter struct {}
-
+type Formatter struct{}
 
 func (f Formatter) FileExt() string {
 	return ".items"
@@ -33,4 +31,3 @@ func (f Formatter) FormatEmbeddings(node lattice.Node) []string {
 	}
 	return txs
 }
-

@@ -6,7 +6,7 @@ import (
 )
 
 func SerializeInt32s(list []int32) []byte {
-	bytes := make([]byte, 4*(1 + len(list)))
+	bytes := make([]byte, 4*(1+len(list)))
 	binary.BigEndian.PutUint32(bytes[0:4], uint32(len(list)))
 	s := 4
 	e := s + 4
@@ -31,4 +31,3 @@ func DeserializeInt32s(bytes []byte) []int32 {
 	}
 	return list
 }
-

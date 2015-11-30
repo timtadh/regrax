@@ -14,18 +14,18 @@ import (
 	"github.com/timtadh/sfp/stats"
 )
 
-
 func UniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
 	samples := make(chan lattice.Node)
 	terminate := make(chan bool)
 	errs := make(chan error)
 	go func() {
 		cur := w.Start[rand.Intn(len(w.Start))]
-		loop: for {
+	loop:
+		for {
 			select {
 			case <-terminate:
 				break loop
-			case samples<-cur:
+			case samples <- cur:
 			}
 			next, err := Next(w, cur)
 			if err != nil {
@@ -101,4 +101,3 @@ func max(a, b float64) float64 {
 	}
 	return b
 }
-
