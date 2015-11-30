@@ -2,6 +2,7 @@ package config
 
 import (
 	"path/filepath"
+	"sync"
 )
 
 import (
@@ -23,6 +24,7 @@ type Config struct {
 	Cache string
 	Output string
 	Support, Samples int
+	AsyncTasks sync.WaitGroup
 }
 
 func (c *Config) CacheFile(name string) string {

@@ -8,6 +8,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
 )
 
 import (
@@ -40,21 +41,26 @@ func NewMatrixReporter(w *Walker, errors chan error) (*MatrixReporter, error) {
 		reports: make(chan lattice.Node),
 		errors: errors,
 	}
-	go func() {
-		for n := range r.reports {
-			err := r.report(n)
-			if err != nil {
-				r.errors<-err
-				break
-			}
-		}
-	}()
+	go r.processReports()
 	return r, nil
 }
 
 func (r *MatrixReporter) Report(n lattice.Node) error {
 	r.reports<-n
 	return nil
+}
+
+func (r *MatrixReporter) processReports() {
+	r.w.Config.AsyncTasks.Add(1)
+	for n := range r.reports {
+		err := r.report(n)
+		if err != nil {
+			errors.Logf("ERROR", "%v", err)
+			r.errors<-err
+			break
+		}
+	}
+	r.w.Config.AsyncTasks.Done()
 }
 
 func (r *MatrixReporter) report(n lattice.Node) error {
@@ -93,6 +99,8 @@ func (r *MatrixReporter) report(n lattice.Node) error {
 }
 
 func (r *MatrixReporter) Close() error {
+	close(r.reports)
+	r.w.Config.AsyncTasks.Wait()
 	err := r.matrices.Close()
 	if err != nil {
 		return err

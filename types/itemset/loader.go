@@ -117,6 +117,7 @@ func (i *ItemSets) TooLarge(node lattice.Node) bool {
 }
 
 func (i *ItemSets) Close() error {
+	i.config.AsyncTasks.Wait()
 	i.Parents.Close()
 	i.ParentCount.Close()
 	i.Children.Close()

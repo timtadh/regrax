@@ -113,6 +113,13 @@ func (g *Graph) TooLarge(node lattice.Node) bool {
 }
 
 func (g *Graph) Close() error {
+	g.config.AsyncTasks.Wait()
+	g.Parents.Close()
+	g.ParentCount.Close()
+	g.Children.Close()
+	g.ChildCount.Close()
+	g.Embeddings.Close()
+	g.NodeAttrs.Close()
 	return nil
 }
 

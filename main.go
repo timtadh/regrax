@@ -542,7 +542,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	defer dt.Close()
 
 	fr, err := reporters.NewFile(conf, fmtr(dt))
 	if err != nil {
@@ -551,15 +550,21 @@ func main() {
 		os.Exit(1)
 	}
 	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, fr}}
-	defer rptr.Close()
 
 	errors.Logf("INFO", "loaded data, about to start mining")
 	err = mode.Mine(dt, rptr)
 	if err != nil {
+		if e := mode.Close(); e != nil {
+			errors.Logf("ERROR", "%v", e)
+		}
 		fmt.Fprintf(os.Stderr, "There was error during the mining process\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	} else {
+		if e := mode.Close(); e != nil {
+			errors.Logf("ERROR", "%v", e)
+			os.Exit(1)
+		}
 		log.Println("Done!")
 	}
 }
