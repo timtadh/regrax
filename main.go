@@ -74,12 +74,100 @@ var UsageMessage string = "sfp --help"
 var ExtendedMessage string = `
 sfp - sample frequent patterns
 
-sfp <type> [Type Options] <mode> [Mode Options] -o <output-path> <input-path>
+$ sfp -o <path> --samples=<int> --support=<int> [Global Options] \
+    <type> [Type Options]
+    <mode> [Mode Options]
+    <input-path>
+
+Note: You must supply [Global Options] then [<type> [Type Options]] then
+[<mode> [Mode Options]] and finally <input-path>. Changes in ordering are not
+supported.
+
+Note: You may either supply the <input-path> as a regular file or a gzipped
+file. If supplying a gzip file the file extension must be '.gz'.
 
 Global Options
     -h, --help                          view this message
     --modes                             show the available modes
     --types                             show the available types
+    -o, --ouput=<path>                  path to output directory (required)
+                                        NB: will overwrite contents of dir
+    -c, --cache=<path>                  path to cache directory (optional)
+                                        NB: will overwrite contents of dir
+    --samples=<int>                     number of samples to collect (required)
+    --support=<int>                     minimum support of patterns (required)
+
+Modes
+    absorbing                           uses absorbing markov chain
+    musk                                uniform sampling of maximal patterns
+    ospace                              uniform sampling of all patterns
+    unisorb                             unifrom sampling of max patterns
+                                        with absorbing chain
+
+    Note: currently none of the modes take special options. This may change.
+
+Type: itemset
+
+$ sfp -o /tmp/sfp --support=1000 --samples=10 \
+    itemset --min-items=4 --max-items=4 \
+    absorbing \
+    ./data/transactions.dat.gz
+
+itemset Options
+    -h, --help                          view this message
+    -l, --loader=<loader-name>          the loader to use (default int)
+    --min-items=<int>                   minimum items in a samplable set
+    --max-items=<int>                   maximum items in a samplable set
+
+itemset Loaders
+    int                                 each line is a transaction
+                                        the items are integers
+                                        the items are space separated
+       ex.
+            10 1 5 7
+            213 2 5 1
+            23 1 4 5 7
+            3 4 1
+
+
+Type: graph
+
+$ sfp -o /tmp/sfp --support=5 --samples=100 \
+    graph --min-vertices=5 --max-vertices=8 --max-edges=15 \
+    absorbing \
+    ./data/graph.veg.gz
+
+graph Options
+    -h, --help                          view this message
+    -l, --loader=<loader-name>          the loader to use (default veg)
+    --min-edges=<int>                   minimum edges in a samplable graph
+    --max-edges=<int>                   maximum edges in a samplable graph
+    --min-vertices=<int>                minimum vertices in a samplable graph
+    --max-vertices=<int>                maximum vertices in a samplable graph
+
+graph Loaders
+    veg File Format
+
+        The veg file format is a line delimited format with vertex lines and
+        edge lines. For example:
+
+        vertex	{"id":136,"label":""}
+        edge	{"src":23,"targ":25,"label":"ddg"}
+
+    veg Grammar
+
+        line -> vertex "\n"
+              | edge "\n"
+
+        vertex -> "vertex" "\t" vertex_json
+
+        edge -> "edge" "\t" edge_json
+
+        vertex_json -> {"id": int, "label": string, ...}
+        // other items are optional
+
+        edge_json -> {"src": int, "targ": int, "label": int, ...}
+        // other items are  optional
 `
 
 func Usage(code int) {
@@ -480,10 +568,10 @@ func main() {
 		case "--samples":
 			samples = ParseInt(oa.Arg())
 		case "--types":
-			fmt.Fprintln(os.Stderr, "Types")
+			fmt.Fprintln(os.Stderr, "Types: itemset, graph")
 			os.Exit(0)
 		case "--modes":
-			fmt.Fprintln(os.Stderr, "Modes")
+			fmt.Fprintln(os.Stderr, "Modes: absorbing, musk, ospace, unisorb")
 			os.Exit(0)
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
