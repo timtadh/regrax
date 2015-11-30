@@ -552,20 +552,20 @@ func main() {
 	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, fr}}
 
 	errors.Logf("INFO", "loaded data, about to start mining")
-	err = mode.Mine(dt, rptr)
-	if err != nil {
-		if e := mode.Close(); e != nil {
-			errors.Logf("ERROR", "%v", e)
-		}
+	mineErr := mode.Mine(dt, rptr)
+
+	code := 0
+	if e := mode.Close(); e != nil {
+		errors.Logf("ERROR", "error closing %v", e)
+		code++
+	}
+	if mineErr != nil {
 		fmt.Fprintf(os.Stderr, "There was error during the mining process\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "%v\n", mineErr)
+		code++
 	} else {
-		if e := mode.Close(); e != nil {
-			errors.Logf("ERROR", "%v", e)
-			os.Exit(1)
-		}
 		log.Println("Done!")
 	}
+	os.Exit(code)
 }
 
