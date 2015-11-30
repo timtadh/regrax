@@ -458,8 +458,6 @@ func unisorbMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return miner, args
 }
 
-
-
 func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
