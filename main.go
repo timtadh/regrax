@@ -49,6 +49,7 @@ import (
 	"github.com/timtadh/sfp/miners/absorbing"
 	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/ospace"
+	"github.com/timtadh/sfp/miners/premusk"
 	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/miners/unisorb"
 	"github.com/timtadh/sfp/miners/walker"
@@ -429,9 +430,7 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := &absorbing.Walker{}
-	miner.Walker = *walker.NewWalker(conf, miner.RejectingWalk)
-	return miner, args
+	return absorbing.NewWalker(conf), args
 }
 
 func unisorbMode(argv []string, conf *config.Config) (miners.Miner, []string) {
@@ -455,7 +454,7 @@ func unisorbMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := walker.NewWalker(conf, unisorb.MaxUniformWalk)
+	miner := walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(unisorb.Next), make(chan error)))
 	return miner, args
 }
 
@@ -480,7 +479,32 @@ func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := walker.NewWalker(conf, musk.MaxUniformWalk)
+	miner := walker.NewWalker(conf, musk.MakeMaxUniformWalk(musk.Next, nil))
+	return miner, args
+}
+
+func premuskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	miner := premusk.NewWalker(conf)
 	return miner, args
 }
 
@@ -532,6 +556,8 @@ func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
 		return muskMode(argv[1:], conf)
 	case "ospace":
 		return ospaceMode(argv[1:], conf)
+	case "premusk":
+		return premuskMode(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown mining mode '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])

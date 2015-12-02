@@ -10,6 +10,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/reporters"
@@ -30,6 +31,14 @@ type Sparse struct {
 type Walker struct {
 	walker.Walker
 	Errors chan error
+}
+
+func NewWalker(conf *config.Config) *Walker {
+	miner := &Walker{
+		Errors: make(chan error),
+	}
+	miner.Walker = *walker.NewWalker(conf, MakeAbsorbingWalk(MakeSample(miner.Next), miner.Errors))
+	return miner
 }
 
 func (w *Walker) PrMatrices(n lattice.Node) (Q, R, u *Sparse, err error) {
@@ -132,7 +141,6 @@ func (w *Walker) probabilities(lat *lattice.Lattice) ([]int, error) {
 }
 
 func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
-	w.Errors = make(chan error)
 	mr, err := NewMatrixReporter(w, w.Errors)
 	if err != nil {
 		return err
@@ -140,47 +148,55 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 	return (w.Walker).Mine(dt, &reporters.Chain{[]miners.Reporter{rptr, mr}})
 }
 
-func (w *Walker) RejectingWalk(wlkr *walker.Walker) (chan lattice.Node, chan bool, chan error) {
-	samples := make(chan lattice.Node)
-	terminate := make(chan bool)
-	go func() {
-	loop:
-		for {
-			sampled, err := w.walk(wlkr)
-			if err != nil {
-				w.Errors <- err
-				break loop
+func MakeAbsorbingWalk(sample func([]lattice.Node) (lattice.Node, error), errs chan error) walker.Walk {
+	return func(wlkr *walker.Walker) (chan lattice.Node, chan bool, chan error) {
+		samples := make(chan lattice.Node)
+		terminate := make(chan bool)
+		go func() {
+		loop:
+			for {
+				sampled, err := sample(wlkr.Start)
+				if err != nil {
+					errs <- err
+					break loop
+				}
+				select {
+				case <-terminate:
+					break loop
+				case samples <- sampled:
+				}
 			}
-			select {
-			case <-terminate:
-				break loop
-			case samples <- sampled:
-			}
-		}
-		close(samples)
-		close(w.Errors)
-		close(terminate)
-	}()
-	return samples, terminate, w.Errors
+			close(samples)
+			close(errs)
+			close(terminate)
+		}()
+		return samples, terminate, errs
+	}
 }
 
-func (w *Walker) walk(wlkr *walker.Walker) (max lattice.Node, err error) {
-	cur, _ := uniform(w.Start, nil)
-	// errors.Logf("DEBUG", "start %v", cur)
-	next, err := uniform(cur.Children())
-	if err != nil {
-		return nil, err
-	}
-	for next != nil {
-		cur = next
-		next, err = uniform(cur.Children())
-		// errors.Logf("DEBUG", "compute next %v %v", next, err)
+func MakeSample(trans func(lattice.Node) (lattice.Node, error)) func(start []lattice.Node) (lattice.Node, error) {
+	return func(start []lattice.Node) (max lattice.Node, err error) {
+		cur, _ := uniform(start, nil)
+		// errors.Logf("DEBUG", "start %v", cur)
+		next, err := trans(cur)
 		if err != nil {
 			return nil, err
 		}
-		// errors.Logf("DEBUG", "cur %v kids %v next %v", cur, kidCount, next)
+		for next != nil {
+			cur = next
+			next, err = trans(cur)
+			// errors.Logf("DEBUG", "compute next %v %v", next, err)
+			if err != nil {
+				return nil, err
+			}
+			// errors.Logf("DEBUG", "cur %v kids %v next %v", cur, kidCount, next)
+		}
+		return cur, nil
 	}
-	return cur, nil
+}
+
+func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
+	return uniform(cur.Children())
 }
 
 func uniform(slice []lattice.Node, err error) (lattice.Node, error) {

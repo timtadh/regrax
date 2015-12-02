@@ -1,61 +1,40 @@
-package musk
+package premusk
 
 import (
-	"math/rand"
 )
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/hashtable"
+	// "github.com/timtadh/data-structures/types"
 )
 
 import (
+	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/miners"
+	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/stats"
 )
 
-type Transition func(interface{}, lattice.Node) (lattice.Node, error)
 
-func MakeMaxUniformWalk(next Transition, ctx interface{}) walker.Walk {
-	return func(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
-		samples := make(chan lattice.Node)
-		terminate := make(chan bool)
-		errs := make(chan error)
-		go func() {
-			cur := w.Start[rand.Intn(len(w.Start))]
-		loop:
-			for {
-				var sampled lattice.Node = nil
-				for sampled == nil {
-					if ismax, err := cur.Maximal(); err != nil {
-						errs <- err
-						break loop
-					} else if ismax {
-						sampled = cur
-					}
-					next, err := next(ctx, cur)
-					if err != nil {
-						errs <- err
-						break loop
-					}
-					if next == nil {
-						errs <- errors.Errorf("next was nil!!")
-						break loop
-					}
-					cur = next
-				}
-				select {
-				case <-terminate:
-					break loop
-				case samples <- sampled:
-				}
-			}
-			close(samples)
-			close(errs)
-			close(terminate)
-		}()
-		return samples, terminate, errs
+type Walker struct {
+	walker.Walker
+	Teleports *hashtable.LinearHash
+}
+
+func NewWalker(conf *config.Config) *Walker {
+	miner := &Walker{
+		Teleports: hashtable.NewLinearHash(),
 	}
+	miner.Walker = *walker.NewWalker(conf, musk.MakeMaxUniformWalk(Next, miner))
+	return miner
+}
+
+func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
+	errors.Logf("INFO", "Customize creation")
+	return (w.Walker).Mine(dt, rptr)
 }
 
 func Next(ctx interface{}, cur lattice.Node) (lattice.Node, error) {
@@ -68,6 +47,7 @@ func Next(ctx interface{}, cur lattice.Node) (lattice.Node, error) {
 		return nil, err
 	}
 	adjs := append(kids, parents...)
+	// teleports, err := 
 	errors.Logf("DEBUG", "cur %v parents %v kids %v adjs %v", cur, len(parents), len(kids), len(adjs))
 	prs, err := transPrs(cur, adjs)
 	if err != nil {
@@ -122,3 +102,4 @@ func weight(u, v lattice.Node) (float64, error) {
 		return 1.0, nil
 	}
 }
+
