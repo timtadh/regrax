@@ -454,8 +454,7 @@ func unisorbMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(unisorb.Next), make(chan error)))
-	return miner, args
+	return unisorb.NewWalker(conf), args
 }
 
 func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {

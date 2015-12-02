@@ -8,9 +8,16 @@ import (
 )
 
 import (
+	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/miners/absorbing"
+	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/stats"
 )
+
+func NewWalker(conf *config.Config) *walker.Walker {
+	return walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(Next), make(chan error)))
+}
 
 func Next(cur lattice.Node) (lattice.Node, error) {
 	kids, err := cur.Children()

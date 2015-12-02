@@ -26,6 +26,15 @@ type Config struct {
 	AsyncTasks       sync.WaitGroup
 }
 
+func (c *Config) Copy() *Config {
+	return &Config{
+		Cache: c.Cache,
+		Output: c.Output,
+		Support: c.Support,
+		Samples: c.Samples,
+	}
+}
+
 func (c *Config) CacheFile(name string) string {
 	return filepath.Join(c.Cache, name)
 }
