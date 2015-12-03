@@ -55,16 +55,19 @@ func transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
 }
 
 func weight(v lattice.Node) (float64, error) {
+	const C = 100
 	vmax, err := v.Maximal()
 	if err != nil {
 		return 0, err
 	}
-	vdeg, err := v.ParentCount()
-	if err != nil {
-		return 0, err
-	}
+	// vdeg, err := v.ParentCount()
+	// if err != nil {
+		// return 0, err
+	// }
+	level := v.Level()
 	if vmax {
-		return 1.0 / float64(vdeg), nil
+		// return (1.0 / float64(vdeg))*(float64(level)/C), nil
+		return (float64(level)/C), nil
 	} else {
 		return 1.0, nil
 	}

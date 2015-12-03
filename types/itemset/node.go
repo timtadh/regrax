@@ -79,12 +79,8 @@ func (n *Node) String() string {
 	return fmt.Sprintf("<Node %v %v>", n.items, len(n.txs))
 }
 
-func (n *Node) StartingPoint() bool {
-	return n.Size() == 1
-}
-
-func (n *Node) Size() int {
-	return n.items.Size()
+func (n *Node) Level() int {
+	return n.items.Size() + 1
 }
 
 func (n *Node) Parents() ([]lattice.Node, error) {

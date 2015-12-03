@@ -40,11 +40,11 @@ func NewFile(c *config.Config, fmt lattice.Formatter) (*File, error) {
 
 func (r *File) Report(n lattice.Node) error {
 	name := r.fmt.PatternName(n)
-	_, err := fmt.Fprintf(r.patterns, "\\\\ %s\n\n%s\n", name, r.fmt.FormatPattern(n))
+	_, err := fmt.Fprintf(r.patterns, "// %s\n\n%s\n", name, r.fmt.FormatPattern(n))
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(r.embeddings, "\\\\ %s\n\n", name)
+	_, err = fmt.Fprintf(r.embeddings, "// %s\n\n", name)
 	if err != nil {
 		return err
 	}

@@ -24,6 +24,7 @@ type DataType interface {
 }
 
 type Node interface {
+	Level() int
 	AdjacentCount() (int, error)
 	Parents() ([]Node, error)
 	ParentCount() (int, error)

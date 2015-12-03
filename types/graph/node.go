@@ -106,13 +106,9 @@ func (n *Node) String() string {
 	}
 }
 
-func (n *Node) StartingPoint() bool {
-	return n.Size() == 1
-}
-
-func (n *Node) Size() int {
+func (n *Node) Level() int {
 	if len(n.sgs) > 0 {
-		return len(n.sgs[0].E)
+		return len(n.sgs[0].E) + 1
 	}
 	return 0
 }
