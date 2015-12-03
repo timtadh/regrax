@@ -41,34 +41,44 @@ func (sgs SubGraphs) Swap(i, j int) {
 	sgs[i], sgs[j] = sgs[j], sgs[i]
 }
 
-func (sgs SubGraphs) Verify() {
+func (sgs SubGraphs) Verify() error {
+	if len(sgs) <= 0 {
+		return errors.Errorf("empty partition")
+	}
 	label := sgs[0].ShortLabel()
 	for _, sg := range sgs {
 		if !bytes.Equal(label, sg.ShortLabel()) {
-			panic(fmt.Errorf("bad partition %v %v", sgs[0].Label(), sg.Label()))
+			return errors.Errorf("bad partition %v %v", sgs[0].Label(), sg.Label())
 		}
 	}
+	return nil
 }
 
 func (sgs SubGraphs) Partition() []SubGraphs {
 	sort.Sort(sgs)
 	parts := make([]SubGraphs, 0, 10)
+	add := func(parts []SubGraphs, buf SubGraphs) []SubGraphs {
+		err := buf.Verify()
+		if err != nil {
+			errors.Logf("ERROR", "%v", err)
+		} else {
+			parts = append(parts, buf)
+		}
+		return parts
+	}
 	buf := make(SubGraphs, 0, 10)
 	var ckey []byte = nil
 	for _, sg := range sgs {
 		label := sg.ShortLabel()
 		if ckey != nil && !bytes.Equal(ckey, label) {
-			parts = append(parts, buf)
+			parts = add(parts, buf)
 			buf = make(SubGraphs, 0, 10)
 		}
 		ckey = label
 		buf = append(buf, sg)
 	}
 	if len(buf) > 0 {
-		parts = append(parts, buf)
-	}
-	for _, part := range parts {
-		part.Verify()
+		parts = add(parts, buf)
 	}
 	return parts
 }
@@ -124,9 +134,8 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	for _, parent := range n.sgs[0].SubGraphs() {
 		p, err := n.FindNode(n.dt, parent)
 		if err != nil {
-			return nil, err
-		}
-		if p != nil {
+			errors.Logf("ERROR", "%v", err)
+		} else if p != nil {
 			parents = append(parents, p)
 		}
 	}
@@ -157,7 +166,10 @@ func (n *Node) FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	cur.sgs.Verify()
+	err = cur.sgs.Verify()
+	if err != nil {
+		return nil, err
+	}
 	for _, sg := range graphs {
 		// errors.Logf("DEBUG", "\n    extend %v\n        to %v", cur.sgs[0].Label(), sg.Label())
 		cur, err = cur.extendTo(sg)
@@ -167,7 +179,10 @@ func (n *Node) FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 		if cur == nil {
 			return nil, nil
 		}
-		cur.sgs.Verify()
+		err := cur.sgs.Verify()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return cur, cur.Save()
 }

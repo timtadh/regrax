@@ -1,23 +1,10 @@
 package stats
 
 import (
-	"encoding/binary"
 	"log"
 	"math/rand"
-	"os"
 )
 
-func init() {
-	if urandom, err := os.Open("/dev/urandom"); err != nil {
-		panic(err)
-	} else {
-		seed := make([]byte, 8)
-		if _, err := urandom.Read(seed); err == nil {
-			rand.Seed(int64(binary.BigEndian.Uint64(seed)))
-		}
-		urandom.Close()
-	}
-}
 
 func Srange(size int) []int {
 	sample := make([]int, 0, size)

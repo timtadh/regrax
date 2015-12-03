@@ -4,6 +4,8 @@ import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/types"
 )
 
 import (
@@ -20,12 +22,16 @@ type Walker struct {
 	Rptr   miners.Reporter
 	Start  []lattice.Node
 	Walk   Walk
+	Reject bool
+	Unique bool
 }
 
 func NewWalker(conf *config.Config, walk Walk) *Walker {
 	return &Walker{
 		Config: conf,
 		Walk:   walk,
+		Reject: true,
+		Unique: true,
 	}
 }
 
@@ -86,10 +92,17 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 	nodes := make(chan lattice.Node)
 	go func() {
 		i := 0
+		seen := set.NewSortedSet(w.Config.Samples)
 		for sampled := range samples {
-			if w.Dt.Acceptable(sampled) {
+			if !w.Reject || w.Dt.Acceptable(sampled) {
+				label := types.ByteSlice(sampled.Label())
 				nodes <- sampled
-				i++
+				if !w.Unique || !seen.Has(label) {
+					if w.Unique {
+						seen.Add(label)
+					}
+					i++
+				}
 			} else {
 				// errors.Logf("INFO", "rejected %v", sampled)
 			}

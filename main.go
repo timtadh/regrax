@@ -25,11 +25,13 @@ package main
 
 import (
 	"compress/gzip"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"path"
 	"runtime"
@@ -59,12 +61,22 @@ import (
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	if urandom, err := os.Open("/dev/urandom"); err != nil {
+		panic(err)
+	} else {
+		seed := make([]byte, 8)
+		if _, err := urandom.Read(seed); err == nil {
+			rand.Seed(int64(binary.BigEndian.Uint64(seed)))
+		}
+		urandom.Close()
+	}
 }
 
 var ErrorCodes map[string]int = map[string]int{
 	"usage":   0,
 	"version": 2,
 	"opts":    3,
+	"badfloat":  6,
 	"badint":  5,
 	"baddir":  6,
 	"badfile": 7,
@@ -243,6 +255,15 @@ func ParseInt(str string) int {
 		Usage(ErrorCodes["badint"])
 	}
 	return i
+}
+
+func ParseFloat(str string) float64 {
+	f, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing '%v' expected a float\n", str)
+		Usage(ErrorCodes["badfloat"])
+	}
+	return f
 }
 
 func AssertDir(dir string) string {
@@ -488,22 +509,26 @@ func premuskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 		"h",
 		[]string{
 			"help",
+			"teleport=",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
+	teleport := .01
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
+		case "--teleport":
+			teleport = ParseFloat(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := premusk.NewWalker(conf)
+	miner := premusk.NewWalker(conf, teleport)
 	return miner, args
 }
 
@@ -528,7 +553,7 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner := walker.NewWalker(conf, ospace.UniformWalk)
+	miner := walker.NewWalker(conf, ospace.MakeUniformWalk(0, true))
 	return miner, args
 }
 
@@ -572,6 +597,7 @@ func main() {
 			"help", "output=", "cache=", "modes", "types",
 			"support=",
 			"samples=",
+			"skip-log=",
 		},
 	)
 	if err != nil {
@@ -603,6 +629,10 @@ func main() {
 		case "--modes":
 			fmt.Fprintln(os.Stderr, "Modes: absorbing, musk, ospace, unisorb")
 			os.Exit(0)
+		case "--skip-log":
+			level := oa.Arg()
+			errors.Logf("INFO", "not logging level %v", level)
+			errors.SkipLogging[level] = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -667,7 +697,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, fr}}
+	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, reporters.NewUnique(fr)}}
 
 	errors.Logf("INFO", "loaded data, about to start mining")
 	mineErr := mode.Mine(dt, rptr)
@@ -682,7 +712,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", mineErr)
 		code++
 	} else {
-		log.Println("Done!")
+		errors.Logf("INFO", "Done!")
 	}
 	os.Exit(code)
 }

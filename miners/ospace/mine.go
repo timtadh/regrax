@@ -1,6 +1,7 @@
 package ospace
 
 import (
+	"bytes"
 	"math/rand"
 )
 
@@ -14,35 +15,52 @@ import (
 	"github.com/timtadh/sfp/stats"
 )
 
-func UniformWalk(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
-	samples := make(chan lattice.Node)
-	terminate := make(chan bool)
-	errs := make(chan error)
-	go func() {
-		cur := w.Start[rand.Intn(len(w.Start))]
-	loop:
-		for {
-			select {
-			case <-terminate:
-				break loop
-			case samples <- cur:
+func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {
+	return func(w *walker.Walker) (chan lattice.Node, chan bool, chan error) {
+		samples := make(chan lattice.Node)
+		terminate := make(chan bool)
+		errs := make(chan error)
+		go func() {
+			cur := w.Start[rand.Intn(len(w.Start))]
+		loop:
+			for {
+				select {
+				case <-terminate:
+					break loop
+				case samples <- cur:
+				}
+				if rand.Float64() < restartPr {
+					errors.Logf("INFO", "a random restart occured with probability %v", restartPr)
+					cur = w.Start[rand.Intn(len(w.Start))]
+				} else {
+					curLabel := cur.Label()
+					nextLabel := curLabel
+					var next lattice.Node = nil
+					for bytes.Equal(curLabel, nextLabel) {
+						var err error
+						next, err = Next(w, cur)
+						if err != nil {
+							errs <- err
+							break loop
+						}
+						if next == nil {
+							errs <- errors.Errorf("next was nil!!")
+							break loop
+						}
+						nextLabel = next.Label()
+						if selfTransition {
+							break
+						}
+					}
+					cur = next
+				}
 			}
-			next, err := Next(w, cur)
-			if err != nil {
-				errs <- err
-				break loop
-			}
-			if next == nil {
-				errs <- errors.Errorf("next was nil!!")
-				break loop
-			}
-			cur = next
-		}
-		close(samples)
-		close(errs)
-		close(terminate)
-	}()
-	return samples, terminate, errs
+			close(samples)
+			close(errs)
+			close(terminate)
+		}()
+		return samples, terminate, errs
+	}
 }
 
 func Next(w *walker.Walker, cur lattice.Node) (lattice.Node, error) {
