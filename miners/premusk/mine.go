@@ -23,6 +23,7 @@ type Walker struct {
 	walker.Walker
 	Teleports []lattice.Node
 	TeleportProbability float64
+	teleportAllowed bool
 }
 
 func NewWalker(conf *config.Config, teleportProbability float64) *Walker {
@@ -61,7 +62,14 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 
 func Next(ctx interface{}, cur lattice.Node) (lattice.Node, error) {
 	w := ctx.(*Walker)
-	if rand.Float64() < w.TeleportProbability {
+	if ismax, err := cur.Maximal(); err != nil {
+		return nil, err
+	} else if ismax && w.Dt.Acceptable(cur) {
+		w.teleportAllowed = true
+		errors.Logf("INFO", "ALLOWING TELEPORTS")
+	}
+	if w.teleportAllowed && rand.Float64() < w.TeleportProbability {
+		w.teleportAllowed = false
 		next := w.Teleports[rand.Intn(len(w.Teleports))]
 		errors.Logf("INFO", "TELEPORT\n    from %v\n      to %v", cur, next)
 		return next, nil
