@@ -39,8 +39,8 @@ func (f *Formatter) FormatEmbeddings(node lattice.Node) []string {
 		allAttrs := make(map[int]map[string]interface{})
 		for _, v := range sg.V {
 			err := f.g.NodeAttrs.DoFind(
-				int32(v.Id),
-				func(_ int32, attrs map[string]interface{}) error {
+				int32(f.g.G.V[v.Id].Id),
+				func(id int32, attrs map[string]interface{}) error {
 					allAttrs[v.Id] = attrs
 					return nil
 				})
@@ -52,3 +52,4 @@ func (f *Formatter) FormatEmbeddings(node lattice.Node) []string {
 	}
 	return embs
 }
+

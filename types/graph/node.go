@@ -284,7 +284,7 @@ func (n *Node) Children() (nodes []lattice.Node, err error) {
 	}
 	partitioned := exts.Partition()
 	for _, sgs := range partitioned {
-		sgs = MinImgSupported(sgs)
+		sgs = MinImgSupported(DedupSupported(sgs))
 		if len(sgs) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
 			nodes = append(nodes, &Node{n.dt, label, sgs})

@@ -37,7 +37,7 @@ func NewWalker(conf *config.Config) *Walker {
 	miner := &Walker{
 		Errors: make(chan error),
 	}
-	miner.Walker = *walker.NewWalker(conf, MakeAbsorbingWalk(MakeSample(miner.Next), miner.Errors))
+	miner.Walker = *walker.NewWalker(conf, MakeAbsorbingWalk(MakeSample(miner), miner.Errors))
 	return miner
 }
 
@@ -148,14 +148,14 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 	return (w.Walker).Mine(dt, &reporters.Chain{[]miners.Reporter{rptr, mr}})
 }
 
-func MakeAbsorbingWalk(sample func([]lattice.Node) (lattice.Node, error), errs chan error) walker.Walk {
+func MakeAbsorbingWalk(sample func(lattice.Node) (lattice.Node, error), errs chan error) walker.Walk {
 	return func(wlkr *walker.Walker) (chan lattice.Node, chan bool, chan error) {
 		samples := make(chan lattice.Node)
 		terminate := make(chan bool)
 		go func() {
 		loop:
 			for {
-				sampled, err := sample(wlkr.Start)
+				sampled, err := sample(wlkr.Dt.Empty())
 				if err != nil {
 					errs <- err
 					break loop
@@ -174,17 +174,20 @@ func MakeAbsorbingWalk(sample func([]lattice.Node) (lattice.Node, error), errs c
 	}
 }
 
-func MakeSample(trans func(lattice.Node) (lattice.Node, error)) func(start []lattice.Node) (lattice.Node, error) {
-	return func(start []lattice.Node) (max lattice.Node, err error) {
-		cur, _ := uniform(start, nil)
-		// errors.Logf("DEBUG", "start %v", cur)
-		next, err := trans(cur)
+type Transitioner interface {
+	Next(cur lattice.Node) (lattice.Node, error)
+}
+
+func MakeSample(t Transitioner) func(lattice.Node) (lattice.Node, error) {
+	return func(empty lattice.Node) (max lattice.Node, err error) {
+		cur := empty
+		next, err := t.Next(cur)
 		if err != nil {
 			return nil, err
 		}
 		for next != nil {
 			cur = next
-			next, err = trans(cur)
+			next, err = t.Next(cur)
 			// errors.Logf("DEBUG", "compute next %v %v", next, err)
 			if err != nil {
 				return nil, err

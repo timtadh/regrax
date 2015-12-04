@@ -34,7 +34,7 @@ type ItemSets struct {
 	ChildCount         ints_int.MultiMap
 	Embeddings         ints_ints.MultiMap
 	FrequentItems      []lattice.Node
-	Empty              lattice.Node
+	empty              lattice.Node
 	config             *config.Config
 }
 
@@ -101,6 +101,14 @@ func (i *ItemSets) Singletons() ([]lattice.Node, error) {
 
 func (i *ItemSets) Support() int {
 	return i.config.Support
+}
+
+func (i *ItemSets) LargestLevel() int {
+	return i.MaxItems
+}
+
+func (i *ItemSets) Empty() lattice.Node {
+	return i.empty
 }
 
 func (i *ItemSets) Acceptable(node lattice.Node) bool {
@@ -223,7 +231,7 @@ func (l *IntLoader) Load(input lattice.Input) (lattice.DataType, error) {
 	if err != nil {
 		return nil, err
 	}
-	l.sets.Empty = &Node{l.sets, int32sToSet([]int32{}), []int32{}}
+	l.sets.empty = &Node{l.sets, int32sToSet([]int32{}), []int32{}}
 	l.sets.FrequentItems = start
 	return l.sets, nil
 }

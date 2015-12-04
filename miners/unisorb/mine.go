@@ -1,6 +1,7 @@
 package unisorb
 
 import (
+	"math/rand"
 )
 
 import (
@@ -10,16 +11,36 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/absorbing"
 	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/stats"
 )
 
-func NewWalker(conf *config.Config) *walker.Walker {
-	return walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(Next), make(chan error)))
+type Walker struct {
+	walker.Walker
 }
 
-func Next(cur lattice.Node) (lattice.Node, error) {
+func NewWalker(conf *config.Config) *Walker {
+	miner := &Walker{}
+	miner.Walker = *walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(miner), make(chan error)))
+	return miner
+}
+
+func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
+	maxLevel := float64(dt.LargestLevel())
+	errors.Logf("INFO", "random restart probability %v", (1.0/maxLevel))
+	return (w.Walker).Mine(dt, rptr)
+}
+
+func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
+	maxLevel := float64(w.Dt.LargestLevel())
+	if ismax, err := cur.Maximal(); err != nil {
+		return nil, err
+	} else if !ismax && rand.Float64() < (1.0/maxLevel) {
+		errors.Logf("DEBUG", "random restart with %v", (1.0/maxLevel))
+		return w.Dt.Empty(), nil
+	}
 	kids, err := cur.Children()
 	if err != nil {
 		return nil, err
@@ -28,7 +49,10 @@ func Next(cur lattice.Node) (lattice.Node, error) {
 	if len(kids) <= 0 {
 		return nil, nil
 	}
-	prs, err := transPrs(cur, kids)
+	if len(kids) == 1 {
+		return kids[0], nil
+	}
+	prs, err := w.transPrs(cur, kids)
 	if err != nil {
 		return nil, err
 	}
@@ -36,11 +60,11 @@ func Next(cur lattice.Node) (lattice.Node, error) {
 	return kids[i], nil
 }
 
-func transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
+func (w *Walker) transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
 	weights := make([]float64, 0, len(adjs))
 	var total float64 = 0
 	for _, v := range adjs {
-		wght, err := weight(v)
+		wght, err := w.weight(v)
 		if err != nil {
 			return nil, err
 		}
@@ -54,21 +78,29 @@ func transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
 	return prs, nil
 }
 
-func weight(v lattice.Node) (float64, error) {
-	const C = 100
+func (w *Walker) weight(v lattice.Node) (float64, error) {
 	vmax, err := v.Maximal()
 	if err != nil {
 		return 0, err
 	}
-	// vdeg, err := v.ParentCount()
-	// if err != nil {
-		// return 0, err
-	// }
-	level := v.Level()
 	if vmax {
-		// return (1.0 / float64(vdeg))*(float64(level)/C), nil
-		return (float64(level)/C), nil
+		indeg, err := v.ParentCount()
+		if err != nil {
+			return 0, err
+		}
+		level := float64(v.Level())
+		maxLevel := float64(w.Dt.LargestLevel())
+		return (level)/(float64(indeg)*maxLevel), nil
 	} else {
-		return 1.0, nil
+		return .5, nil
+		// indeg, err := v.ParentCount()
+		// if err != nil {
+			// return 0, err
+		// }
+		// odeg, err := v.ChildCount()
+		// if err != nil {
+			// return 0, err
+		// }
+		// return float64(odeg)/float64(indeg), nil
 	}
 }

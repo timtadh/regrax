@@ -87,7 +87,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	if n.items.Size() == 0 {
 		return []lattice.Node{}, nil
 	} else if n.items.Size() == 1 {
-		return []lattice.Node{n.dt.Empty}, nil
+		return []lattice.Node{n.dt.empty}, nil
 	}
 	i := setToInt32s(n.items)
 	if has, err := n.dt.ParentCount.Has(i); err != nil {

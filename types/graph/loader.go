@@ -91,6 +91,14 @@ func (g *Graph) Support() int {
 	return g.config.Support
 }
 
+func (g *Graph) LargestLevel() int {
+	return g.MaxEdges
+}
+
+func (g *Graph) Empty() lattice.Node {
+	return &Node{dt: g}
+}
+
 func (g *Graph) Acceptable(node lattice.Node) bool {
 	n := node.(*Node)
 	if len(n.sgs) <= 0 {

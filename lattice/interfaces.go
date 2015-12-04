@@ -16,9 +16,11 @@ type Loader interface {
 }
 
 type DataType interface {
+	LargestLevel() int
 	Support() int
 	Acceptable(Node) bool
 	TooLarge(Node) bool
+	Empty() Node
 	Singletons() ([]Node, error)
 	Close() error
 }
