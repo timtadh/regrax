@@ -3,4 +3,6 @@
 pkg/
 bin/*
 data/
+*.pyc
+env/
 

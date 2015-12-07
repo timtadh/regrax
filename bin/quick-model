@@ -1,0 +1,227 @@
+#!/usr/bin/env python
+
+import os
+import random
+random.seed(os.urandom(16))
+
+import numpy as np
+from numpy import linalg
+
+
+E = [
+    (0, 1),
+    (0, 2),
+    (0, 3),
+    (0, 4),
+    (2, 5),
+    (2, 6),
+    (3, 7),
+    (4, 7),
+    (7, 8),
+    (7, 9),
+    (7, 10),
+    (9, 11),
+    (9, 12),
+    (10, 12),
+    (10, 13),
+]
+
+def randE(max_nodes_per_level, max_edges_per_node, max_levels, only_absorb_at_max):
+    E = set()
+    levels = [[0]]
+    u = 1
+    for _ in xrange(1, max_levels+1):
+        level = list()
+        for _ in xrange(random.randint(1, max_nodes_per_level)):
+            level.append(u)
+            u += 1
+        levels.append(level)
+    for l in xrange(len(levels)-1):
+        srcs = levels[l]
+        targs = levels[l+1]
+        used_srcs = set()
+        used_targs = set()
+        for u in srcs:
+            for _ in xrange(random.randint(0, max_edges_per_node)):
+                v = random.choice(targs)
+                E.add((u,v))
+                used_srcs.add(u)
+                used_targs.add(v)
+        if len(used_srcs) <= 0:
+            used_srcs.add(srcs[0])
+        used_srcs = list(used_srcs)
+        for v in set(targs) - used_targs:
+            u = random.choice(used_srcs)
+            E.add((u,v))
+        if only_absorb_at_max:
+            for u in (set(srcs) - set(used_srcs)):
+                v = random.choice(targs)
+                E.add((u,v))
+    return sorted(list(E))
+
+E = randE(10, 4, 25, True)
+
+s = set(e[0] for e in E)
+t = set(e[1] for e in E)
+V = s | t
+A = t - s
+T = V - A
+
+V = sorted(list(V))
+A = sorted(list(A))
+T = sorted(list(T))
+
+print "E", E
+print "V", V
+print "A", A
+print "T", T
+
+parents = [
+    [i for i, j in E if u == j]
+    for u in V
+]
+
+kids = [
+    [j for i, j in E if u == i]
+    for u in V
+]
+
+level = np.zeros((len(V),))
+for u in V:
+    if u == 0:
+        level[u] = 0
+    else:
+        level[u] = level[parents[u][0]] + 1
+max_level = level[-1]
+
+TE = list()
+discovered = set([0])
+for i, j in E:
+    if j in discovered: continue
+    discovered.add(j)
+    TE.append((i,j))
+
+tparents = [
+    [i for i, j in TE if u == j]
+    for u in V
+]
+
+tkids = [
+    [j for i, j in TE if u == i]
+    for u in V
+]
+print 'tree edges', TE
+print 'tree kids', tkids
+print 'tree parents', tparents
+
+print "kids", kids
+print "parents", parents
+print "level", level
+
+Q = np.zeros((len(T), len(T)))
+R = np.zeros((len(T), len(A)))
+
+def connected(i, j):
+    return (i,j) in E
+
+def tree_connected(i, j):
+    return (i,j) in TE
+
+def absorbing(v, kids):
+    stack = [v]
+    seen = set()
+    absorbing = list()
+    while len(stack) > 0:
+        u = stack.pop()
+        seen.add(u)
+        if u in A:
+            absorbing.append(u)
+        for kid in kids[u]:
+            if kid not in seen:
+                stack.append(kid)
+    return absorbing
+
+def density(v):
+    return len(absorbing(v, kids))
+
+def tree_density(v):
+    len(absorbing(v, tkids))
+    return len(absorbing(v, tkids))
+
+def weight(v):
+    return float(tree_density(v))
+
+def absorbing_urw(i, j):
+    if connected(i, j):
+        return 1.0/len(kids[i])
+    elif i == j and i in A:
+        return 1.0
+    else:
+        return 0.0
+
+def unisorb(i, j):
+    def weight(v):
+        return float(tree_density(v))
+    if tree_connected(i, j) and weight(j) > 0:
+        return (weight(j) / sum(weight(kid) for kid in tkids[i]))
+    elif i == j and len(kids[i]) == 0:
+        return 1.0
+    else:
+        return 0.0
+
+def musk(i, j):
+    def weight(u, v):
+        umax = u in A
+        vmax = v in A
+        udeg = float(len(kids[u]) + len(parents[u]))
+        vdeg = float(len(kids[v]) + len(parents[v]))
+        if umax and vmax:
+            return 0.0
+        elif not umax and vmax:
+            return 1.0/vdeg
+        elif umax and not vmax:
+            return 1.0/udeg
+        else:
+            return 1.0
+    if (connected(i, j) or connected(j, i)):
+        return (weight(i, j) / sum(weight(i, x)
+                                   for x in kids[i] + parents[i]))
+    elif i == j and len(kids[i]) == 0:
+        return 1.0
+    else:
+        return 0.0
+
+def Pr(i, j):
+    return musk(i, j)
+
+for i, u in enumerate(T):
+    for j, v in enumerate(T):
+        Q[i,j] = Pr(u,v)
+
+for i, u in enumerate(T):
+    for j, v in enumerate(A):
+        R[i,j] = Pr(u,v)
+
+print "Q", Q
+print "R", R
+
+I = np.eye(len(T))
+N = linalg.inv(I - Q)
+
+print "N", N
+
+for i, u in enumerate(V):
+    print 'sum', i, sum(Pr(u, v) for j, v in enumerate(V))
+
+print
+print
+prs = list(N.dot(R)[0,:])
+times = list(N.dot(np.ones((len(T)))))
+print 'prs', prs
+print 'sum(prs)', sum(prs)
+print 'average time to absorb', times[0]
+
+expected = 1.0/float(len(prs))
+print 'expected mean', expected
+print 'std error', round(np.sqrt(sum((p - expected)**2 for p in prs)), 10)
+print 'uniform?', all(round(prs[0], 3) == round(p, 3) for p in prs)
