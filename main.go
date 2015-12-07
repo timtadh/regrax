@@ -53,7 +53,7 @@ import (
 	"github.com/timtadh/sfp/miners/ospace"
 	"github.com/timtadh/sfp/miners/premusk"
 	"github.com/timtadh/sfp/miners/reporters"
-	"github.com/timtadh/sfp/miners/unisorb"
+	"github.com/timtadh/sfp/miners/fastmax"
 	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/types/graph"
 	"github.com/timtadh/sfp/types/itemset"
@@ -113,7 +113,7 @@ Modes
     absorbing                           uses absorbing markov chain
     musk                                uniform sampling of maximal patterns
     ospace                              uniform sampling of all patterns
-    unisorb                             unifrom sampling of max patterns
+    fastmax                             unifrom sampling of max patterns
                                         with absorbing chain
 
     Note: currently none of the modes take special options. This may change.
@@ -454,7 +454,7 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 	return absorbing.NewWalker(conf), args
 }
 
-func unisorbMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"h",
@@ -475,7 +475,7 @@ func unisorbMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	return unisorb.NewWalker(conf), args
+	return fastmax.NewWalker(conf), args
 }
 
 func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
@@ -574,8 +574,8 @@ func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
 	switch argv[0] {
 	case "absorbing":
 		return absorbingMode(argv[1:], conf)
-	case "unisorb":
-		return unisorbMode(argv[1:], conf)
+	case "fastmax":
+		return fastmaxMode(argv[1:], conf)
 	case "musk":
 		return muskMode(argv[1:], conf)
 	case "ospace":
@@ -627,7 +627,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Types: itemset, graph")
 			os.Exit(0)
 		case "--modes":
-			fmt.Fprintln(os.Stderr, "Modes: absorbing, musk, ospace, unisorb")
+			fmt.Fprintln(os.Stderr, "Modes: absorbing, musk, ospace, fastmax")
 			os.Exit(0)
 		case "--skip-log":
 			level := oa.Arg()

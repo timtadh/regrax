@@ -1,7 +1,6 @@
-package unisorb
+package fastmax
 
 import (
-	"math/rand"
 )
 
 import (
@@ -34,13 +33,6 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 }
 
 func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
-	maxLevel := float64(w.Dt.LargestLevel())
-	if ismax, err := cur.Maximal(); err != nil {
-		return nil, err
-	} else if !ismax && rand.Float64() < (1.0/maxLevel) {
-		errors.Logf("DEBUG", "random restart with %v", (1.0/maxLevel))
-		return w.Dt.Empty(), nil
-	}
 	kids, err := cur.Children()
 	if err != nil {
 		return nil, err
@@ -92,15 +84,14 @@ func (w *Walker) weight(v lattice.Node) (float64, error) {
 		maxLevel := float64(w.Dt.LargestLevel())
 		return (level)/(float64(indeg)*maxLevel), nil
 	} else {
-		return .5, nil
-		// indeg, err := v.ParentCount()
-		// if err != nil {
-			// return 0, err
-		// }
-		// odeg, err := v.ChildCount()
-		// if err != nil {
-			// return 0, err
-		// }
-		// return float64(odeg)/float64(indeg), nil
+		indeg, err := v.ParentCount()
+		if err != nil {
+			return 0, err
+		}
+		odeg, err := v.ChildCount()
+		if err != nil {
+			return 0, err
+		}
+		return float64(odeg)/float64(indeg), nil
 	}
 }
