@@ -11,7 +11,7 @@ import seaborn as sns
 import pandas as pd
 
 
-def Graph():
+def Graph(level=25, only_absorb_at_max=False):
 
     def randE(max_nodes_per_level, max_edges_per_node, max_levels, only_absorb_at_max):
         E = set()
@@ -46,7 +46,7 @@ def Graph():
                     E.add((u,v))
         return sorted(list(E))
 
-    E = randE(15, 4, 50, False)
+    E = randE(15, 4, level, only_absorb_at_max)
 
     s = set(e[0] for e in E)
     t = set(e[1] for e in E)
@@ -219,15 +219,24 @@ def stats(T, A, pr):
     return {
         'time':times[0],
         'max':max(prs),
-        'min':min(prs),
+        'min*10000':min(prs)*10000,
         'stderr':stderr,
         'stddev':np.std(prs*100)
     }
 
+## for level in [10, 25, 50, 75, 100]:
+##     T, A, prs = Graph(level=level, only_absorb_at_max=True)
+##     print level, stats(T, A, prs['musk'])['time']
+
+
 data = list()
-for _ in xrange(100):
+for _ in xrange(50):
     T, A, prs = Graph()
-    d = {'urw': stats(T, A, prs['urw']), 'fastmax': stats(T, A, prs['fastmax'])}
+    d = {
+        'urw': stats(T, A, prs['urw']),
+        'fastmax': stats(T, A, prs['fastmax']),
+        'unisorb': stats(T, A, prs['unisorb']),
+    }
     data.append(d)
     print d
 
@@ -253,28 +262,5 @@ g = sns.pairplot(df, aspect=3.5,
 #g = g.map(plt.scatter, "graph", "value")
 
 g.savefig("/tmp/fig.png")
-
-
-#keys = data[0]['urw'].keys()
-#markers = ['o', 'v', '^', 's', 'x', 'd', '+']
-#colors = ['r', 'b', 'g']
-
-
-## print data[0].keys()
-## fig = plt.figure()
-## for k, m in zip(keys, markers):
-##     ys = dict((group, list()) for group in data[0])
-##     for i, line in enumerate(data):
-##         for group, points in line.iteritems():
-##             ys[group].append(points[k])
-##     xs = range(len(data))
-##     ax = fig.add_subplot(1, 1, 1)
-##     for i, group in enumerate(data[0]):
-##         print ys[group], colors[i]+m
-##         ax.plot(xs, ys[group], colors[i]+'o', label=group)
-##     ax.legend()
-##     ax.set_title(k)
-## plt.show(fig)
-## plt.close(fig)
 
 
