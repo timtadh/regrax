@@ -1,0 +1,66 @@
+ttest-rel for log(min) between unisorb uniprox result 7.42828352662e-44
+ttest-rel for log(min) between unisorb urw result 4.5117771806e-41
+ttest-rel for log(min) between unisorb fastmax2 result 8.43392235804e-40
+ttest-rel for log(min) between unisorb fastmax result 3.26274150109e-36
+ttest-rel for log(min) between uniprox urw result 7.44844668661e-14
+ttest-rel for log(min) between uniprox fastmax2 result 3.57427411616e-29
+ttest-rel for log(min) between uniprox fastmax result 1.63368642589e-28
+ttest-rel for log(min) between urw fastmax2 result 1.62451651074e-32
+ttest-rel for log(min) between urw fastmax result 7.48012069231e-40
+ttest-rel for log(min) between fastmax2 fastmax result 0.864226345029
+
+ttest-rel for max between unisorb uniprox result 7.87005024384e-14
+ttest-rel for max between unisorb urw result 3.0408103567e-20
+ttest-rel for max between unisorb fastmax2 result 4.20743757213e-23
+ttest-rel for max between unisorb fastmax result 7.83464737615e-21
+ttest-rel for max between uniprox urw result 9.32242105423e-15
+ttest-rel for max between uniprox fastmax2 result 0.000953906213411
+ttest-rel for max between uniprox fastmax result 3.20808326856e-12
+ttest-rel for max between urw fastmax2 result 1.02567776248e-17
+ttest-rel for max between urw fastmax result 0.000401107800055
+ttest-rel for max between fastmax2 fastmax result 2.1538048832e-16
+
+ttest-rel for min between unisorb uniprox result 7.46963594652e-53
+ttest-rel for min between unisorb urw result 7.4639039305e-53
+ttest-rel for min between unisorb fastmax2 result 3.91847297475e-53
+ttest-rel for min between unisorb fastmax result 1.98951894397e-53
+ttest-rel for min between uniprox urw result 0.000771415956189
+ttest-rel for min between uniprox fastmax2 result 5.09086312969e-11
+ttest-rel for min between uniprox fastmax result 3.3826945052e-08
+ttest-rel for min between urw fastmax2 result 4.61834465852e-11
+ttest-rel for min between urw fastmax result 3.23176940076e-08
+ttest-rel for min between fastmax2 fastmax result 0.218986011392
+
+ttest-rel for stddev between unisorb uniprox result 7.22930072921e-22
+ttest-rel for stddev between unisorb urw result 2.40047115284e-30
+ttest-rel for stddev between unisorb fastmax2 result 2.26876991469e-40
+ttest-rel for stddev between unisorb fastmax result 9.82077739315e-29
+ttest-rel for stddev between uniprox urw result 4.44297922153e-23
+ttest-rel for stddev between uniprox fastmax2 result 2.14891483217e-07
+ttest-rel for stddev between uniprox fastmax result 1.10113698422e-18
+ttest-rel for stddev between urw fastmax2 result 1.39121851743e-20
+ttest-rel for stddev between urw fastmax result 9.12589283091e-07
+ttest-rel for stddev between fastmax2 fastmax result 2.78462426972e-14
+
+ttest-rel for stderr between unisorb uniprox result 2.69974236671e-28
+ttest-rel for stderr between unisorb urw result 5.7234157154e-32
+ttest-rel for stderr between unisorb fastmax2 result 1.55992923677e-42
+ttest-rel for stderr between unisorb fastmax result 4.161950425e-29
+ttest-rel for stderr between uniprox urw result 1.67975667297e-22
+ttest-rel for stderr between uniprox fastmax2 result 0.000568028777591
+ttest-rel for stderr between uniprox fastmax result 9.09009926046e-17
+ttest-rel for stderr between urw fastmax2 result 1.87959746691e-21
+ttest-rel for stderr between urw fastmax result 9.66502737074e-07
+ttest-rel for stderr between fastmax2 fastmax result 2.25932305928e-14
+
+ttest-rel for time between unisorb uniprox result 9.71150519645e-49
+ttest-rel for time between unisorb urw result 1.56136717622e-60
+ttest-rel for time between unisorb fastmax2 result 9.37944428838e-53
+ttest-rel for time between unisorb fastmax result 8.4596283135e-37
+ttest-rel for time between uniprox urw result 2.83545566732e-13
+ttest-rel for time between uniprox fastmax2 result 3.14727885921e-12
+ttest-rel for time between uniprox fastmax result 1.26169905194e-18
+ttest-rel for time between urw fastmax2 result 1.38005624535e-32
+ttest-rel for time between urw fastmax result 3.88393335348e-27
+ttest-rel for time between fastmax2 fastmax result 2.92069583335e-10
+
