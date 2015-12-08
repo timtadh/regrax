@@ -6,9 +6,6 @@ random.seed(os.urandom(16))
 
 import numpy as np
 from numpy import linalg
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 
 
 def Graph(level=25, only_absorb_at_max=False):
@@ -111,6 +108,35 @@ def Graph(level=25, only_absorb_at_max=False):
     def tree_connected(i, j):
         return (i,j) in TE
 
+    def common_ancestor(i, j):
+        if level[i] > level[j]:
+            t = i
+            i = j
+            j = t
+        istack = set([i])
+        jstack = set([j])
+        while level[list(jstack)[0]] > level[i]:
+            njstack = set()
+            for v in jstack:
+                for p in parents[v]:
+                    njstack.add(p)
+            jstack = njstack
+        while len(istack & jstack) <= 0:
+            #print istack, jstack
+            nistack = set()
+            njstack = set()
+            for v in istack:
+                for p in parents[v]:
+                    nistack.add(p)
+            for v in jstack:
+                for p in parents[v]:
+                    njstack.add(p)
+            istack = nistack
+            jstack = njstack
+            if len(istack) == 0 or len(jstack) == 0:
+                return None
+        return (istack & jstack).pop()
+
     def absorbing(v, kids):
         stack = [v]
         seen = set()
@@ -124,6 +150,104 @@ def Graph(level=25, only_absorb_at_max=False):
                 if kid not in seen:
                     stack.append(kid)
         return absorbing
+
+    def walk(v, kids):
+        def transition(c):
+            if len(kids[c]) > 0:
+                return random.choice(kids[c])
+            return None
+        c = v
+        n = transition(c)
+        path = [c]
+        while n is not None:
+            c = n
+            n = transition(c)
+            path.append(c)
+        return path
+
+    def total_area(v, kids):
+        stack = [v]
+        seen = set()
+        while len(stack) > 0:
+            u = stack.pop()
+            seen.add(u)
+            for kid in kids[u]:
+                if kid not in seen:
+                    stack.append(kid)
+        return sorted(list(seen))
+
+    def estimate_area_walk(v, kids, walks=5):
+        nodes = set()
+        for _ in xrange(walks):
+            for n in walk(v, kids):
+                nodes.add(n)
+                for k in kids[n]:
+                    nodes.add(k)
+        return sorted(list(nodes))
+
+    def estimate_depth_diameter(v, kids, walks=5):
+        mp = 0
+        mt = None
+        tails = set()
+        for _ in xrange(walks):
+            p = walk(v, kids)
+            tails.add(p[-1])
+            if len(p) > mp:
+                mp = len(p)
+                mt = p[-1]
+        tails = sorted(list(tails))
+        anc = tails[0]
+        #print tails
+        for t in tails[1:]:
+            #print v, t, anc, common_ancestor(anc, t)
+            anc = common_ancestor(anc, t)
+        diameter = (level[mt] - level[anc])
+        return float(mp), float(diameter)
+
+    def estimate_area(v, kids, limit=5):
+        def uniform(v):
+            return random.random()
+        def size_random(v):
+            return (1.0/float(level[v]))*random.random()
+        def kids_random(v):
+            if len(kids[v]) > 0:
+                return (1.0/float(len(kids[v])))*random.random()
+            return 1.0
+        def level_random(v):
+            return float(level[v])/random.random()
+        def score(v):
+            return level_random(v)
+        def argsel(items, score, better):
+            idx = 0
+            for i in xrange(1, len(items)):
+                if better(score(items[idx]), score(items[i])):
+                    idx = i
+            return idx
+        def argmin(items, score):
+            return argsel(items, score, lambda a, b: a > b)
+        def argmax(items, score):
+            return argsel(items, score, lambda a, b: a < b)
+        def take(stack):
+            idx = argmax(stack, score)
+            u = stack[idx]
+            del stack[idx]
+            return u
+        def push(stack, item):
+            stack.append(item)
+            while len(stack) > limit:
+                drop(stack)
+        def drop(stack):
+            idx = argmin(stack, score)
+            del stack[idx]
+        stack = [v]
+        seen = set()
+        while len(stack) > 0:
+            u = take(stack)
+            seen.add(u)
+            for kid in kids[u]:
+                if kid not in seen:
+                    push(stack, kid)
+        return sorted(list(seen))
 
     def density(v):
         return len(absorbing(v, kids))
@@ -167,6 +291,56 @@ def Graph(level=25, only_absorb_at_max=False):
         else:
             return 0.0
 
+    fm2_ests = dict()
+    def fastmax2(i, j):
+        K = tkids
+        M = float(max_level)
+        def weight(v):
+            if v in fm2_ests:
+                return fm2_ests[v]
+            if v not in A:
+                w = max(M-level[v], 2.0)
+                walks = int(np.log(w)*(w**2))
+                area = estimate_area_walk(v, K, walks=walks)
+                total = float(len(area))
+                absor = float(len([n for n in area if n in A]))
+                trans = float(len([n for n in area if n in T]))
+                est = absor
+                fm2_ests[v] = est
+                return est
+            else:
+                return 1.0
+        if j in K[i] and weight(j) > 0:
+            return (weight(j) / sum(weight(kid) for kid in K[i]))
+        elif i == j and len(kids[i]) == 0:
+            return 1.0
+        else:
+            return 0.0
+
+    uniprox_ests = dict()
+    def uniprox(i, j):
+        K = tkids
+        M = float(max_level)
+        def weight(v):
+            if v in uniprox_ests:
+                return uniprox_ests[v]
+            if v not in A:
+                walks = int(max(M/4.5, 5))
+                depth, diameter = estimate_depth_diameter(v, K, walks=walks)
+                est = depth*max(diameter, 1)
+                uniprox_ests[v] = est
+                return est
+            else:
+                return 1.0
+                #return float(level[v])/(M*float(len(parents[v])))
+                #return float(level[v])/M
+        if j in K[i] and weight(j) > 0:
+            return (weight(j) / sum(weight(kid) for kid in K[i]))
+        elif i == j and len(kids[i]) == 0:
+            return 1.0
+        else:
+            return 0.0
+
     #C = np.mean([len(x) for x in kids])
     def musk(i, j):
         def weight(u, v):
@@ -194,6 +368,8 @@ def Graph(level=25, only_absorb_at_max=False):
         'urw': urw,
         'unisorb': unisorb,
         'fastmax': fastmax,
+        'fastmax2': fastmax2,
+        'uniprox': uniprox,
         'musk': musk,
     }
 
@@ -216,10 +392,12 @@ def stats(T, A, pr):
     times = N.dot(np.ones((N.shape[0],)))
     expected = 1.0/float(len(prs))
     stderr = round(np.sqrt(sum((p - expected)**2 for p in prs)), 10)
-    return {
-        'time':times[0],
+    #print A
+    #print list(prs)
+    return { 'time':times[0],
         'max':max(prs),
-        'min*10000':min(prs)*10000,
+        'min':min(prs),
+        'log(min)':np.log(min(prs)) if min(prs) > 0 else np.log(10e-7),
         'stderr':stderr,
         'stddev':np.std(prs*100)
     }
@@ -228,39 +406,62 @@ def stats(T, A, pr):
 ##     T, A, prs = Graph(level=level, only_absorb_at_max=True)
 ##     print level, stats(T, A, prs['musk'])['time']
 
+def compare():
+    def pvals(data, stat_name, a, b):
+        from scipy import stats
+        A = list()
+        B = list()
+        for row in data:
+            A.append(row[a][stat_name])
+            B.append(row[b][stat_name])
+        _, pval = stats.ttest_rel(A, B)
+        print 'ttest-rel', 'for', stat_name, 'between', a, b, 'result', pval
+        #_, pval = stats.ttest_ind(A, B)
+        #print 'ttest', 'for', stat_name, 'between', a, b, 'result', pval
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import pandas as pd
+    data = list()
+    for _ in xrange(50):
+        T, A, prs = Graph(level=75)
+        d = {
+            'urw': stats(T, A, prs['urw']),
+            'fastmax': stats(T, A, prs['fastmax']),
+            'uniprox': stats(T, A, prs['uniprox']),
+            'fastmax2': stats(T, A, prs['fastmax2']),
+            'unisorb': stats(T, A, prs['unisorb']),
+        }
+        data.append(d)
+        print d
+    data = sorted(data, key=lambda x: x['uniprox']['stderr'])
 
-data = list()
-for _ in xrange(50):
-    T, A, prs = Graph()
-    d = {
-        'urw': stats(T, A, prs['urw']),
-        'fastmax': stats(T, A, prs['fastmax']),
-        'unisorb': stats(T, A, prs['unisorb']),
-    }
-    data.append(d)
-    print d
+    stat_names = sorted(data[0]['urw'].keys())
+    records = list()
+    for i, line in enumerate(data):
+        for gn, group in line.iteritems():
+            row = list()
+            row.append(i)
+            row.append(gn)
+            for sn in stat_names:
+                row.append(group[sn])
+            records.append(row)
 
-data = sorted(data, key=lambda x: x['fastmax']['stderr'])
+    df = pd.DataFrame(records, columns=(['graph', 'chain'] + stat_names))
 
-stat_names = sorted(data[0]['urw'].keys())
-records = list()
-for i, line in enumerate(data):
-    for gn, group in line.iteritems():
-        row = list()
-        row.append(i)
-        row.append(gn)
-        for sn in stat_names:
-            row.append(group[sn])
-        records.append(row)
+    g = sns.pairplot(df, aspect=3.5,
+            hue="chain", x_vars='graph', y_vars=stat_names)
+    g.savefig("/tmp/fig.png")
 
-df = pd.DataFrame(records, columns=(['graph', 'chain'] + stat_names))
-print df
+    print
+    groups = data[0].keys()
+    for sn in stat_names:
+        for i, a in enumerate(groups):
+            for b in groups[i+1:]:
+                pvals(data, sn, a, b)
+        print
 
-g = sns.pairplot(df, aspect=3.5,
-        hue="chain", x_vars='graph', y_vars=stat_names)
-#g = sns.FacetGrid(df, row="stat", hue="chain")
-#g = g.map(plt.scatter, "graph", "value")
+#T, A, prs = Graph(level=50)
+#print stats(T, A, prs['fastmax2'])
 
-g.savefig("/tmp/fig.png")
-
+compare()
 
