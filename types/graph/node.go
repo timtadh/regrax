@@ -294,6 +294,10 @@ func (n *Node) Children() (nodes []lattice.Node, err error) {
 	return nodes, n.cache(n.dt.ChildCount, n.dt.Children, n.label, nodes)
 }
 
+func (n *Node) CanonKids() (nodes []lattice.Node, err error) {
+	return nil, errors.Errorf("unimplemented")
+}
+
 func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
 	if has, err := count.Has(key); err != nil {
 		return err

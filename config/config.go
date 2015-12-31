@@ -11,6 +11,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/stores/bytes_bytes"
+	"github.com/timtadh/sfp/stores/bytes_float"
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
 	"github.com/timtadh/sfp/stores/int_int"
@@ -59,6 +60,14 @@ func (c *Config) BytesSubgraphMultiMap(
 		return bytes_subgraph.AnonBpTree(bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
 	} else {
 		return bytes_subgraph.NewBpTree(c.CacheFile(name+".bptree"), bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
+	}
+}
+
+func (c *Config) BytesFloatMultiMap(name string) (bytes_float.MultiMap, error) {
+	if c.Cache == "" {
+		return bytes_float.AnonBpTree()
+	} else {
+		return bytes_float.NewBpTree(c.CacheFile(name + ".bptree"))
 	}
 }
 

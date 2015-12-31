@@ -32,6 +32,8 @@ type ItemSets struct {
 	ParentCount        ints_int.MultiMap
 	Children           ints_ints.MultiMap
 	ChildCount         ints_int.MultiMap
+	CanonKids          ints_ints.MultiMap
+	CanonKidCount      ints_int.MultiMap
 	Embeddings         ints_ints.MultiMap
 	FrequentItems      []lattice.Node
 	empty              lattice.Node
@@ -66,6 +68,10 @@ func NewItemSets(config *config.Config, min, max int) (i *ItemSets, err error) {
 	if err != nil {
 		return nil, err
 	}
+	parentCount, err := config.IntsIntMultiMap("itemsets-parent-count")
+	if err != nil {
+		return nil, err
+	}
 	children, err := config.IntsIntsMultiMap("itemsets-children")
 	if err != nil {
 		return nil, err
@@ -74,7 +80,11 @@ func NewItemSets(config *config.Config, min, max int) (i *ItemSets, err error) {
 	if err != nil {
 		return nil, err
 	}
-	parentCount, err := config.IntsIntMultiMap("itemsets-parent-count")
+	canonKids, err := config.IntsIntsMultiMap("itemsets-canon-kids")
+	if err != nil {
+		return nil, err
+	}
+	canonKidCount, err := config.IntsIntMultiMap("itemsets-canon-kid-count")
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +99,8 @@ func NewItemSets(config *config.Config, min, max int) (i *ItemSets, err error) {
 		ParentCount: parentCount,
 		Children:    children,
 		ChildCount:  childCount,
+		CanonKids:    canonKids,
+		CanonKidCount:  canonKidCount,
 		Embeddings:  embeddings,
 		config:      config,
 	}
@@ -129,6 +141,8 @@ func (i *ItemSets) Close() error {
 	i.ParentCount.Close()
 	i.Children.Close()
 	i.ChildCount.Close()
+	i.CanonKids.Close()
+	i.CanonKidCount.Close()
 	i.Embeddings.Close()
 	return nil
 }

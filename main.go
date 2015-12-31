@@ -54,6 +54,7 @@ import (
 	"github.com/timtadh/sfp/miners/premusk"
 	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/miners/fastmax"
+	"github.com/timtadh/sfp/miners/uniprox"
 	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/types/graph"
 	"github.com/timtadh/sfp/types/itemset"
@@ -113,8 +114,10 @@ Modes
     absorbing                           uses absorbing markov chain
     musk                                uniform sampling of maximal patterns
     ospace                              uniform sampling of all patterns
-    fastmax                             unifrom sampling of max patterns
-                                        with absorbing chain
+    fastmax                             faster sampling of large max patterns
+                                        than absorbing
+    uniprox                             approximately uniform sampling of max
+                                        patterns using an absorbing chain
 
     Note: currently none of the modes take special options. This may change.
 
@@ -478,6 +481,30 @@ func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return fastmax.NewWalker(conf), args
 }
 
+func uniproxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	return uniprox.NewWalker(conf), args
+}
+
 func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
@@ -582,6 +609,8 @@ func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
 		return ospaceMode(argv[1:], conf)
 	case "premusk":
 		return premuskMode(argv[1:], conf)
+	case "uniprox":
+		return uniproxMode(argv[1:], conf)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown mining mode '%v'\n", argv[0])
 		Usage(ErrorCodes["opts"])

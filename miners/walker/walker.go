@@ -102,6 +102,7 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 						seen.Add(label)
 					}
 					i++
+					errors.Logf("INFO", "%v sampled unique %v", seen.Size(), sampled)
 				}
 			} else {
 				// errors.Logf("INFO", "rejected %v", sampled)

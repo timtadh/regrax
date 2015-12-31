@@ -32,6 +32,7 @@ type Node interface {
 	ParentCount() (int, error)
 	Children() ([]Node, error)
 	ChildCount() (int, error)
+	CanonKids() ([]Node, error)
 	Maximal() (bool, error)
 	Label() []byte
 	Lattice() (*Lattice, error)

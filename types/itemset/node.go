@@ -195,6 +195,57 @@ func (n *Node) Children() ([]lattice.Node, error) {
 	return nodes, nil
 }
 
+func (n *Node) CanonKids() ([]lattice.Node, error) {
+	if n.items.Size() == 0 {
+		return n.dt.FrequentItems, nil
+	}
+	if n.items.Size() >= n.dt.MaxItems {
+		return []lattice.Node{}, nil
+	}
+	i := setToInt32s(n.items)
+	if has, err := n.dt.CanonKidCount.Has(i); err != nil {
+		return nil, err
+	} else if has {
+		return n.cached(n.dt.CanonKids, i)
+	}
+	// this works because n.items is a set.SortedSet
+	// equiv. to. int32(n.items.Get(n.items.Size()-1).(types.Int32))
+	largest := i[len(i)-1]
+	exts := make(map[int32][]int32)
+	for _, tx := range n.txs {
+		for _, item := range n.dt.Index[tx] {
+			if item <= largest {
+				continue
+			}
+			if !n.items.Has(types.Int32(item)) {
+				exts[item] = append(exts[item], tx)
+			}
+		}
+	}
+	nodes := make([]lattice.Node, 0, 10)
+	for item, txs := range exts {
+		if len(txs) >= n.dt.Support() && !n.items.Has(types.Int32(item)) {
+			items := n.items.Copy()
+			items.Add(types.Int32(item))
+			node := &Node{
+				dt:    n.dt,
+				items: items,
+				txs:   txs,
+			}
+			err := node.Save()
+			if err != nil {
+				return nil, err
+			}
+			nodes = append(nodes, node)
+		}
+	}
+	err := n.cache(n.dt.CanonKidCount, n.dt.CanonKids, i, nodes)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
 func (n *Node) AdjacentCount() (int, error) {
 	pc, err := n.ParentCount()
 	if err != nil {
