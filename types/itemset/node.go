@@ -156,6 +156,14 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 }
 
 func (n *Node) Children() ([]lattice.Node, error) {
+	return n.kids(n.dt.ChildCount, n.dt.Children, n.allCandidateKids)
+}
+
+func (n *Node) CanonKids() ([]lattice.Node, error) {
+	return n.kids(n.dt.CanonKidCount, n.dt.CanonKids, n.canonCandidateKids)
+}
+
+func (n *Node) kids(counts ints_int.MultiMap, kids ints_ints.MultiMap, candidates func()(map[int32][]int32)) ([]lattice.Node, error) {
 	if n.items.Size() == 0 {
 		return n.dt.FrequentItems, nil
 	}
@@ -163,59 +171,30 @@ func (n *Node) Children() ([]lattice.Node, error) {
 		return []lattice.Node{}, nil
 	}
 	i := setToInt32s(n.items)
-	if has, err := n.dt.ChildCount.Has(i); err != nil {
+	if has, err := counts.Has(i); err != nil {
 		return nil, err
 	} else if has {
-		return n.cached(n.dt.Children, i)
+		return n.cached(kids, i)
 	}
-	exts := make(map[int32][]int32)
-	for _, tx := range n.txs {
-		for _, item := range n.dt.Index[tx] {
-			if !n.items.Has(types.Int32(item)) {
-				exts[item] = append(exts[item], tx)
-			}
-		}
+	exts := candidates()
+	nodes, err := n.nodesFromCandidateKids(exts)
+	if err != nil {
+		return nil, err
 	}
-	nodes := make([]lattice.Node, 0, 10)
-	for item, txs := range exts {
-		if len(txs) >= n.dt.Support() && !n.items.Has(types.Int32(item)) {
-			items := n.items.Copy()
-			items.Add(types.Int32(item))
-			node := &Node{
-				Items: Items{items},
-				dt:    n.dt,
-				txs:   txs,
-			}
-			err := node.Save()
-			if err != nil {
-				return nil, err
-			}
-			nodes = append(nodes, node)
-		}
-	}
-	err := n.cache(n.dt.ChildCount, n.dt.Children, i, nodes)
+	err = n.cache(counts, kids, i, nodes)
 	if err != nil {
 		return nil, err
 	}
 	return nodes, nil
 }
 
-func (n *Node) CanonKids() ([]lattice.Node, error) {
-	if n.items.Size() == 0 {
-		return n.dt.FrequentItems, nil
-	}
-	if n.items.Size() >= n.dt.MaxItems {
-		return []lattice.Node{}, nil
-	}
-	i := setToInt32s(n.items)
-	if has, err := n.dt.CanonKidCount.Has(i); err != nil {
-		return nil, err
-	} else if has {
-		return n.cached(n.dt.CanonKids, i)
-	}
+func (n *Node) canonCandidateKids() (map[int32][]int32) {
 	// this works because n.items is a set.SortedSet
-	// equiv. to. int32(n.items.Get(n.items.Size()-1).(types.Int32))
-	largest := i[len(i)-1]
+	l, err := n.items.Get(n.items.Size()-1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	largest := int32(l.(types.Int32))
 	exts := make(map[int32][]int32)
 	for _, tx := range n.txs {
 		for _, item := range n.dt.Index[tx] {
@@ -227,6 +206,22 @@ func (n *Node) CanonKids() ([]lattice.Node, error) {
 			}
 		}
 	}
+	return exts
+}
+
+func (n *Node) allCandidateKids() (map[int32][]int32) {
+	exts := make(map[int32][]int32)
+	for _, tx := range n.txs {
+		for _, item := range n.dt.Index[tx] {
+			if !n.items.Has(types.Int32(item)) {
+				exts[item] = append(exts[item], tx)
+			}
+		}
+	}
+	return exts
+}
+
+func (n *Node) nodesFromCandidateKids(exts map[int32][]int32) ([]lattice.Node, error) {
 	nodes := make([]lattice.Node, 0, 10)
 	for item, txs := range exts {
 		if len(txs) >= n.dt.Support() && !n.items.Has(types.Int32(item)) {
@@ -243,10 +238,6 @@ func (n *Node) CanonKids() ([]lattice.Node, error) {
 			}
 			nodes = append(nodes, node)
 		}
-	}
-	err := n.cache(n.dt.CanonKidCount, n.dt.CanonKids, i, nodes)
-	if err != nil {
-		return nil, err
 	}
 	return nodes, nil
 }
