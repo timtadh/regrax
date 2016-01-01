@@ -199,13 +199,13 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	graphs = make([]*goiso.SubGraph, len(cur.E))
 	for chainIdx := len(graphs) - 1; chainIdx >= 0; chainIdx-- {
 		if len(cur.V) <= 2 && len(cur.E) <= 1 {
-			a := cur.G.VertexSubGraph(cur.V[0].Id)
+			a, _ := cur.G.VertexSubGraph(cur.V[0].Id)
 			graphs[chainIdx] = cur
 			// errors.Logf("DEBUG", "small parent a %v cur %v", a.Label(), cur.Label())
 			cur = a
 		} else {
 			for i := range cur.E {
-				p := cur.RemoveEdge(i)
+				p, _ := cur.RemoveEdge(i)
 				if p.Connected() {
 					graphs[chainIdx] = cur
 					cur = p
@@ -221,7 +221,7 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	// for i, g := range graphs {
 	// errors.Logf("DEBUG", "graph %v %v", i, g.Label())
 	// }
-	startSg := dt.G.VertexSubGraph(cur.V[0].Id)
+	startSg, _ := dt.G.VertexSubGraph(cur.V[0].Id)
 	startLabel := startSg.ShortLabel()
 	var sgs SubGraphs
 	err = dt.Embeddings.DoFind(startLabel, func(_ []byte, sg *goiso.SubGraph) error {
@@ -254,6 +254,14 @@ func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
 }
 
 func (n *Node) Children() (nodes []lattice.Node, err error) {
+	return n.children(false)
+}
+
+func (n *Node) CanonKids() (nodes []lattice.Node, err error) {
+	return n.children(true)
+}
+
+func (n *Node) children(checkCanon bool) (nodes []lattice.Node, err error) {
 	if len(n.sgs) == 0 {
 		return n.dt.FrequentVertices, nil
 	}
@@ -275,8 +283,8 @@ func (n *Node) Children() (nodes []lattice.Node, err error) {
 			return exts
 		}
 		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
-			ext := sg.EdgeExtend(e)
-			if len(ext.V) <= n.dt.MaxVertices {
+			ext, canonized := sg.EdgeExtend(e)
+			if len(ext.V) <= n.dt.MaxVertices && (!checkCanon || canonized) {
 				exts = append(exts, ext)
 			}
 		}
@@ -302,10 +310,6 @@ func (n *Node) Children() (nodes []lattice.Node, err error) {
 	}
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
 	return nodes, n.cache(n.dt.ChildCount, n.dt.Children, n.label, nodes)
-}
-
-func (n *Node) CanonKids() (nodes []lattice.Node, err error) {
-	return nil, errors.Errorf("unimplemented")
 }
 
 func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {

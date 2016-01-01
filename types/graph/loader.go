@@ -168,7 +168,7 @@ func (v *VegLoader) startingPoints(input lattice.Input) (nodes []lattice.Node, e
 	for i := range G.V {
 		u := &G.V[i]
 		if G.ColorFrequency(u.Color) >= v.g.config.Support {
-			sg := G.SubGraph([]int{u.Idx}, nil)
+			sg, _ := G.SubGraph([]int{u.Idx}, nil)
 			err := v.g.Embeddings.Add(sg.ShortLabel(), sg)
 			if err != nil {
 				return nil, err
