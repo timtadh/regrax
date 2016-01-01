@@ -502,7 +502,11 @@ func uniproxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	return uniprox.NewWalker(conf), args
+	miner, err := uniprox.NewWalker(conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return miner, args
 }
 
 func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {

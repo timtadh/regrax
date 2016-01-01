@@ -26,7 +26,7 @@ type DataType interface {
 }
 
 type Node interface {
-	Level() int
+	Pattern() Pattern
 	AdjacentCount() (int, error)
 	Parents() ([]Node, error)
 	ParentCount() (int, error)
@@ -34,8 +34,13 @@ type Node interface {
 	ChildCount() (int, error)
 	CanonKids() ([]Node, error)
 	Maximal() (bool, error)
-	Label() []byte
 	Lattice() (*Lattice, error)
+}
+
+type Pattern interface {
+	Label() []byte
+	Level() int
+	CommonAncestor(Pattern) Pattern
 }
 
 type Formatter interface {

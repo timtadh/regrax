@@ -168,7 +168,6 @@ func MakeAbsorbingWalk(sample func(lattice.Node) (lattice.Node, error), errs cha
 			}
 			close(samples)
 			close(errs)
-			close(terminate)
 		}()
 		return samples, terminate, errs
 	}

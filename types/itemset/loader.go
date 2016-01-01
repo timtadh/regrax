@@ -245,7 +245,7 @@ func (l *IntLoader) Load(input lattice.Input) (lattice.DataType, error) {
 	if err != nil {
 		return nil, err
 	}
-	l.sets.empty = &Node{l.sets, int32sToSet([]int32{}), []int32{}}
+	l.sets.empty = &Node{Items{int32sToSet([]int32{})}, l.sets, []int32{}}
 	l.sets.FrequentItems = start
 	return l.sets, nil
 }
@@ -262,8 +262,8 @@ func (l *IntLoader) startingPoints(items itemsIter) ([]lattice.Node, error) {
 		if len(txs) >= l.sets.Support() {
 			errors.Logf("INFO", "item %d len(txs) %d", item, len(txs))
 			n := &Node{
+				Items: Items{set.FromSlice([]types.Hashable{types.Int32(item)})},
 				dt:    l.sets,
-				items: set.FromSlice([]types.Hashable{types.Int32(item)}),
 				txs:   txs,
 			}
 			nodes = append(nodes, n)

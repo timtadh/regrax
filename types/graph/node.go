@@ -17,9 +17,14 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
-type Node struct {
-	dt    *Graph
+type GraphPattern struct {
 	label []byte
+	level int
+}
+
+type Node struct {
+	GraphPattern
+	dt    *Graph
 	sgs   SubGraphs
 }
 
@@ -81,6 +86,11 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 		parts = add(parts, buf)
 	}
 	return parts
+}
+
+func (n *Node) Pattern() lattice.Pattern {
+	n.GraphPattern.level = n.Level()
+	return &n.GraphPattern
 }
 
 func (n *Node) Save() error {
@@ -154,7 +164,7 @@ func (n *Node) FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &Node{n.dt, label, sgs}, nil
+		return &Node{GraphPattern{label: label}, n.dt, sgs}, nil
 	}
 	// errors.Logf("DEBUG", "target %v", target.Label())
 	// errors.Logf("DEBUG", "compute Parent\n    of %v", target.Label())
@@ -221,7 +231,7 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	if err != nil {
 		return nil, nil, err
 	}
-	return &Node{dt, startLabel, sgs}, graphs, nil
+	return &Node{GraphPattern{label: startLabel}, dt, sgs}, graphs, nil
 }
 
 func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
@@ -287,7 +297,7 @@ func (n *Node) Children() (nodes []lattice.Node, err error) {
 		sgs = MinImgSupported(DedupSupported(sgs))
 		if len(sgs) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
-			nodes = append(nodes, &Node{n.dt, label, sgs})
+			nodes = append(nodes, &Node{GraphPattern{label: label}, n.dt, sgs})
 		}
 	}
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
@@ -336,7 +346,7 @@ func (n *Node) cached(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key 
 		if err != nil {
 			return err
 		}
-		nodes = append(nodes, &Node{n.dt, adj, sgs})
+		nodes = append(nodes, &Node{GraphPattern{label: adj}, n.dt, sgs})
 		return nil
 	})
 	if err != nil {
@@ -413,18 +423,18 @@ func (n *Node) Maximal() (bool, error) {
 	return cc == 0, nil
 }
 
-func (n *Node) Label() []byte {
-	return n.label
+func (g *GraphPattern) Label() []byte {
+	return g.label
 }
 
-func (n *Node) Embeddings() ([]lattice.Embedding, error) {
-	return nil, errors.Errorf("unimplemented")
+func (g *GraphPattern) Level() int {
+	return g.level
+}
+
+func (g *GraphPattern) CommonAncestor(lattice.Pattern) lattice.Pattern {
+	panic("unimplemented")
 }
 
 func (n *Node) Lattice() (*lattice.Lattice, error) {
 	return nil, &lattice.NoLattice{}
-}
-
-func (e *Embedding) Components() ([]int, error) {
-	return nil, errors.Errorf("unimplemented")
 }

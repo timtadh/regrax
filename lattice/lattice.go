@@ -29,14 +29,14 @@ func lattice(node Node) (*Lattice, error) {
 	for len(queue) > 0 {
 		var n Node
 		n, queue = pop(queue)
-		queued[string(n.Label())] = true
+		queued[string(n.Pattern().Label())] = true
 		rlattice = append(rlattice, n)
 		parents, err := n.Parents()
 		if err != nil {
 			return nil, err
 		}
 		for _, p := range parents {
-			l := string(p.Label())
+			l := string(p.Pattern().Label())
 			if _, has := queued[l]; !has {
 				queue = append(queue, p)
 				queued[l] = true
@@ -47,7 +47,7 @@ func lattice(node Node) (*Lattice, error) {
 	labels := make(map[string]int, len(lattice))
 	for i := len(rlattice) - 1; i >= 0; i-- {
 		lattice = append(lattice, rlattice[i])
-		labels[string(lattice[len(lattice)-1].Label())] = len(lattice) - 1
+		labels[string(lattice[len(lattice)-1].Pattern().Label())] = len(lattice) - 1
 	}
 	edges := make([]Edge, 0, len(lattice)*2)
 	for i, n := range lattice {
@@ -56,7 +56,7 @@ func lattice(node Node) (*Lattice, error) {
 			return nil, err
 		}
 		for _, kid := range kids {
-			j, has := labels[string(kid.Label())]
+			j, has := labels[string(kid.Pattern().Label())]
 			if has {
 				edges = append(edges, Edge{Src: i, Targ: j})
 			}

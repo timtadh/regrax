@@ -33,7 +33,7 @@ func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {
 					errors.Logf("INFO", "a random restart occured with probability %v", restartPr)
 					cur = w.Start[rand.Intn(len(w.Start))]
 				} else {
-					curLabel := cur.Label()
+					curLabel := cur.Pattern().Label()
 					nextLabel := curLabel
 					var next lattice.Node = nil
 					for bytes.Equal(curLabel, nextLabel) {
@@ -47,7 +47,7 @@ func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {
 							errs <- errors.Errorf("next was nil!!")
 							break loop
 						}
-						nextLabel = next.Label()
+						nextLabel = next.Pattern().Label()
 						if selfTransition {
 							break
 						}
@@ -57,7 +57,6 @@ func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {
 			}
 			close(samples)
 			close(errs)
-			close(terminate)
 		}()
 		return samples, terminate, errs
 	}

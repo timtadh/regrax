@@ -95,7 +95,7 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 		seen := set.NewSortedSet(w.Config.Samples)
 		for sampled := range samples {
 			if !w.Reject || w.Dt.Acceptable(sampled) {
-				label := types.ByteSlice(sampled.Label())
+				label := types.ByteSlice(sampled.Pattern().Label())
 				nodes <- sampled
 				if !w.Unique || !seen.Has(label) {
 					if w.Unique {
@@ -114,6 +114,7 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 		terminate <- true
 		<-samples
 		close(nodes)
+		close(terminate)
 	}()
 	return nodes
 }

@@ -52,7 +52,6 @@ func MakeMaxUniformWalk(next Transition, ctx interface{}) walker.Walk {
 			}
 			close(samples)
 			close(errs)
-			close(terminate)
 		}()
 		return samples, terminate, errs
 	}

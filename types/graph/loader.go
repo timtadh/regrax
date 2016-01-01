@@ -186,7 +186,11 @@ func (v *VegLoader) startingPoints(input lattice.Input) (nodes []lattice.Node, e
 			return err
 		}
 		if len(sgs) >= v.g.Support() {
-			nodes = append(nodes, &Node{dt: v.g, label: label, sgs: sgs})
+			nodes = append(nodes, &Node{
+				GraphPattern: GraphPattern{label, len(sgs[0].E) + 1},
+				dt: v.g,
+				sgs: sgs,
+			})
 			errors.Logf("INFO", "start %v %v", sgs[0].Label(), len(sgs))
 		}
 		return nil

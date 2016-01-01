@@ -23,7 +23,7 @@ func NewUnique(reporter miners.Reporter) *Unique {
 }
 
 func (r *Unique) Report(n lattice.Node) error {
-	label := types.ByteSlice(n.Label())
+	label := types.ByteSlice(n.Pattern().Label())
 	if r.Seen.Has(label) {
 		return nil
 	}

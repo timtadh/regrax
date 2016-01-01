@@ -3,6 +3,7 @@ package itemset
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 )
 
 import (
@@ -17,9 +18,13 @@ import (
 	"github.com/timtadh/sfp/stores/ints_ints"
 )
 
-type Node struct {
-	dt    *ItemSets
+type Items struct {
 	items *set.SortedSet
+}
+
+type Node struct {
+	Items
+	dt    *ItemSets
 	txs   []int32
 }
 
@@ -46,7 +51,7 @@ func int32sToSet(list []int32) *set.SortedSet {
 
 func TryLoadNode(items []int32, dt *ItemSets) (n *Node, _ error) {
 	err := dt.Embeddings.DoFind(items, func(key, txs []int32) error {
-		n = &Node{dt, int32sToSet(key), txs}
+		n = &Node{Items{int32sToSet(key)}, dt, txs}
 		return nil
 	})
 	if err != nil {
@@ -65,6 +70,10 @@ func LoadNode(items []int32, dt *ItemSets) (n *Node, err error) {
 	return n, nil
 }
 
+func (n *Node) Pattern() lattice.Pattern {
+	return &n.Items
+}
+
 func (n *Node) Save() error {
 	key := setToInt32s(n.items)
 	if has, err := n.dt.Embeddings.Has(key); err != nil {
@@ -77,10 +86,6 @@ func (n *Node) Save() error {
 
 func (n *Node) String() string {
 	return fmt.Sprintf("<Node %v %v>", n.items, len(n.txs))
-}
-
-func (n *Node) Level() int {
-	return n.items.Size() + 1
 }
 
 func (n *Node) Parents() ([]lattice.Node, error) {
@@ -136,7 +141,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 		for item, next := txs.Items()(); next != nil; item, next = next() {
 			stxs = append(stxs, int32(item.(types.Int32)))
 		}
-		node := &Node{n.dt, items, stxs}
+		node := &Node{Items{items}, n.dt, stxs}
 		err = node.Save()
 		if err != nil {
 			return nil, err
@@ -177,8 +182,8 @@ func (n *Node) Children() ([]lattice.Node, error) {
 			items := n.items.Copy()
 			items.Add(types.Int32(item))
 			node := &Node{
+				Items: Items{items},
 				dt:    n.dt,
-				items: items,
 				txs:   txs,
 			}
 			err := node.Save()
@@ -228,8 +233,8 @@ func (n *Node) CanonKids() ([]lattice.Node, error) {
 			items := n.items.Copy()
 			items.Add(types.Int32(item))
 			node := &Node{
+				Items: Items{items},
 				dt:    n.dt,
-				items: items,
 				txs:   txs,
 			}
 			err := node.Save()
@@ -337,18 +342,31 @@ func (n *Node) cached(m ints_ints.MultiMap, key []int32) (nodes []lattice.Node, 
 	return nodes, nil
 }
 
-func (n *Node) Label() []byte {
-	size := uint32(n.items.Size())
+func (i *Items) Label() []byte {
+	size := uint32(i.items.Size())
 	bytes := make([]byte, 4*(size+1))
 	binary.BigEndian.PutUint32(bytes[0:4], size)
 	s := 4
 	e := s + 4
-	for item, next := n.items.Items()(); next != nil; item, next = next() {
+	for item, next := i.items.Items()(); next != nil; item, next = next() {
 		binary.BigEndian.PutUint32(bytes[s:e], uint32(int32(item.(types.Int32))))
 		s += 4
 		e = s + 4
 	}
 	return bytes
+}
+
+func (i *Items) Level() int {
+	return i.items.Size() + 1
+}
+
+func (i *Items) CommonAncestor(p lattice.Pattern) lattice.Pattern {
+	o := p.(*Items)
+	anc, err := i.items.Intersect(o.items)
+	if err != nil {
+		log.Panic(err)
+	}
+	return &Items{anc.(*set.SortedSet)}
 }
 
 func (n *Node) Embeddings() ([]lattice.Embedding, error) {
