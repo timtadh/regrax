@@ -6,8 +6,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/data-structures/hashtable"
-	"github.com/timtadh/data-structures/types"
+	"github.com/timtadh/data-structures/set"
 )
 
 import (
@@ -62,6 +61,7 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 }
 
 func (w *Walker) transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
+	errors.Logf("DEBUG", "u %v", u)
 	weights := make([]float64, 0, len(adjs))
 	var total float64 = 0
 	for _, v := range adjs {
@@ -94,57 +94,135 @@ func (w *Walker) weight(v lattice.Node) (float64, error) {
 		}
 		return est, nil
 	}
-	depth, diameter, err := w.estimateDepthDiameter(v, 25)
+	depth, diameter, err := w.estimateDepthDiameter(v, 10)
 	if err != nil {
 		return 0, err
 	}
-	var est float64 = depth * max(diameter, 1)
+	var est float64 = depth * max(diameter, .01)
 	err = w.Ests.Add(label, est)
 	if err != nil {
 		return 0, err
 	}
+	errors.Logf("INFO", "node %v depth %v diameter %v est %v", v, depth, diameter, est)
 	return est, nil
 }
 
 func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diameter float64, err error) {
 	var maxDepth int = 0
-	var maxTail lattice.Node = nil
-	tails := hashtable.NewLinearHash()
+	var maxTail lattice.Pattern = nil
+	tails := set.NewSortedSet(10)
 	for i := 0; i < walks; i++ {
-		path, err := w.walkFrom(v)
+		var path []lattice.Node = nil
+		var err error = nil
+		if i < walks / 2 {
+			path, err = w.walkFrom(v)
+		} else {
+			path, err = w.quickWalkFrom(v)
+		}
 		if err != nil {
 			return 0, 0, err
 		}
-		tail := path[len(path)-1]
-		tailLabel := types.ByteSlice(tail.Pattern().Label())
-		if !tails.Has(tailLabel) {
-			tails.Put(tailLabel, tail)
-		}
+		tail := path[len(path)-1].Pattern()
+		tails.Add(tail)
 		if len(path) > maxDepth {
 			maxDepth = len(path)
 			maxTail = tail
 		}
 	}
-	anc := maxTail.Pattern()
-	for t, next := tails.Values()(); next != nil; t, next = next() {
-		tail := t.(lattice.Node)
-		anc = anc.CommonAncestor(tail.Pattern())
+	errors.Logf("DEBUG", "v %v got depth %v", v, maxDepth)
+	diameter = 0.0
+	// anc := maxTail
+	for i := 0; i < 3; i++ {
+		t, err := tails.Random()
+		if err != nil {
+			return 0, 0, err
+		}
+		tail := t.(lattice.Pattern)
+		a := maxTail.Distance(tail)
+		if a > diameter {
+			diameter = a
+		}
+		/*
+		a := maxTail.CommonAncestor(tail)
+		if a.Level() < anc.Level() {
+			anc = a
+		}*/
 	}
-	diameter = float64(maxTail.Pattern().Level() - anc.Level())
+	// diameter = float64(maxTail.Level() - anc.Level())
 	depth = float64(maxDepth)
 	return depth, diameter, nil
 }
 
-func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
+func (w *Walker) quickWalkFrom(v lattice.Node) (path []lattice.Node, err error) {
 	transition := func(c lattice.Node) (lattice.Node, error) {
 		kids, err := c.CanonKids()
 		if err != nil {
 			return nil, err
 		}
-		if len(kids) > 0 {
-			return kids[rand.Intn(len(kids))], nil
+		if len(kids) <= 0 {
+			return nil, nil
 		}
-		return nil, nil
+		return kids[rand.Intn(len(kids))], nil
+	}
+	c := v
+	n, err := transition(c)
+	if err != nil {
+		return nil, err
+	}
+	path = append(path, c)
+	for n != nil {
+		c = n
+		n, err = transition(c)
+		if err != nil {
+			return nil, err
+		}
+		path = append(path, c)
+	}
+	return path, nil
+}
+
+func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
+	weight := func(a lattice.Node) (float64, error) {
+		odeg, err := a.ChildCount()
+		if err != nil {
+			return 0, err
+		}
+		return float64(odeg) + 1, nil
+	}
+	prs := func(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
+		weights := make([]float64, 0, len(adjs))
+		var total float64 = 0
+		for _, v := range adjs {
+			wght, err := weight(v)
+			if err != nil {
+				return nil, err
+			}
+			weights = append(weights, wght)
+			total += wght
+		}
+		prs := make([]float64, 0, len(adjs))
+		for _, wght := range weights {
+			prs = append(prs, wght/total)
+		}
+		return prs, nil
+	}
+	transition := func(c lattice.Node) (lattice.Node, error) {
+		kids, err := c.CanonKids()
+		if err != nil {
+			return nil, err
+		}
+		if len(kids) <= 0 {
+			return nil, nil
+		}
+		if len(kids) == 1 {
+			return kids[0], nil
+		}
+		prs, err := prs(c, kids)
+		if err != nil {
+			return nil, err
+		}
+		i := stats.WeightedSample(prs)
+		return kids[i], nil
 	}
 	c := v
 	n, err := transition(c)

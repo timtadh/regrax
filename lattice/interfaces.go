@@ -4,6 +4,10 @@ import (
 	"io"
 )
 
+import (
+	"github.com/timtadh/data-structures/types"
+)
+
 type Lattice struct {
 	V []Node
 	E []Edge
@@ -38,9 +42,11 @@ type Node interface {
 }
 
 type Pattern interface {
+	types.Hashable
 	Label() []byte
 	Level() int
 	CommonAncestor(Pattern) Pattern
+	Distance(Pattern) float64
 }
 
 type Formatter interface {

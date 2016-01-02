@@ -360,18 +360,31 @@ func (i *Items) CommonAncestor(p lattice.Pattern) lattice.Pattern {
 	return &Items{anc.(*set.SortedSet)}
 }
 
-func (n *Node) Embeddings() ([]lattice.Embedding, error) {
-	embeddings := make([]lattice.Embedding, 0, len(n.txs))
-	for _, tx := range n.txs {
-		embeddings = append(embeddings, &Embedding{tx: tx})
-	}
-	return embeddings, nil
+func (i *Items) Distance(p lattice.Pattern) float64 {
+	o := p.(*Items)
+	intersect, _ := i.items.Intersect(o.items)
+	overlap := float64(intersect.Size())
+	return 1 - (overlap / (float64(i.items.Size()) + float64(o.items.Size()) - overlap))
 }
 
 func (n *Node) Lattice() (*lattice.Lattice, error) {
 	return nil, &lattice.NoLattice{}
 }
 
-func (e *Embedding) Components() ([]int, error) {
-	return []int{int(e.tx)}, nil
+func (i *Items) Equals(o types.Equatable) bool {
+	switch b := o.(type) {
+	case *Items: return i.items.Equals(b.items)
+	default: return false
+	}
+}
+
+func (i *Items) Less(o types.Sortable) bool {
+	switch b := o.(type) {
+	case *Items: return i.items.Less(b.items)
+	default: return false
+	}
+}
+
+func (i *Items) Hash() int {
+	return i.items.Hash()
 }
