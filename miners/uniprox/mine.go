@@ -1,7 +1,7 @@
 package uniprox
 
 import (
-	"math/rand"
+	// "math/rand"
 )
 
 import (
@@ -94,31 +94,40 @@ func (w *Walker) weight(v lattice.Node) (float64, error) {
 		}
 		return est, nil
 	}
-	depth, diameter, err := w.estimateDepthDiameter(v, 10)
+	var est float64
+	if ismax, err := v.Maximal(); err != nil {
+		return 0, err
+	} else if !ismax {
+		depth, diameter, err := w.estimateDepthDiameter(v, 25)
+		if err != nil {
+			return 0, err
+		}
+		est = depth * max(diameter, 1)
+		errors.Logf("INFO", "node %v depth %v diameter %v est %v", v, depth, diameter, est)
+	} else {
+		est = 1.0
+		errors.Logf("INFO", "node %v is max %v est %v", v, ismax, est)
+	}
+	err := w.Ests.Add(label, est)
 	if err != nil {
 		return 0, err
 	}
-	var est float64 = depth * max(diameter, .01)
-	err = w.Ests.Add(label, est)
-	if err != nil {
-		return 0, err
-	}
-	errors.Logf("INFO", "node %v depth %v diameter %v est %v", v, depth, diameter, est)
 	return est, nil
 }
 
 func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diameter float64, err error) {
+	if kids, err := v.CanonKids(); err != nil {
+		return 0, 0, err
+	} else if len(kids) <= 0 {
+		return 0, 0, nil
+	}
 	var maxDepth int = 0
 	var maxTail lattice.Pattern = nil
 	tails := set.NewSortedSet(10)
 	for i := 0; i < walks; i++ {
 		var path []lattice.Node = nil
 		var err error = nil
-		if i < walks / 2 {
-			path, err = w.walkFrom(v)
-		} else {
-			path, err = w.quickWalkFrom(v)
-		}
+		path, err = w.walkFrom(v)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -129,30 +138,20 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 			maxTail = tail
 		}
 	}
-	errors.Logf("DEBUG", "v %v got depth %v", v, maxDepth)
-	diameter = 0.0
-	// anc := maxTail
-	for i := 0; i < 3; i++ {
-		t, err := tails.Random()
-		if err != nil {
-			return 0, 0, err
-		}
-		tail := t.(lattice.Pattern)
-		a := maxTail.Distance(tail)
-		if a > diameter {
-			diameter = a
-		}
-		/*
-		a := maxTail.CommonAncestor(tail)
-		if a.Level() < anc.Level() {
-			anc = a
-		}*/
+	patterns := make([]lattice.Pattern, 0, tails.Size())
+	for t, next := tails.Items()(); next != nil; t, next = next() {
+		patterns = append(patterns, t.(lattice.Pattern))
 	}
-	// diameter = float64(maxTail.Level() - anc.Level())
+	anc, err := CommonAncestor(patterns)
+	if err != nil {
+		return 0, 0, err
+	}
+	diameter = float64(maxTail.Level() - anc.Level())
 	depth = float64(maxDepth)
 	return depth, diameter, nil
 }
 
+/*
 func (w *Walker) quickWalkFrom(v lattice.Node) (path []lattice.Node, err error) {
 	transition := func(c lattice.Node) (lattice.Node, error) {
 		kids, err := c.CanonKids()
@@ -180,14 +179,15 @@ func (w *Walker) quickWalkFrom(v lattice.Node) (path []lattice.Node, err error) 
 	}
 	return path, nil
 }
+*/
 
 func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 	weight := func(a lattice.Node) (float64, error) {
-		odeg, err := a.ChildCount()
+		kids, err := a.CanonKids()
 		if err != nil {
 			return 0, err
 		}
-		return float64(odeg) + 1, nil
+		return float64(len(kids)), nil
 	}
 	prs := func(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
 		weights := make([]float64, 0, len(adjs))
@@ -199,6 +199,9 @@ func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 			}
 			weights = append(weights, wght)
 			total += wght
+		}
+		if total == 0 {
+			return nil, nil
 		}
 		prs := make([]float64, 0, len(adjs))
 		for _, wght := range weights {
@@ -220,6 +223,9 @@ func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 		prs, err := prs(c, kids)
 		if err != nil {
 			return nil, err
+		}
+		if prs == nil {
+			return nil, nil
 		}
 		i := stats.WeightedSample(prs)
 		return kids[i], nil

@@ -125,13 +125,13 @@ func (i *ItemSets) Empty() lattice.Node {
 
 func (i *ItemSets) Acceptable(node lattice.Node) bool {
 	n := node.(*Node)
-	items := n.items.Size()
+	items := n.pat.Items.Size()
 	return i.MinItems <= items && items <= i.MaxItems
 }
 
 func (i *ItemSets) TooLarge(node lattice.Node) bool {
 	n := node.(*Node)
-	items := n.items.Size()
+	items := n.pat.Items.Size()
 	return items > i.MaxItems
 }
 
@@ -245,7 +245,7 @@ func (l *IntLoader) Load(input lattice.Input) (lattice.DataType, error) {
 	if err != nil {
 		return nil, err
 	}
-	l.sets.empty = &Node{Items{int32sToSet([]int32{})}, l.sets, []int32{}}
+	l.sets.empty = &Node{Pattern{int32sToSet([]int32{})}, l.sets, []int32{}}
 	l.sets.FrequentItems = start
 	return l.sets, nil
 }
@@ -262,7 +262,7 @@ func (l *IntLoader) startingPoints(items itemsIter) ([]lattice.Node, error) {
 		if len(txs) >= l.sets.Support() {
 			errors.Logf("INFO", "item %d len(txs) %d", item, len(txs))
 			n := &Node{
-				Items: Items{set.FromSlice([]types.Hashable{types.Int32(item)})},
+				pat:   Pattern{set.FromSlice([]types.Hashable{types.Int32(item)})},
 				dt:    l.sets,
 				txs:   txs,
 			}

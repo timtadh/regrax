@@ -3,13 +3,11 @@ package graph
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"sort"
 )
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
@@ -20,20 +18,20 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
-type GraphPattern struct {
+type Pattern struct {
 	label []byte
 	level int
 	sg *goiso.SubGraph
 }
 
-var EmptyPattern = &GraphPattern{
+var EmptyPattern = &Pattern{
 	label: []byte{},
 	level: 0,
 	sg: nil,
 }
 
 type Node struct {
-	GraphPattern
+	pat   Pattern
 	dt    *Graph
 	sgs   SubGraphs
 }
@@ -99,21 +97,21 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 }
 
 func (n *Node) Pattern() lattice.Pattern {
-	n.GraphPattern.level = n.Level()
-	if n.GraphPattern.level > 0 {
-		n.GraphPattern.sg = n.sgs[0]
+	n.pat.level = n.Level()
+	if n.pat.level > 0 {
+		n.pat.sg = n.sgs[0]
 	}
-	return &n.GraphPattern
+	return &n.pat
 }
 
 func (n *Node) Save() error {
-	if has, err := n.dt.Embeddings.Has(n.label); err != nil {
+	if has, err := n.dt.Embeddings.Has(n.pat.label); err != nil {
 		return err
 	} else if has {
 		return nil
 	}
 	for _, sg := range n.sgs {
-		err := n.dt.Embeddings.Add(n.label, sg)
+		err := n.dt.Embeddings.Add(n.pat.label, sg)
 		if err != nil {
 			return err
 		}
@@ -144,7 +142,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	if len(n.sgs[0].V) == 1 && len(n.sgs[0].E) == 0 {
 		return []lattice.Node{&Node{dt: n.dt}}, nil
 	}
-	if nodes, has, err := n.cached(n.dt.ParentCount, n.dt.Parents, n.label); err != nil {
+	if nodes, has, err := n.cached(n.dt.ParentCount, n.dt.Parents, n.pat.label); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -161,7 +159,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	if len(parents) == 0 {
 		return nil, errors.Errorf("Found no parents!!\n    node %v", n)
 	}
-	return parents, n.cache(n.dt.ParentCount, n.dt.Parents, n.label, parents)
+	return parents, n.cache(n.dt.ParentCount, n.dt.Parents, n.pat.label, parents)
 }
 
 func (n *Node) FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
@@ -177,7 +175,7 @@ func (n *Node) FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &Node{GraphPattern{label: label}, n.dt, sgs}, nil
+		return &Node{Pattern{label: label}, n.dt, sgs}, nil
 	}
 	// errors.Logf("DEBUG", "target %v", target.Label())
 	// errors.Logf("DEBUG", "compute Parent\n    of %v", target.Label())
@@ -244,7 +242,7 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	if err != nil {
 		return nil, nil, err
 	}
-	return &Node{GraphPattern{label: startLabel}, dt, sgs}, graphs, nil
+	return &Node{Pattern{label: startLabel}, dt, sgs}, graphs, nil
 }
 
 func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
@@ -257,7 +255,7 @@ func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
 	for _, lkid := range latKids {
 		kid := lkid.(*Node)
 		// errors.Logf("DEBUG", "trying to find extension\n    from %v\n      to %v\n    have %v", n.sgs[0].Label(), sg.Label(), kid.sgs[0].Label())
-		if bytes.Equal(label, kid.label) {
+		if bytes.Equal(label, kid.pat.label) {
 			// errors.Logf("DEBUG", "FOUND extension\n    from %v\n      to %v\n    have %v", n.sgs[0].Label(), sg.Label(), kid.sgs[0].Label())
 			return kid, nil
 		}
@@ -281,7 +279,7 @@ func (n *Node) children(checkCanon bool) (nodes []lattice.Node, err error) {
 	if len(n.sgs[0].E) >= n.dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
-	if nodes, has, err := n.cached(n.dt.ChildCount, n.dt.Children, n.label); err != nil {
+	if nodes, has, err := n.cached(n.dt.ChildCount, n.dt.Children, n.pat.label); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -318,11 +316,11 @@ func (n *Node) children(checkCanon bool) (nodes []lattice.Node, err error) {
 		sgs = MinImgSupported(DedupSupported(sgs))
 		if len(sgs) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
-			nodes = append(nodes, &Node{GraphPattern{label: label}, n.dt, sgs})
+			nodes = append(nodes, &Node{Pattern{label: label}, n.dt, sgs})
 		}
 	}
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
-	return nodes, n.cache(n.dt.ChildCount, n.dt.Children, n.label, nodes)
+	return nodes, n.cache(n.dt.ChildCount, n.dt.Children, n.pat.label, nodes)
 }
 
 func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
@@ -340,7 +338,7 @@ func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key [
 		if err != nil {
 			return err
 		}
-		err = cache.Add(key, node.(*Node).label)
+		err = cache.Add(key, node.(*Node).pat.label)
 		if err != nil {
 			return err
 		}
@@ -363,7 +361,7 @@ func (n *Node) cached(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key 
 		if err != nil {
 			return err
 		}
-		nodes = append(nodes, &Node{GraphPattern{label: adj}, n.dt, sgs})
+		nodes = append(nodes, &Node{Pattern{label: adj}, n.dt, sgs})
 		return nil
 	})
 	if err != nil {
@@ -388,7 +386,7 @@ func (n *Node) ParentCount() (int, error) {
 	if len(n.sgs) == 0 {
 		return 0, nil
 	}
-	if has, err := n.dt.ParentCount.Has(n.label); err != nil {
+	if has, err := n.dt.ParentCount.Has(n.pat.label); err != nil {
 		return 0, err
 	} else if !has {
 		nodes, err := n.Parents()
@@ -398,7 +396,7 @@ func (n *Node) ParentCount() (int, error) {
 		return len(nodes), nil
 	}
 	var count int32
-	err := n.dt.ParentCount.DoFind(n.label, func(_ []byte, c int32) error {
+	err := n.dt.ParentCount.DoFind(n.pat.label, func(_ []byte, c int32) error {
 		count = c
 		return nil
 	})
@@ -412,7 +410,7 @@ func (n *Node) ChildCount() (int, error) {
 	if len(n.sgs) == 0 {
 		return len(n.dt.FrequentVertices), nil
 	}
-	if has, err := n.dt.ChildCount.Has(n.label); err != nil {
+	if has, err := n.dt.ChildCount.Has(n.pat.label); err != nil {
 		return 0, err
 	} else if !has {
 		nodes, err := n.Children()
@@ -422,7 +420,7 @@ func (n *Node) ChildCount() (int, error) {
 		return len(nodes), nil
 	}
 	var count int32
-	err := n.dt.ChildCount.DoFind(n.label, func(_ []byte, c int32) error {
+	err := n.dt.ChildCount.DoFind(n.pat.label, func(_ []byte, c int32) error {
 		count = c
 		return nil
 	})
@@ -440,132 +438,47 @@ func (n *Node) Maximal() (bool, error) {
 	return cc == 0, nil
 }
 
-func NewGraphPattern(sg *goiso.SubGraph) *GraphPattern {
-	return &GraphPattern{
+func NewPattern(sg *goiso.SubGraph) *Pattern {
+	return &Pattern{
 		label: sg.ShortLabel(),
 		level: len(sg.E) + 1,
 		sg: sg,
 	}
 }
 
-func (g *GraphPattern) Label() []byte {
+func (g *Pattern) Label() []byte {
 	return g.label
 }
 
-func (g *GraphPattern) Level() int {
+func (g *Pattern) Level() int {
 	return g.level
 }
 
-func (g *GraphPattern) String() string {
+func (g *Pattern) String() string {
 	if g.sg != nil {
-		return fmt.Sprintf("<GraphPattern %v>", g.sg.Label())
+		return fmt.Sprintf("<Pattern %v>", g.sg.Label())
 	} else {
-		return fmt.Sprintf("<GraphPattern {}>")
+		return fmt.Sprintf("<Pattern {}>")
 	}
 }
 
-func (a *GraphPattern) Distance(o lattice.Pattern) float64 {
-	b := o.(*GraphPattern)
-	aColors := set.NewSortedSet(len(a.sg.V) + len(a.sg.E))
-	bColors := set.NewSortedSet(len(b.sg.V) + len(b.sg.E))
-	for i := range a.sg.V {
-		aColors.Add(types.Int(a.sg.V[i].Color))
-	}
-	for i := range b.sg.V {
-		bColors.Add(types.Int(b.sg.V[i].Color))
-	}
-	for i := range a.sg.E {
-		aColors.Add(types.Int(a.sg.E[i].Color))
-	}
-	for i := range b.sg.E {
-		bColors.Add(types.Int(b.sg.E[i].Color))
-	}
-	intersect, _ := aColors.Intersect(bColors)
-	overlap := float64(intersect.Size())
-	return 1 - (overlap / (float64(aColors.Size()) + float64(bColors.Size()) - overlap))
-}
-
-func (a *GraphPattern) CommonAncestor(o lattice.Pattern) lattice.Pattern {
-	b := o.(*GraphPattern)
-	if a.Level() > b.Level() {
-		a, b = b, a
-	}
-	if a.Equals(b) {
-		return a
-	} else if a.Level() < 1 {
-		return EmptyPattern
-	} else if b.Level() < 1 {
-		return EmptyPattern
-	}
-	aSet := set.FromSlice([]types.Hashable{a})
-	bSet := set.FromSlice([]types.Hashable{b})
-	firstB, _ := bSet.Get(0)
-	// errors.Logf("DEBUG", "levels: a %v b %v", a.Level(), b.Level())
-	for firstB.(*GraphPattern).Level() > a.Level() {
-		nbSet := set.NewSortedSet(bSet.Size()+1)
-		for x, next := bSet.Items()(); next != nil; x, next = next() {
-			v := x.(*GraphPattern)
-	// 		errors.Logf("DEBUG", "sg: %v", v.sg)
-			parents := v.sg.SubGraphs()
-			for _, p := range parents {
-				nbSet.Add(NewGraphPattern(p))
-			}
-		}
-		bSet = nbSet
-		firstB, _ = bSet.Get(0)
-	}
-	// errors.Logf("DEBUG", "levels: a %v b %v len(b) %v", a.Level(), firstB.(*GraphPattern).Level(), bSet.Size())
-	for !aSet.Overlap(bSet) {
-		naSet := set.NewSortedSet(aSet.Size())
-		nbSet := set.NewSortedSet(bSet.Size())
-		for x, next := aSet.Items()(); next != nil; x, next = next() {
-			v := x.(*GraphPattern)
-			parents := v.sg.CanonSubGraphs()
-			for _, p := range parents {
-				naSet.Add(NewGraphPattern(p))
-			}
-		}
-		for x, next := bSet.Items()(); next != nil; x, next = next() {
-			v := x.(*GraphPattern)
-			parents := v.sg.CanonSubGraphs()
-			for _, p := range parents {
-				nbSet.Add(NewGraphPattern(p))
-			}
-		}
-		aSet = naSet
-		bSet = nbSet
-		if aSet.Size() == 0 || bSet.Size() == 0 {
-			return EmptyPattern
-		}
-	}
-	ancs, err := aSet.Intersect(bSet)
-	if err != nil {
-		log.Fatal(err)
-	}
-	anc, err := ancs.(*set.SortedSet).Random()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return anc.(*GraphPattern)
-}
-
-func (g *GraphPattern) Equals(o types.Equatable) bool {
+func (g *Pattern) Equals(o types.Equatable) bool {
 	a := types.ByteSlice(g.Label())
 	switch b := o.(type) {
-	case *GraphPattern: return a.Equals(types.ByteSlice(b.Label()))
+	case *Pattern: return a.Equals(types.ByteSlice(b.Label()))
 	default: return false
 	}
 }
 
-func (g *GraphPattern) Less(o types.Sortable) bool {
+func (g *Pattern) Less(o types.Sortable) bool {
 	a := types.ByteSlice(g.Label())
 	switch b := o.(type) {
-	case *GraphPattern: return a.Less(types.ByteSlice(b.Label()))
+	case *Pattern: return a.Less(types.ByteSlice(b.Label()))
 	default: return false
 	}
 }
 
-func (g *GraphPattern) Hash() int {
+func (g *Pattern) Hash() int {
 	return types.ByteSlice(g.Label()).Hash()
 }
 

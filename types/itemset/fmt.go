@@ -20,7 +20,7 @@ func (f Formatter) PatternName(n lattice.Node) string {
 
 func (f Formatter) FormatPattern(node lattice.Node) string {
 	n := node.(*Node)
-	return n.items.String()
+	return n.pat.Items.String()
 }
 
 func (f Formatter) FormatEmbeddings(node lattice.Node) []string {
