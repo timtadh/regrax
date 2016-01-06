@@ -1,7 +1,6 @@
 package reporters
 
 import (
-	"fmt"
 	"io"
 	"os"
 )
@@ -39,20 +38,13 @@ func NewFile(c *config.Config, fmt lattice.Formatter) (*File, error) {
 }
 
 func (r *File) Report(n lattice.Node) error {
-	name := r.fmt.PatternName(n)
-	_, err := fmt.Fprintf(r.patterns, "// %s\n\n%s\n", name, r.fmt.FormatPattern(n))
+	err := r.fmt.FormatPattern(r.patterns, n)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(r.embeddings, "// %s\n\n", name)
+	err = r.fmt.FormatEmbeddings(r.embeddings, n)
 	if err != nil {
 		return err
-	}
-	for _, embedding := range r.fmt.FormatEmbeddings(n) {
-		_, err = fmt.Fprintf(r.embeddings, "%s\n", embedding)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }

@@ -1,7 +1,9 @@
 package graph
 
 import (
-	"log"
+	"fmt"
+	"io"
+	"strings"
 )
 
 import (
@@ -27,13 +29,22 @@ func (f *Formatter) PatternName(node lattice.Node) string {
 	return n.sgs[0].Label()
 }
 
-func (f *Formatter) FormatPattern(node lattice.Node) string {
+func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	n := node.(*Node)
-	return n.sgs[0].String()
+	max := ""
+	if ismax, err := n.Maximal(); err != nil {
+		return "", err
+	} else if ismax {
+		max = " # maximal"
+	}
+	pat := n.sgs[0].Label()
+	dot := n.sgs[0].String()
+	return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
 }
 
-func (f *Formatter) FormatEmbeddings(node lattice.Node) []string {
+func (f *Formatter) Embeddings(node lattice.Node) (string, error) {
 	n := node.(*Node)
+	pat := n.sgs[0].Label()
 	embs := make([]string, 0, len(n.sgs))
 	for _, sg := range n.sgs {
 		allAttrs := make(map[int]map[string]interface{})
@@ -45,11 +56,30 @@ func (f *Formatter) FormatEmbeddings(node lattice.Node) []string {
 					return nil
 				})
 			if err != nil {
-				log.Fatal(err)
+				return "", err
 			}
 		}
 		embs = append(embs, sg.StringWithAttrs(allAttrs))
 	}
-	return embs
+	embeddings := strings.Join(embs, "\n")
+	return fmt.Sprintf("// %s\n\n%s\n", pat, embeddings), nil
+}
+
+func (f *Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
+	pat, err := f.Pattern(node)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(w, "%s\n", pat)
+	return err
+}
+
+func (f *Formatter) FormatEmbeddings(w io.Writer, node lattice.Node) error {
+	emb, err := f.Embeddings(node)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(w, "%s\n", emb)
+	return err
 }
 
