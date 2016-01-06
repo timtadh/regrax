@@ -24,6 +24,8 @@ import (
 func CommonAncestor(patterns []lattice.Pattern) (_ lattice.Pattern, err error) {
 	if len(patterns) == 0 {
 		return nil, errors.Errorf("no patterns given")
+	} else if len(patterns) == 1 {
+		return patterns[0], nil
 	}
 	switch patterns[0].(type) {
 	case *graph.Pattern: return graphCommonAncestor(patterns)
@@ -105,6 +107,12 @@ func graphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) {
 		}
 	}
 	errors.Logf("DEBUG", "ancestor %v", maxPattern)
+
+	err = wlkr.Close()
+	if err != nil {
+		return nil, err
+	}
+
 	return maxPattern, nil
 }
 
