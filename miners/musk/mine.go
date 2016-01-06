@@ -11,7 +11,6 @@ import (
 import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners/walker"
-	"github.com/timtadh/sfp/stats"
 )
 
 type Transition func(interface{}, lattice.Node) (lattice.Node, error)
@@ -68,30 +67,7 @@ func Next(ctx interface{}, cur lattice.Node) (lattice.Node, error) {
 	}
 	adjs := append(kids, parents...)
 	errors.Logf("DEBUG", "cur %v parents %v kids %v adjs %v", cur, len(parents), len(kids), len(adjs))
-	prs, err := transPrs(cur, adjs)
-	if err != nil {
-		return nil, err
-	}
-	i := stats.WeightedSample(prs)
-	return adjs[i], nil
-}
-
-func transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
-	weights := make([]float64, 0, len(adjs))
-	var total float64 = 0
-	for _, v := range adjs {
-		wght, err := weight(u, v)
-		if err != nil {
-			return nil, err
-		}
-		weights = append(weights, wght)
-		total += wght
-	}
-	prs := make([]float64, 0, len(adjs))
-	for _, wght := range weights {
-		prs = append(prs, wght/total)
-	}
-	return prs, nil
+	return walker.Transition(cur, adjs, weight)
 }
 
 func weight(u, v lattice.Node) (float64, error) {

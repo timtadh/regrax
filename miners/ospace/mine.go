@@ -90,7 +90,7 @@ func selfPr(prs []float64) float64 {
 func transPrs(w *walker.Walker, u lattice.Node, adjs []lattice.Node) ([]float64, error) {
 	prs := make([]float64, 0, len(adjs))
 	for _, v := range adjs {
-		wght, err := weight(w, u, v)
+		wght, err := weight(u, v)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +100,7 @@ func transPrs(w *walker.Walker, u lattice.Node, adjs []lattice.Node) ([]float64,
 	return prs, nil
 }
 
-func weight(w *walker.Walker, u, v lattice.Node) (float64, error) {
+func weight(u, v lattice.Node) (float64, error) {
 	udeg, err := u.AdjacentCount()
 	if err != nil {
 		return 0, err

@@ -1,7 +1,6 @@
 package uniprox
 
 import (
-	"math/rand"
 )
 
 import (
@@ -46,39 +45,10 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 		return nil, err
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
-	if len(kids) <= 0 {
-		return nil, nil
-	}
-	if len(kids) == 1 {
-		return kids[0], nil
-	}
-	prs, err := w.transPrs(cur, kids)
-	if err != nil {
-		return nil, err
-	}
-	i := stats.WeightedSample(prs)
-	return kids[i], nil
+	return walker.Transition(cur, kids, w.weight)
 }
 
-func (w *Walker) transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
-	weights := make([]float64, 0, len(adjs))
-	var total float64 = 0
-	for _, v := range adjs {
-		wght, err := w.weight(v)
-		if err != nil {
-			return nil, err
-		}
-		weights = append(weights, wght)
-		total += wght
-	}
-	prs := make([]float64, 0, len(adjs))
-	for _, wght := range weights {
-		prs = append(prs, wght/total)
-	}
-	return prs, nil
-}
-
-func (w *Walker) weight(v lattice.Node) (float64, error) {
+func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 	label := v.Pattern().Label()
 	if has, err := w.Ests.Has(label); err != nil {
 		return 0, err
@@ -131,17 +101,10 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 	for i := 0; i < walks; i++ {
 		var path []lattice.Node = nil
 		var err error = nil
-		// if i < walks/2 {
-		// 	path, err = w.walkFrom(v)
-		// 	if err != nil {
-		// 		return 0, 0, err
-		// 	}
-		// } else {
-			path, err = w.walkFrom(v)
-			if err != nil {
-				return 0, 0, err
-			}
-		// }
+		path, err = w.walkFrom(v)
+		if err != nil {
+			return 0, 0, err
+		}
 		tail := path[len(path)-1].Pattern()
 		tails.Add(tail)
 		if len(path) > maxDepth {
@@ -164,34 +127,6 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 	diameter = float64(maxTail.Level() - anc.Level())
 	depth = float64(maxDepth)
 	return depth, diameter, nil
-}
-
-func (w *Walker) quickWalkFrom(v lattice.Node) (path []lattice.Node, err error) {
-	transition := func(c lattice.Node) (lattice.Node, error) {
-		kids, err := c.CanonKids()
-		if err != nil {
-			return nil, err
-		}
-		if len(kids) <= 0 {
-			return nil, nil
-		}
-		return kids[rand.Intn(len(kids))], nil
-	}
-	c := v
-	n, err := transition(c)
-	if err != nil {
-		return nil, err
-	}
-	path = append(path, c)
-	for n != nil {
-		c = n
-		n, err = transition(c)
-		if err != nil {
-			return nil, err
-		}
-		path = append(path, c)
-	}
-	return path, nil
 }
 
 func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
