@@ -436,25 +436,29 @@ func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice
 func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"h",
+		"hc",
 		[]string{
 			"help",
+			"compute-pr-matrices",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
+	computePrMatrices := false
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
+		case "-c", "--compute-pr-matrices":
+			computePrMatrices = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	return absorbing.NewWalker(conf), args
+	return absorbing.NewWalker(conf, computePrMatrices), args
 }
 
 func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {

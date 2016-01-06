@@ -95,6 +95,15 @@ func (g *Graph) LargestLevel() int {
 	return g.MaxEdges
 }
 
+func (g *Graph) MinimumLevel() int {
+	if g.MinEdges > 0 {
+		return g.MinEdges
+	} else if g.MinVertices > 0 {
+		return  g.MinVertices - 1
+	}
+	return 0
+}
+
 func (g *Graph) Empty() lattice.Node {
 	return &Node{dt: g}
 }

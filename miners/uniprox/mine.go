@@ -1,7 +1,7 @@
 package uniprox
 
 import (
-	// "math/rand"
+	"math/rand"
 )
 
 import (
@@ -61,7 +61,6 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 }
 
 func (w *Walker) transPrs(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
-	errors.Logf("DEBUG", "u %v", u)
 	weights := make([]float64, 0, len(adjs))
 	var total float64 = 0
 	for _, v := range adjs {
@@ -98,15 +97,20 @@ func (w *Walker) weight(v lattice.Node) (float64, error) {
 	if ismax, err := v.Maximal(); err != nil {
 		return 0, err
 	} else if !ismax {
-		depth, diameter, err := w.estimateDepthDiameter(v, 25)
+		depth, diameter, err := w.estimateDepthDiameter(v, 5)
 		if err != nil {
 			return 0, err
 		}
 		est = depth * max(diameter, 1)
-		errors.Logf("INFO", "node %v depth %v diameter %v est %v", v, depth, diameter, est)
-	} else {
+		if est > 0 {
+			errors.Logf("DEBUG", "weight %v depth %v diameter %v est %v", v, depth, diameter, est)
+		}
+	} else if v.Pattern().Level() >= w.Dt.MinimumLevel() {
 		est = 1.0
-		errors.Logf("INFO", "node %v is max %v est %v", v, ismax, est)
+		// errors.Logf("INFO", "node %v is max %v est %v", v, ismax, est)
+	} else {
+		est = 0.0
+		// errors.Logf("INFO", "node %v is max %v but too small v est %v", v, ismax, est)
 	}
 	err := w.Ests.Add(label, est)
 	if err != nil {
@@ -127,16 +131,27 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 	for i := 0; i < walks; i++ {
 		var path []lattice.Node = nil
 		var err error = nil
-		path, err = w.walkFrom(v)
-		if err != nil {
-			return 0, 0, err
-		}
+		// if i < walks/2 {
+		// 	path, err = w.walkFrom(v)
+		// 	if err != nil {
+		// 		return 0, 0, err
+		// 	}
+		// } else {
+			path, err = w.walkFrom(v)
+			if err != nil {
+				return 0, 0, err
+			}
+		// }
 		tail := path[len(path)-1].Pattern()
 		tails.Add(tail)
 		if len(path) > maxDepth {
 			maxDepth = len(path)
 			maxTail = tail
 		}
+	}
+	level := maxDepth + v.Pattern().Level()
+	if level < w.Dt.MinimumLevel() {
+		return 0, 0, nil
 	}
 	patterns := make([]lattice.Pattern, 0, tails.Size())
 	for t, next := tails.Items()(); next != nil; t, next = next() {
@@ -151,7 +166,6 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 	return depth, diameter, nil
 }
 
-/*
 func (w *Walker) quickWalkFrom(v lattice.Node) (path []lattice.Node, err error) {
 	transition := func(c lattice.Node) (lattice.Node, error) {
 		kids, err := c.CanonKids()
@@ -179,15 +193,24 @@ func (w *Walker) quickWalkFrom(v lattice.Node) (path []lattice.Node, err error) 
 	}
 	return path, nil
 }
-*/
 
 func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 	weight := func(a lattice.Node) (float64, error) {
-		kids, err := a.CanonKids()
-		if err != nil {
+		var est float64
+		if ismax, err := a.Maximal(); err != nil {
 			return 0, err
+		} else if !ismax {
+			kids, err := a.CanonKids()
+			if err != nil {
+				return 0, err
+			}
+			est = float64(len(kids))
+		} else if v.Pattern().Level() >= w.Dt.MinimumLevel() {
+			est = 1.0
+		} else {
+			est = 0.0
 		}
-		return float64(len(kids)), nil
+		return est, nil
 	}
 	prs := func(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
 		weights := make([]float64, 0, len(adjs))

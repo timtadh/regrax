@@ -119,6 +119,10 @@ func (i *ItemSets) LargestLevel() int {
 	return i.MaxItems
 }
 
+func (i *ItemSets) MinimumLevel() int {
+	return i.MinItems
+}
+
 func (i *ItemSets) Empty() lattice.Node {
 	return i.empty
 }

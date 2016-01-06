@@ -31,11 +31,13 @@ type Sparse struct {
 type Walker struct {
 	walker.Walker
 	Errors chan error
+	ComputePrMatrices bool
 }
 
-func NewWalker(conf *config.Config) *Walker {
+func NewWalker(conf *config.Config, computePrMatrices bool) *Walker {
 	miner := &Walker{
 		Errors: make(chan error),
+		ComputePrMatrices: computePrMatrices,
 	}
 	miner.Walker = *walker.NewWalker(conf, MakeAbsorbingWalk(MakeSample(miner), miner.Errors))
 	return miner
@@ -141,6 +143,9 @@ func (w *Walker) probabilities(lat *lattice.Lattice) ([]int, error) {
 }
 
 func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
+	if !w.ComputePrMatrices {
+		return (w.Walker).Mine(dt, rptr)
+	}
 	mr, err := NewMatrixReporter(w, w.Errors)
 	if err != nil {
 		return err
