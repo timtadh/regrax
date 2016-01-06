@@ -131,7 +131,7 @@ func (g *Graph) Close() error {
 }
 
 type VegLoader struct {
-	g *Graph
+	G *Graph
 }
 
 func NewVegLoader(config *config.Config, minE, maxE, minV, maxV int) (lattice.Loader, error) {
@@ -140,55 +140,55 @@ func NewVegLoader(config *config.Config, minE, maxE, minV, maxV int) (lattice.Lo
 		return nil, err
 	}
 	v := &VegLoader{
-		g: g,
+		G: g,
 	}
 	return v, nil
 }
 
 func (v *VegLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
-	start, err := v.startingPoints(input)
-	if err != nil {
-		return nil, err
-	}
-	v.g.FrequentVertices = start
-	return v.g, nil
-}
-
-func (v *VegLoader) startingPoints(input lattice.Input) (nodes []lattice.Node, err error) {
 	G, err := v.loadGraph(input)
 	if err != nil {
 		return nil, err
 	}
-	v.g.G = G
-	v.g.Embeddings, err = v.g.config.BytesSubgraphMultiMap("graph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
+	start, err := v.ComputeStartingPoints(G)
+	if err != nil {
+		return nil, err
+	}
+	v.G.FrequentVertices = start
+	return v.G, nil
+}
+
+func (v *VegLoader) ComputeStartingPoints(G *goiso.Graph) (nodes []lattice.Node, err error) {
+	v.G.G = G
+	v.G.Embeddings, err = v.G.config.BytesSubgraphMultiMap("graph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
 	if err != nil {
 		return nil, err
 	}
 
 	for i := range G.V {
 		u := &G.V[i]
-		if G.ColorFrequency(u.Color) >= v.g.config.Support {
-			sg, _ := G.SubGraph([]int{u.Idx}, nil)
-			err := v.g.Embeddings.Add(sg.ShortLabel(), sg)
+		if G.ColorFrequency(u.Color) >= v.G.config.Support {
+			sg, _ := G.VertexSubGraph(u.Idx)
+			err := v.G.Embeddings.Add(sg.ShortLabel(), sg)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	err = bytes_subgraph.DoKey(v.g.Embeddings.Keys, func(label []byte) error {
+	err = bytes_subgraph.DoKey(v.G.Embeddings.Keys, func(label []byte) error {
 		sgs := make([]*goiso.SubGraph, 0, 10)
-		err := v.g.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
+		err := v.G.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
 			sgs = append(sgs, sg)
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		if len(sgs) >= v.g.Support() {
+		if len(sgs) >= v.G.Support() {
 			nodes = append(nodes, &Node{
 				pat: Pattern{label: label},
-				dt: v.g,
+				dt: v.G,
 				sgs: sgs,
 			})
 			errors.Logf("INFO", "start %v %v", sgs[0].Label(), len(sgs))
@@ -257,8 +257,8 @@ func (v *VegLoader) loadVertex(g *goiso.Graph, vids types.Map, data []byte) (err
 	if err != nil {
 		return err
 	}
-	if v.g.NodeAttrs != nil {
-		err = v.g.NodeAttrs.Add(int32(vertex.Id), obj)
+	if v.G.NodeAttrs != nil {
+		err = v.G.NodeAttrs.Add(int32(vertex.Id), obj)
 		if err != nil {
 			return err
 		}

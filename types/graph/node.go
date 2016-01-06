@@ -21,13 +21,13 @@ import (
 type Pattern struct {
 	label []byte
 	level int
-	sg *goiso.SubGraph
+	Sg *goiso.SubGraph
 }
 
 var EmptyPattern = &Pattern{
 	label: []byte{},
 	level: 0,
-	sg: nil,
+	Sg: nil,
 }
 
 type Node struct {
@@ -99,7 +99,7 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 func (n *Node) Pattern() lattice.Pattern {
 	n.pat.level = n.Level()
 	if n.pat.level > 0 {
-		n.pat.sg = n.sgs[0]
+		n.pat.Sg = n.sgs[0]
 	}
 	return &n.pat
 }
@@ -442,7 +442,7 @@ func NewPattern(sg *goiso.SubGraph) *Pattern {
 	return &Pattern{
 		label: sg.ShortLabel(),
 		level: len(sg.E) + 1,
-		sg: sg,
+		Sg: sg,
 	}
 }
 
@@ -455,8 +455,8 @@ func (g *Pattern) Level() int {
 }
 
 func (g *Pattern) String() string {
-	if g.sg != nil {
-		return fmt.Sprintf("<Pattern %v>", g.sg.Label())
+	if g.Sg != nil {
+		return fmt.Sprintf("<Pattern %v>", g.Sg.Label())
 	} else {
 		return fmt.Sprintf("<Pattern {}>")
 	}
