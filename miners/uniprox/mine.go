@@ -14,7 +14,6 @@ import (
 	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/absorbing"
 	"github.com/timtadh/sfp/miners/walker"
-	"github.com/timtadh/sfp/stats"
 	"github.com/timtadh/sfp/stores/bytes_float"
 )
 
@@ -45,7 +44,9 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 		return nil, err
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
-	return walker.Transition(cur, kids, w.weight)
+	next, err := walker.Transition(cur, kids, w.weight)
+	panic("stop")
+	return next, err
 }
 
 func (w *Walker) weight(_, v lattice.Node) (float64, error) {
@@ -130,7 +131,7 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 }
 
 func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
-	weight := func(a lattice.Node) (float64, error) {
+	weight := func(_, a lattice.Node) (float64, error) {
 		var est float64
 		if ismax, err := a.Maximal(); err != nil {
 			return 0, err
@@ -143,50 +144,16 @@ func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 		} else if v.Pattern().Level() >= w.Dt.MinimumLevel() {
 			est = 1.0
 		} else {
-			est = 0.0
+			est = 0.01
 		}
 		return est, nil
-	}
-	prs := func(u lattice.Node, adjs []lattice.Node) ([]float64, error) {
-		weights := make([]float64, 0, len(adjs))
-		var total float64 = 0
-		for _, v := range adjs {
-			wght, err := weight(v)
-			if err != nil {
-				return nil, err
-			}
-			weights = append(weights, wght)
-			total += wght
-		}
-		if total == 0 {
-			return nil, nil
-		}
-		prs := make([]float64, 0, len(adjs))
-		for _, wght := range weights {
-			prs = append(prs, wght/total)
-		}
-		return prs, nil
 	}
 	transition := func(c lattice.Node) (lattice.Node, error) {
 		kids, err := c.CanonKids()
 		if err != nil {
 			return nil, err
 		}
-		if len(kids) <= 0 {
-			return nil, nil
-		}
-		if len(kids) == 1 {
-			return kids[0], nil
-		}
-		prs, err := prs(c, kids)
-		if err != nil {
-			return nil, err
-		}
-		if prs == nil {
-			return nil, nil
-		}
-		i := stats.WeightedSample(prs)
-		return kids[i], nil
+		return walker.Transition(c, kids, weight)
 	}
 	c := v
 	n, err := transition(c)

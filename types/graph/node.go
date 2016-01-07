@@ -265,21 +265,21 @@ func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
 }
 
 func (n *Node) Children() (nodes []lattice.Node, err error) {
-	return n.children(false)
+	return n.children(false, n.dt.Children, n.dt.ChildCount)
 }
 
 func (n *Node) CanonKids() (nodes []lattice.Node, err error) {
-	return n.children(true)
+	return n.children(true, n.dt.CanonKids, n.dt.CanonKidCount)
 }
 
-func (n *Node) children(checkCanon bool) (nodes []lattice.Node, err error) {
+func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
 	if len(n.sgs) == 0 {
 		return n.dt.FrequentVertices, nil
 	}
 	if len(n.sgs[0].E) >= n.dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
-	if nodes, has, err := n.cached(n.dt.ChildCount, n.dt.Children, n.pat.label); err != nil {
+	if nodes, has, err := n.cached(childCount, children, n.pat.label); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -320,7 +320,7 @@ func (n *Node) children(checkCanon bool) (nodes []lattice.Node, err error) {
 		}
 	}
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
-	return nodes, n.cache(n.dt.ChildCount, n.dt.Children, n.pat.label, nodes)
+	return nodes, n.cache(childCount, children, n.pat.label, nodes)
 }
 
 func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {

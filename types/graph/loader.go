@@ -43,6 +43,8 @@ type Graph struct {
 	ParentCount                                  bytes_int.MultiMap
 	Children                                     bytes_bytes.MultiMap
 	ChildCount                                   bytes_int.MultiMap
+	CanonKids                                    bytes_bytes.MultiMap
+	CanonKidCount                                bytes_int.MultiMap
 	FrequentVertices                             []lattice.Node
 	config                                       *config.Config
 }
@@ -56,6 +58,10 @@ func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err 
 	if err != nil {
 		return nil, err
 	}
+	parentCount, err := config.BytesIntMultiMap("graph-parent-count")
+	if err != nil {
+		return nil, err
+	}
 	children, err := config.MultiMap("graph-children")
 	if err != nil {
 		return nil, err
@@ -64,21 +70,27 @@ func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err 
 	if err != nil {
 		return nil, err
 	}
-	parentCount, err := config.BytesIntMultiMap("graph-parent-count")
+	canonKids, err := config.MultiMap("graph-canon-kids")
+	if err != nil {
+		return nil, err
+	}
+	canonKidCount, err := config.BytesIntMultiMap("graph-canon-kid-count")
 	if err != nil {
 		return nil, err
 	}
 	g = &Graph{
-		MinEdges:    minE,
-		MaxEdges:    maxE,
-		MinVertices: minV,
-		MaxVertices: maxV,
-		NodeAttrs:   nodeAttrs,
-		Parents:     parents,
-		ParentCount: parentCount,
-		Children:    children,
-		ChildCount:  childCount,
-		config:      config,
+		MinEdges:      minE,
+		MaxEdges:      maxE,
+		MinVertices:   minV,
+		MaxVertices:   maxV,
+		NodeAttrs:     nodeAttrs,
+		Parents:       parents,
+		ParentCount:   parentCount,
+		Children:      children,
+		ChildCount:    childCount,
+		CanonKids:     canonKids,
+		CanonKidCount: canonKidCount,
+		config:        config,
 	}
 	return g, nil
 }
@@ -134,6 +146,8 @@ func (g *Graph) Close() error {
 	g.ParentCount.Close()
 	g.Children.Close()
 	g.ChildCount.Close()
+	g.CanonKids.Close()
+	g.CanonKidCount.Close()
 	g.Embeddings.Close()
 	g.NodeAttrs.Close()
 	return nil
