@@ -285,29 +285,44 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 		return nodes, nil
 	}
 	exts := make(SubGraphs, 0, 10)
-	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) SubGraphs {
+	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
 		if n.dt.G.ColorFrequency(e.Color) < n.dt.Support() {
-			return exts
+			return exts, nil
 		} else if n.dt.G.ColorFrequency(n.dt.G.V[e.Src].Color) < n.dt.Support() {
-			return exts
+			return exts, nil
 		} else if n.dt.G.ColorFrequency(n.dt.G.V[e.Targ].Color) < n.dt.Support() {
-			return exts
+			return exts, nil
 		}
 		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
-			ext, canonized := sg.EdgeExtend(e)
-			if len(ext.V) <= n.dt.MaxVertices && (!checkCanon || canonized) {
+			ext, _ := sg.EdgeExtend(e)
+			if len(ext.V) > n.dt.MaxVertices {
+				return exts, nil
+			}
+			if checkCanon {
+				if canonized, err := n.isCanonicalExtension(ext); err != nil {
+					return nil, err
+				} else if canonized {
+					exts = append(exts, ext)
+				}
+			} else {
 				exts = append(exts, ext)
 			}
 		}
-		return exts
+		return exts, nil
 	}
 	for _, sg := range n.sgs {
 		for _, u := range sg.V {
 			for _, e := range n.dt.G.Kids[u.Id] {
-				exts = add(exts, sg, e)
+				exts, err = add(exts, sg, e)
+				if err != nil {
+					return nil, err
+				}
 			}
 			for _, e := range n.dt.G.Parents[u.Id] {
-				exts = add(exts, sg, e)
+				exts, err = add(exts, sg, e)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -321,6 +336,39 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	}
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
 	return nodes, n.cache(childCount, children, n.pat.label, nodes)
+}
+
+func (n *Node) isCanonicalExtension(ext *goiso.SubGraph) (bool, error) {
+	parent, err := firstParent(ext)
+	if err != nil {
+		return false, err
+	}
+	parentLabel := parent.ShortLabel()
+	if bytes.Equal(parentLabel, n.Pattern().Label()) {
+		return true, nil
+	}
+	return false, nil
+}
+
+func firstParent(sg *goiso.SubGraph) (*goiso.SubGraph, error) {
+	if len(sg.E) <= 0 {
+		return nil, nil
+	}
+	for i := len(sg.E)-1; i >= 0; i-- {
+		if len(sg.V) == 2 && len(sg.E) == 1 {
+			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
+			return p, nil
+		} else if len(sg.V) == 1 && len(sg.E) == 1 {
+			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
+			return p, nil
+		} else {
+			p, _ := sg.RemoveEdge(i)
+			if p.Connected() {
+				return p, nil
+			}
+		}
+	}
+	return nil, errors.Errorf("no firstParent() found for %v", sg)
 }
 
 func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {

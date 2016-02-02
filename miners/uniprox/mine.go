@@ -45,7 +45,7 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
 	next, err := walker.Transition(cur, kids, w.weight)
-	panic("stop")
+	// panic("stop")
 	return next, err
 }
 
