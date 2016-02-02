@@ -488,25 +488,29 @@ func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 func uniproxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"h",
+		"hw:",
 		[]string{
 			"help",
+			"walks=",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
+	walks := 15
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
+		case "-w", "--walks":
+			walks = ParseInt(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	miner, err := uniprox.NewWalker(conf)
+	miner, err := uniprox.NewWalker(conf, walks)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -19,15 +19,17 @@ import (
 
 type Walker struct {
 	walker.Walker
+	EstimatingWalks int
 	Ests bytes_float.MultiMap
 }
 
-func NewWalker(conf *config.Config) (*Walker, error) {
+func NewWalker(conf *config.Config, estimatingWalks int) (*Walker, error) {
 	ests, err := conf.BytesFloatMultiMap("uniprox-weight-ests")
 	if err != nil {
 		return nil, err
 	}
 	miner := &Walker{
+		EstimatingWalks: estimatingWalks,
 		Ests: ests,
 	}
 	miner.Walker = *walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(miner), make(chan error)))
@@ -68,7 +70,7 @@ func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 	if ismax, err := v.Maximal(); err != nil {
 		return 0, err
 	} else if !ismax {
-		depth, diameter, err := w.estimateDepthDiameter(v, 5)
+		depth, diameter, err := w.estimateDepthDiameter(v, w.EstimatingWalks)
 		if err != nil {
 			return 0, err
 		}
