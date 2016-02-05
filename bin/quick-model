@@ -224,7 +224,7 @@ def Graph(level=25, only_absorb_at_max=False):
         for t in tails[1:]:
             #print v, t, anc, common_ancestor(anc, t)
             anc = common_ancestor(anc, t, parents)
-        diameter = float((level[mt] - level[anc]))
+        diameter = float((level[mt] - level[anc])) + 1
         depth = float(mp)
         if all(t in T for t in tails):
             return depth/2.0, diameter
@@ -365,7 +365,7 @@ def Graph(level=25, only_absorb_at_max=False):
                     #w = max(M-level[v], 2.0)
                     #walks = int(np.log(w)*(w**2))
                     depth, diameter = estimate_depth_diameter(v, K, P, walks=walks)
-                    est = depth*max(diameter, 1)
+                    est = depth * diameter
                     #est = max(diameter, 1.0)
                     uniprox_ests[v] = est
                     return est
@@ -486,7 +486,7 @@ def compare():
     import pandas as pd
     data = list()
     for i in xrange(50):
-        kids, tkids, T, A, prs = Graph(level=15)
+        kids, tkids, T, A, prs = Graph(level=random.randint(15,50))
         d = {
             'urw': stats(T, A, prs['urw']),
             'fastmax': stats(T, A, prs['fastmax']),
