@@ -145,7 +145,7 @@ def Graph(level=25, only_absorb_at_max=False):
         while len(stack) > 0:
             u = stack.pop()
             seen.add(u)
-            if u in A:
+            if len(kids[u]) == 0:
                 absorbing.append(u)
             for kid in kids[u]:
                 if kid not in seen:
@@ -297,7 +297,7 @@ def Graph(level=25, only_absorb_at_max=False):
             return (weight(j) / sum(weight(kid) for kid in tkids[i]))
         elif i == j and len(kids[i]) == 0:
             return 1.0
-        elif j == 0 and sum(weight(x) for x in tkids[i]) <= 0 and i not in A:
+        elif j == i and sum(weight(x) for x in tkids[i]) <= 0 and i not in A:
             return 1.0
         else:
             return 0.0

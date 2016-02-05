@@ -41,9 +41,19 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 }
 
 func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
+	ismax, err := cur.Maximal(); 
+	if err != nil {
+		return nil, err
+	} else if ismax {
+		return nil, nil
+	}
 	kids, err := cur.CanonKids()
 	if err != nil {
 		return nil, err
+	} else if len(kids) == 0 {
+		errors.Logf("DEBUG", "cur %v is not max but no canon kids", cur)
+		errors.Logf("DEBUG", "restarting walk from bottom lattice node")
+		return w.Dt.Empty(), nil
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
 	next, err := walker.Transition(cur, kids, w.weight)
@@ -75,7 +85,7 @@ func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 			return 0, err
 		}
 		est = depth * max(diameter, 1)
-		if est > 0 {
+		if est >= 0 {
 			errors.Logf("DEBUG", "weight %v depth %v diameter %v est %v", v, depth, diameter, est)
 		}
 	} else if v.Pattern().Level() >= w.Dt.MinimumLevel() {
@@ -138,11 +148,13 @@ func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 		if ismax, err := a.Maximal(); err != nil {
 			return 0, err
 		} else if !ismax {
+			/*
 			kids, err := a.CanonKids()
 			if err != nil {
 				return 0, err
 			}
-			est = float64(len(kids))
+			est = float64(len(kids))*/
+			est = 1.0
 		} else if v.Pattern().Level() >= w.Dt.MinimumLevel() {
 			est = 1.0
 		} else {
@@ -150,26 +162,52 @@ func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 		}
 		return est, nil
 	}
-	transition := func(c lattice.Node) (lattice.Node, error) {
+	transition := func(c lattice.Node) (lattice.Node, bool, error) {
 		kids, err := c.CanonKids()
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
-		return walker.Transition(c, kids, weight)
+		if len(kids) == 0 {
+			if ismax, err := c.Maximal(); err != nil {
+				return nil, false, err
+			} else if !ismax {
+				// restart walk
+				return nil, true, nil
+			}
+		}
+		next, err := walker.Transition(c, kids, weight)
+		return next, false, err
 	}
 	c := v
-	n, err := transition(c)
+	n, _, err := transition(c)
 	if err != nil {
 		return nil, err
 	}
 	path = append(path, c)
+	restarts := 0
 	for n != nil {
+		var restart bool
 		c = n
-		n, err = transition(c)
+		path = append(path, c)
+		n, restart, err = transition(c)
 		if err != nil {
 			return nil, err
+		} else if restart && restarts > 5 {
+			return []lattice.Node{v}, nil
+		} else if restart {
+			restarts++
+			errors.Logf("DEBUG", "restart(%v) to beginning node %v", restarts, v)
+			errors.Logf("DEBUG", "restart(%v) from %v", restarts, c)
+			kids, err := c.Children()
+			if err != nil {
+				return nil, err
+			}
+			for _, kid := range kids {
+				errors.Logf("DEBUG", "restart(%v) kid %v", restarts, kid)
+			}
+			n = v
+			path = make([]lattice.Node, 0, 10)
 		}
-		path = append(path, c)
 	}
 	return path, nil
 }

@@ -119,7 +119,9 @@ Modes
     uniprox                             approximately uniform sampling of max
                                         patterns using an absorbing chain
 
-    Note: currently none of the modes take special options. This may change.
+    uniprox Options
+        -w, walks=<int>                 (default 15) number of estimating
+                                        walks
 
 Type: itemset
 
