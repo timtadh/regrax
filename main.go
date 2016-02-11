@@ -90,7 +90,7 @@ sfp - sample frequent patterns
 $ sfp -o <path> --samples=<int> --support=<int> [Global Options] \
     <type> [Type Options] <input-path> \
     <mode> [Mode Options] \
-    [reporter <reporter> [Reporter Options]]*
+    [<reporter> [Reporter Options]]
 
 Note: You must supply [Global Options] then [<type> [Type Options]] then
 [<mode> [Mode Options]] and finally <input-path>. Changes in ordering are not
@@ -129,6 +129,25 @@ Modes
     uniprox Options
         -w, walks=<int>       (default 15) number of estimating
                               walks
+
+Reporters
+    chain                     chain several reporters together (end the chain
+                              with endchain)
+    log                       log the samples
+    file                      write the samples to a file in the output dir
+
+    chain Examples
+
+        $ sfp -o <path> --samples=5 --support=5 \
+            digraph ./digraph.veg.gz \
+            graple \
+            chain log file 
+
+        $ sfp -o <path> --samples=5 --support=5 \
+            digraph ./digraph.veg.gz \
+            graple \
+            chain log chain log log endchain file
+
 
 Type: itemset
 
@@ -674,6 +693,53 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
     return fr, args
 }
 
+func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	rptrs := make([]miners.Reporter, 0, 10)
+	for len(args) >=1 {
+		if args[0] == "endchain" {
+			args = args[1:]
+			break
+		}
+		if _, has := reports[args[0]]; !has {
+			fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+			fmt.Fprintln(os.Stderr, "Reporters:")
+			for k := range reports {
+				fmt.Fprintln(os.Stderr, "  ", k)
+			}
+			Usage(ErrorCodes["opts"])
+		}
+		var rptr miners.Reporter
+		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
+		rptrs = append(rptrs, rptr)
+	}
+	if len(rptrs) == 0 {
+		fmt.Fprintln(os.Stderr, "Empty chain")
+		fmt.Fprintln(os.Stderr, "try: chain log file")
+			Usage(ErrorCodes["opts"])
+	}
+	return &reporters.Chain{rptrs}, args
+}
+
 func main() {
 
 	modes := map[string]func([]string, *config.Config)(miners.Miner, []string) {
@@ -693,6 +759,7 @@ func main() {
 	reports := map[string]Reporter {
 		"log": logReporter,
 		"file": fileReporter,
+		"chain": chainReporter,
 	}
 
 	args, optargs, err := getopt.GetOpt(
@@ -827,27 +894,19 @@ func main() {
 	}
 	fmtr := makeFmtr(dt)
 
-	rptrs := make([]miners.Reporter, 0, 10)
-	for len(args) > 1 && args[0] == "reporter" {
-		args = args[1:]
-		if _, has := reports[args[0]]; !has {
-			fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
-			fmt.Fprintln(os.Stderr, "Reporters:")
-			for k := range reports {
-				fmt.Fprintln(os.Stderr, "  ", k)
-			}
-			Usage(ErrorCodes["opts"])
+	var rptr miners.Reporter
+	if len(args) == 0 {
+		rptr, _ = reports["chain"](reports, []string{"log", "file"}, fmtr, conf)
+	} else if _, has := reports[args[0]]; !has {
+		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+		fmt.Fprintln(os.Stderr, "Reporters:")
+		for k := range reports {
+			fmt.Fprintln(os.Stderr, "  ", k)
 		}
-		var rptr miners.Reporter
+		Usage(ErrorCodes["opts"])
+	} else {
 		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
-		rptrs = append(rptrs, rptr)
 	}
-	if len(rptrs) == 0 {
-		log, _ := reports["log"](reports, []string{}, fmtr, conf)
-		file, _ := reports["file"](reports, []string{}, fmtr, conf)
-		rptrs = append(rptrs, log, file)
-	}
-	rptr := &reporters.Chain{rptrs}
 
 	if len(args) != 0 {
 		fmt.Fprintf(os.Stderr, "unconsumed commandline options: '%v'\n", strings.Join(args, " "))
