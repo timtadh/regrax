@@ -56,7 +56,7 @@ import (
 	"github.com/timtadh/sfp/miners/fastmax"
 	"github.com/timtadh/sfp/miners/uniprox"
 	"github.com/timtadh/sfp/miners/walker"
-	"github.com/timtadh/sfp/types/graph"
+	"github.com/timtadh/sfp/types/digraph"
 	"github.com/timtadh/sfp/types/itemset"
 )
 
@@ -88,9 +88,9 @@ var ExtendedMessage string = `
 sfp - sample frequent patterns
 
 $ sfp -o <path> --samples=<int> --support=<int> [Global Options] \
-    <type> [Type Options]
-    <mode> [Mode Options]
-    <input-path>
+    <type> [Type Options] <input-path> \
+    <mode> [Mode Options] \
+    [reporter <reporter> [Reporter Options]]*
 
 Note: You must supply [Global Options] then [<type> [Type Options]] then
 [<mode> [Mode Options]] and finally <input-path>. Changes in ordering are not
@@ -111,6 +111,10 @@ Global Options
     --support=<int>           minimum support of patterns (required)
     --non-unique              by default, sfp collects only unique samples. This
                               option allows non-unique samples.
+
+Types
+    itemset                   sets of items, treated as sets of integers
+    digraph                   large directed graphs
 
 Modes
     graple                    the GRAPLE (unweighted random walk) algorithm.
@@ -149,22 +153,22 @@ itemset Loaders
             3 4 1
 
 
-Type: graph
+Type: digraph
 
 $ sfp -o /tmp/sfp --support=5 --samples=100 \
-    graph --min-vertices=5 --max-vertices=8 --max-edges=15 \
+    digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
     graple \
-    ./data/graph.veg.gz
+    ./data/digraph.veg.gz
 
-graph Options
+digraph Options
     -h, --help                          view this message
     -l, --loader=<loader-name>          the loader to use (default veg)
-    --min-edges=<int>                   minimum edges in a samplable graph
-    --max-edges=<int>                   maximum edges in a samplable graph
-    --min-vertices=<int>                minimum vertices in a samplable graph
-    --max-vertices=<int>                maximum vertices in a samplable graph
+    --min-edges=<int>                   minimum edges in a samplable digraph
+    --max-edges=<int>                   maximum edges in a samplable digraph
+    --min-vertices=<int>                minimum vertices in a samplable digraph
+    --max-vertices=<int>                maximum vertices in a samplable digraph
 
-graph Loaders
+digraph Loaders
     veg File Format
 
         The veg file format is a line delimited format with vertex lines and
@@ -392,7 +396,7 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	return loader, fmtr, args
 }
 
-func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
+func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{"help", "loader=",
@@ -435,7 +439,7 @@ func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice
 	var loader lattice.Loader
 	switch loaderType {
 	case "veg":
-		loader, err = graph.NewVegLoader(conf, minE, maxE, minV, maxV)
+		loader, err = digraph.NewVegLoader(conf, minE, maxE, minV, maxV)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
@@ -444,8 +448,8 @@ func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice
 		log.Panic(err)
 	}
 	fmtr := func(dt lattice.DataType) lattice.Formatter {
-		g := dt.(*graph.Graph)
-		return graph.NewFormatter(g)
+		g := dt.(*digraph.Graph)
+		return digraph.NewFormatter(g)
 	}
 	return loader, fmtr, args
 }
@@ -626,7 +630,7 @@ func main() {
 
 	types := map[string]func([]string, *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
 		"itemset": itemsetType,
-		"graph": graphType,
+		"digraph": digraphType,
 	}
 
 	args, optargs, err := getopt.GetOpt(

@@ -18,7 +18,7 @@ import (
 	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/fastmax"
 	"github.com/timtadh/sfp/miners/reporters"
-	"github.com/timtadh/sfp/types/graph"
+	"github.com/timtadh/sfp/types/digraph"
 	"github.com/timtadh/sfp/types/itemset"
 )
 
@@ -29,7 +29,7 @@ func CommonAncestor(patterns []lattice.Pattern) (_ lattice.Pattern, err error) {
 		return patterns[0], nil
 	}
 	switch patterns[0].(type) {
-	case *graph.Pattern: return graphCommonAncestor(patterns)
+	case *digraph.Pattern: return digraphCommonAncestor(patterns)
 	case *itemset.Pattern: return itemsetCommonAncestor(patterns)
 	default: return nil, errors.Errorf("unknown pattern type %v", patterns[0])
 	}
@@ -51,9 +51,9 @@ func itemsetCommonAncestor(patterns []lattice.Pattern) (_ lattice.Pattern, err e
 	return &itemset.Pattern{items.(*set.SortedSet)}, nil
 }
 
-func graphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) {
+func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) {
 
-	// construct a in memory configuration for finding common subgraphs of all patterns
+	// construct a in memory configuration for finding common subdigraphs of all patterns
 	conf := &config.Config{
 		Support: len(patterns),
 		Samples: 5,
@@ -75,7 +75,7 @@ func graphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) {
 	maxE := int(math.MaxInt32)
 	maxV := int(math.MaxInt32)
 	for _, pat := range patterns {
-		sg := pat.(*graph.Pattern).Sg
+		sg := pat.(*digraph.Pattern).Sg
 		if len(sg.E) < maxE {
 			maxE = len(sg.E)
 		}
@@ -84,17 +84,17 @@ func graphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) {
 		}
 	}
 
-	// construct the graph from the patterns
+	// construct the digraph from the patterns
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
-	l, err := graph.NewVegLoader(conf, 0, maxE, 0, maxV)
+	l, err := digraph.NewVegLoader(conf, 0, maxE, 0, maxV)
 	if err != nil {
 		return nil, err
 	}
-	v := l.(*graph.VegLoader)
+	v := l.(*digraph.VegLoader)
 	offset := 0
 	for _, pat := range patterns {
-		sg := pat.(*graph.Pattern).Sg
+		sg := pat.(*digraph.Pattern).Sg
 		for i := range sg.V {
 			G.AddVertex(offset + i, sg.G.Colors[sg.V[i].Color])
 		}
@@ -120,7 +120,7 @@ func graphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) {
 		return nil, err
 	}
 
-	// extract the largest common subgraph
+	// extract the largest common subdigraph
 	maxLevel := collector.Nodes[0].Pattern().Level()
 	maxPattern := collector.Nodes[0].Pattern()
 	for _, n := range collector.Nodes {

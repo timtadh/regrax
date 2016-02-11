@@ -1,4 +1,4 @@
-package graph
+package digraph
 
 import (
 	"bufio"
@@ -50,31 +50,31 @@ type Graph struct {
 }
 
 func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err error) {
-	nodeAttrs, err := config.IntJsonMultiMap("graph-node-attrs")
+	nodeAttrs, err := config.IntJsonMultiMap("digraph-node-attrs")
 	if err != nil {
 		return nil, err
 	}
-	parents, err := config.MultiMap("graph-parents")
+	parents, err := config.MultiMap("digraph-parents")
 	if err != nil {
 		return nil, err
 	}
-	parentCount, err := config.BytesIntMultiMap("graph-parent-count")
+	parentCount, err := config.BytesIntMultiMap("digraph-parent-count")
 	if err != nil {
 		return nil, err
 	}
-	children, err := config.MultiMap("graph-children")
+	children, err := config.MultiMap("digraph-children")
 	if err != nil {
 		return nil, err
 	}
-	childCount, err := config.BytesIntMultiMap("graph-child-count")
+	childCount, err := config.BytesIntMultiMap("digraph-child-count")
 	if err != nil {
 		return nil, err
 	}
-	canonKids, err := config.MultiMap("graph-canon-kids")
+	canonKids, err := config.MultiMap("digraph-canon-kids")
 	if err != nil {
 		return nil, err
 	}
-	canonKidCount, err := config.BytesIntMultiMap("graph-canon-kid-count")
+	canonKidCount, err := config.BytesIntMultiMap("digraph-canon-kid-count")
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (v *VegLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
 
 func (v *VegLoader) ComputeStartingPoints(G *goiso.Graph) (nodes []lattice.Node, err error) {
 	v.G.G = G
-	v.G.Embeddings, err = v.G.config.BytesSubgraphMultiMap("graph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
+	v.G.Embeddings, err = v.G.config.BytesSubgraphMultiMap("digraph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
 	if err != nil {
 		return nil, err
 	}
