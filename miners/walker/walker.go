@@ -72,7 +72,6 @@ loop:
 	for {
 		select {
 		case sampled, open := <-samples:
-			errors.Logf("INFO", "got sample %v and open %v", sampled, open)
 			if sampled != nil {
 				if err := w.Rptr.Report(sampled); err != nil {
 					return err
@@ -106,10 +105,11 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 					}
 					accept = true
 					i++
-					errors.Logf("INFO", "%v sampled unique %v", seen.Size(), sampled)
+				} else {
+					errors.Logf("INFO", "duplicate %v", sampled)
 				}
 			} else {
-				errors.Logf("DEBUG", "rejected %v", sampled)
+				errors.Logf("INFO", "rejected %v", sampled)
 			}
 			if i >= w.Config.Samples {
 				terminate <- true

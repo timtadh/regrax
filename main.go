@@ -618,6 +618,62 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return miner, args
 }
 
+type Reporter func(map[string]Reporter, []string, lattice.Formatter, *config.Config)(miners.Reporter, []string)
+
+func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	return &reporters.Log{}, args
+}
+
+func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	fr, err := reporters.NewFile(conf, fmtr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+    return fr, args
+}
+
 func main() {
 
 	modes := map[string]func([]string, *config.Config)(miners.Miner, []string) {
@@ -634,11 +690,18 @@ func main() {
 		"digraph": digraphType,
 	}
 
+	reports := map[string]Reporter {
+		"log": logReporter,
+		"file": fileReporter,
+	}
+
 	args, optargs, err := getopt.GetOpt(
 		os.Args[1:],
 		"ho:c:",
 		[]string{
-			"help", "output=", "cache=", "modes", "types",
+			"help",
+			"output=", "cache=",
+			"modes", "types", "reporters",
 			"support=",
 			"samples=",
 			"skip-log=",
@@ -676,6 +739,12 @@ func main() {
 		case "--modes":
 			fmt.Fprintln(os.Stderr, "Modes:")
 			for k := range modes {
+				fmt.Fprintln(os.Stderr, "  ", k)
+			}
+			os.Exit(0)
+		case "--reporters":
+			fmt.Fprintln(os.Stderr, "Reporters:")
+			for k := range reports {
 				fmt.Fprintln(os.Stderr, "  ", k)
 			}
 			os.Exit(0)
@@ -722,7 +791,19 @@ func main() {
 		}
 		Usage(ErrorCodes["opts"])
 	}
-	loader, fmtr, args := types[args[0]](args[1:], conf)
+	loader, makeFmtr, args := types[args[0]](args[1:], conf)
+
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "You must supply exactly an input path\n")
+		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
+		Usage(ErrorCodes["opts"])
+	}
+	inputPath := AssertFileOrDirExists(args[0])
+	args = args[1:]
+
+	getInput := func() (io.Reader, func()) {
+		return Input(inputPath)
+	}
 
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a mode\n")
@@ -737,17 +818,6 @@ func main() {
 	}
 	mode, args := modes[args[0]](args[1:], conf)
 
-	if len(args) != 1 {
-		fmt.Fprintf(os.Stderr, "You must supply exactly one input path\n")
-		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
-		Usage(ErrorCodes["opts"])
-	}
-	inputPath := AssertFileOrDirExists(args[0])
-
-	getInput := func() (io.Reader, func()) {
-		return Input(inputPath)
-	}
-
 	errors.Logf("INFO", "Got configuration about to load dataset")
 	dt, err := loader.Load(getInput)
 	if err != nil {
@@ -755,14 +825,34 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
+	fmtr := makeFmtr(dt)
 
-	fr, err := reporters.NewFile(conf, fmtr(dt))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+	rptrs := make([]miners.Reporter, 0, 10)
+	for len(args) > 1 && args[0] == "reporter" {
+		args = args[1:]
+		if _, has := reports[args[0]]; !has {
+			fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+			fmt.Fprintln(os.Stderr, "Reporters:")
+			for k := range reports {
+				fmt.Fprintln(os.Stderr, "  ", k)
+			}
+			Usage(ErrorCodes["opts"])
+		}
+		var rptr miners.Reporter
+		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
+		rptrs = append(rptrs, rptr)
 	}
-	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, reporters.NewUnique(fr)}}
+	if len(rptrs) == 0 {
+		log, _ := reports["log"](reports, []string{}, fmtr, conf)
+		file, _ := reports["file"](reports, []string{}, fmtr, conf)
+		rptrs = append(rptrs, log, file)
+	}
+	rptr := &reporters.Chain{rptrs}
+
+	if len(args) != 0 {
+		fmt.Fprintf(os.Stderr, "unconsumed commandline options: '%v'\n", strings.Join(args, " "))
+		Usage(ErrorCodes["opts"])
+	}
 
 	errors.Logf("INFO", "loaded data, about to start mining")
 	mineErr := mode.Mine(dt, rptr)
