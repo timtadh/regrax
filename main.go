@@ -135,18 +135,47 @@ Reporters
                               with endchain)
     log                       log the samples
     file                      write the samples to a file in the output dir
+    unique                    takes an "inner reporter" but only passes the
+                              unique samples to inner reporter. (useful in
+                              conjunction with --non-unique)
 
-    chain Examples
+    log Options
+        -l, --level=<string>  log level the logger should use
+        -p, --prefix=<string> a prefix to put before the log line
+
+    file Options
+        -e, --embeddings=<name> the prefix of the name of the file in the output
+                                directory to write the embeddings
+        -p, --patterns=<name>   the prefix of the name of the file in the output
+                                directory to write the patterns
+
+        Note: the file extension is chosen by the formatter for the datatype.
+              Some data types may provide multiple formatters to choose from
+              however that is configured (at this time) from the <type> Options.
+
+    Examples
 
         $ sfp -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
-            chain log file 
+            chain log file
 
         $ sfp -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
             chain log chain log log endchain file
+
+        $ sfp --non-unique --skip-log=DEBUG -o /tmp/sfp --samples=5 --support=5 \
+            digraph --min-vertices=3 ../fsm/data/expr.gz \
+            graple \
+            chain \
+                log -p non-unique \
+                unique \
+                    chain \
+                        log -p unique \
+                        file -e unique-embeddings -p unique-patterns \
+                    endchain \
+                file -e non-unique-embeddings -p non-unique-patterns
 
 
 Type: itemset
@@ -674,25 +703,34 @@ func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"h",
+		"hp:e:",
 		[]string{
 			"help",
+			"patterns=",
+			"embeddings=",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
+	patterns := "patterns"
+	embeddings := "embeddigns"
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
+		case "-p", "--patterns":
+			patterns = oa.Arg()
+		case "-e", "--embeddings":
+			embeddings = oa.Arg()
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	fr, err := reporters.NewFile(conf, fmtr)
+	fmt.Fprintf(os.Stderr, "There was error creating output files\n")
+	fr, err := reporters.NewFile(conf, fmtr, patterns, embeddings)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -784,7 +822,7 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 	} else {
 		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
 	}
-	return reporters.NewUnique(rptr), nil
+	return reporters.NewUnique(rptr), args
 }
 
 func main() {

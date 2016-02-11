@@ -19,12 +19,12 @@ type File struct {
 	embeddings io.WriteCloser
 }
 
-func NewFile(c *config.Config, fmt lattice.Formatter) (*File, error) {
-	patterns, err := os.Create(c.OutputFile("patterns" + fmt.FileExt()))
+func NewFile(c *config.Config, fmt lattice.Formatter, patternsFilename, embeddingsFilename string) (*File, error) {
+	patterns, err := os.Create(c.OutputFile(patternsFilename + fmt.FileExt()))
 	if err != nil {
 		return nil, err
 	}
-	embeddings, err := os.Create(c.OutputFile("embeddings" + fmt.FileExt()))
+	embeddings, err := os.Create(c.OutputFile(embeddingsFilename + fmt.FileExt()))
 	if err != nil {
 		return nil, err
 	}
