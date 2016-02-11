@@ -111,6 +111,7 @@ Global Options
     --support=<int>           minimum support of patterns (required)
     --non-unique              by default, sfp collects only unique samples. This
                               option allows non-unique samples.
+    --skip-log=<level>        don't output the given log level.
 
 Types
     itemset                   sets of items, treated as sets of integers

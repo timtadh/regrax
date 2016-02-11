@@ -43,10 +43,9 @@ func MakeMaxUniformWalk(next Transition, ctx interface{}) walker.Walk {
 					}
 					cur = next
 				}
-				select {
-				case <-terminate:
+				samples <- sampled
+				if <-terminate {
 					break loop
-				case samples <- sampled:
 				}
 			}
 			close(samples)

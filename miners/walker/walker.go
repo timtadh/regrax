@@ -72,49 +72,56 @@ loop:
 	for {
 		select {
 		case sampled, open := <-samples:
+			errors.Logf("INFO", "got sample %v and open %v", sampled, open)
+			if sampled != nil {
+				if err := w.Rptr.Report(sampled); err != nil {
+					return err
+				}
+			}
 			if !open {
 				break loop
 			}
-			if err := w.Rptr.Report(sampled); err != nil {
+		case err := <-errs:
+			if err != nil {
 				return err
 			}
-		case err, open := <-errs:
-			if !open {
-				break loop
-			}
-			return err
 		}
 	}
+	errors.Logf("INFO", "exiting walker Mine")
 	return nil
 }
 
 func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) chan lattice.Node {
-	nodes := make(chan lattice.Node)
+	accepted := make(chan lattice.Node)
 	go func() {
 		i := 0
 		seen := set.NewSortedSet(w.Config.Samples)
 		for sampled := range samples {
+			accept := false
 			if !w.Reject || w.Dt.Acceptable(sampled) {
 				label := types.ByteSlice(sampled.Pattern().Label())
-				nodes <- sampled
 				if !w.Unique || !seen.Has(label) {
 					if w.Unique {
 						seen.Add(label)
 					}
+					accept = true
 					i++
 					errors.Logf("INFO", "%v sampled unique %v", seen.Size(), sampled)
 				}
 			} else {
-				// errors.Logf("INFO", "rejected %v", sampled)
+				errors.Logf("DEBUG", "rejected %v", sampled)
 			}
 			if i >= w.Config.Samples {
-				break
+				terminate <- true
+			} else {
+				terminate <- false
+			}
+			if accept {
+				accepted <- sampled
 			}
 		}
-		terminate <- true
-		<-samples
-		close(nodes)
+		close(accepted)
 		close(terminate)
 	}()
-	return nodes
+	return accepted
 }

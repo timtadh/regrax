@@ -158,17 +158,15 @@ func MakeAbsorbingWalk(sample func(lattice.Node) (lattice.Node, error), errs cha
 		samples := make(chan lattice.Node)
 		terminate := make(chan bool)
 		go func() {
-		loop:
 			for {
 				sampled, err := sample(wlkr.Dt.Empty())
 				if err != nil {
 					errs <- err
-					break loop
+					break
 				}
-				select {
-				case <-terminate:
-					break loop
-				case samples <- sampled:
+				samples <- sampled
+				if <-terminate {
+					break
 				}
 			}
 			close(samples)

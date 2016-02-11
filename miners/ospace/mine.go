@@ -24,10 +24,9 @@ func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {
 			cur := w.Start[rand.Intn(len(w.Start))]
 		loop:
 			for {
-				select {
-				case <-terminate:
+				samples <- cur
+				if <-terminate {
 					break loop
-				case samples <- cur:
 				}
 				if rand.Float64() < restartPr {
 					errors.Logf("INFO", "a random restart occured with probability %v", restartPr)
