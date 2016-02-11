@@ -46,7 +46,7 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
 	pRptr := &reporters.Skip{
 		Skip: 10,
-		Reporter: &reporters.Chain{[]miners.Reporter{&reporters.Log{}, reporters.NewUnique(collector)}},
+		Reporter: &reporters.Chain{[]miners.Reporter{reporters.NewLog("DEBUG", "premining"), reporters.NewUnique(collector)}},
 	}
 
 	err := premine.Mine(dt, pRptr)

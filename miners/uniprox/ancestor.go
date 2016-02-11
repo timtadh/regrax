@@ -62,7 +62,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	wlkr := fastmax.NewWalker(conf)
 	wlkr.Reject = false
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
-	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, reporters.NewUnique(collector)}}
+	rptr := &reporters.Chain{[]miners.Reporter{reporters.NewLog("DEBUG", "common-ancestor"), reporters.NewUnique(collector)}}
 
 	// closing the walker releases the memory
 	defer func() {

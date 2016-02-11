@@ -642,25 +642,33 @@ type Reporter func(map[string]Reporter, []string, lattice.Formatter, *config.Con
 func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"h",
+		"hl:p:",
 		[]string{
 			"help",
+			"level=",
+			"prefix=",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
+	level := "INFO"
+	prefix := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
+		case "-l", "--level":
+			level = oa.Arg()
+		case "-p", "--prefix":
+			prefix = oa.Arg()
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	return &reporters.Log{}, args
+	return reporters.NewLog(level, prefix), args
 }
 
 func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {

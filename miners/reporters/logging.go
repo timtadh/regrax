@@ -9,12 +9,25 @@ import (
 )
 
 type Log struct {
-	count int
+	level  string
+	prefix string
+	count  int
+}
+
+func NewLog(level, prefix string) *Log {
+	if level == "" {
+		level = "INFO"
+	}
+	return &Log{level: level, prefix: prefix}
 }
 
 func (lr *Log) Report(n lattice.Node) error {
 	lr.count++
-	errors.Logf("INFO", "sample %v %v", lr.count, n)
+	if lr.prefix != "" {
+		errors.Logf(lr.level, "%s: sample %v %v", lr.prefix, lr.count, n)
+	} else {
+		errors.Logf(lr.level, "sample %v %v", lr.count, n)
+	}
 	return nil
 }
 

@@ -104,10 +104,10 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 					accept = true
 					i++
 				} else {
-					errors.Logf("INFO", "duplicate %v", sampled)
+					errors.Logf("DEBUG", "duplicate %v", sampled)
 				}
 			} else {
-				errors.Logf("INFO", "rejected %v", sampled)
+				errors.Logf("DEBUG", "rejected %v", sampled)
 			}
 			if i >= w.Config.Samples {
 				terminate <- true
