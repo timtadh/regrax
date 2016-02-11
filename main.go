@@ -181,9 +181,8 @@ Reporters
 Type: itemset
 
 $ sfp -o /tmp/sfp --support=1000 --samples=10 \
-    itemset --min-items=4 --max-items=4 \
-    graple \
-    ./data/transactions.dat.gz
+    itemset --min-items=4 --max-items=4  ./data/transactions.dat.gz \
+    graple
 
 itemset Options
     -h, --help                          view this message
@@ -206,8 +205,8 @@ Type: digraph
 
 $ sfp -o /tmp/sfp --support=5 --samples=100 \
     digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
-    graple \
-    ./data/digraph.veg.gz
+        ./data/digraph.veg.gz \
+    graple
 
 digraph Options
     -h, --help                          view this message
