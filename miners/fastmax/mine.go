@@ -10,7 +10,7 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners/absorbing"
+	"github.com/timtadh/sfp/miners/graple"
 	"github.com/timtadh/sfp/miners/walker"
 )
 
@@ -20,7 +20,7 @@ type Walker struct {
 
 func NewWalker(conf *config.Config) *Walker {
 	miner := &Walker{}
-	miner.Walker = *walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(miner), make(chan error)))
+	miner.Walker = *walker.NewWalker(conf, graple.MakeAbsorbingWalk(graple.MakeSample(miner), make(chan error)))
 	return miner
 }
 

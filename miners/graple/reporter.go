@@ -1,4 +1,4 @@
-package absorbing
+package graple
 
 import (
 	"encoding/json"

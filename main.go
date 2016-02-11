@@ -48,7 +48,7 @@ import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/miners/absorbing"
+	"github.com/timtadh/sfp/miners/graple"
 	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/ospace"
 	"github.com/timtadh/sfp/miners/premusk"
@@ -100,34 +100,36 @@ Note: You may either supply the <input-path> as a regular file or a gzipped
 file. If supplying a gzip file the file extension must be '.gz'.
 
 Global Options
-    -h, --help                          view this message
-    --modes                             show the available modes
-    --types                             show the available types
-    -o, --ouput=<path>                  path to output directory (required)
-                                        NB: will overwrite contents of dir
-    -c, --cache=<path>                  path to cache directory (optional)
-                                        NB: will overwrite contents of dir
-    --samples=<int>                     number of samples to collect (required)
-    --support=<int>                     minimum support of patterns (required)
+    -h, --help                view this message
+    --types                   show the available types
+    --modes                   show the available modes
+    -o, --ouput=<path>        path to output directory (required)
+                              NB: will overwrite contents of dir
+    -c, --cache=<path>        path to cache directory (optional)
+                              NB: will overwrite contents of dir
+    --samples=<int>           number of samples to collect (required)
+    --support=<int>           minimum support of patterns (required)
+    --non-unique              by default, sfp collects only unique samples. This
+                              option allows non-unique samples.
 
 Modes
-    absorbing                           uses absorbing markov chain
-    musk                                uniform sampling of maximal patterns
-    ospace                              uniform sampling of all patterns
-    fastmax                             faster sampling of large max patterns
-                                        than absorbing
-    uniprox                             approximately uniform sampling of max
-                                        patterns using an absorbing chain
+    graple                    the GRAPLE (unweighted random walk) algorithm.
+    musk                      uniform sampling of maximal patterns.
+    ospace                    uniform sampling of all patterns.
+    fastmax                   faster sampling of large max patterns than
+                              graple.
+    uniprox                   approximately uniform sampling of max patterns
+                              using an absorbing chain
 
     uniprox Options
-        -w, walks=<int>                 (default 15) number of estimating
-                                        walks
+        -w, walks=<int>       (default 15) number of estimating
+                              walks
 
 Type: itemset
 
 $ sfp -o /tmp/sfp --support=1000 --samples=10 \
     itemset --min-items=4 --max-items=4 \
-    absorbing \
+    graple \
     ./data/transactions.dat.gz
 
 itemset Options
@@ -151,7 +153,7 @@ Type: graph
 
 $ sfp -o /tmp/sfp --support=5 --samples=100 \
     graph --min-vertices=5 --max-vertices=8 --max-edges=15 \
-    absorbing \
+    graple \
     ./data/graph.veg.gz
 
 graph Options
@@ -316,6 +318,19 @@ func EmptyDir(dir string) string {
 	return dir
 }
 
+func AssertFileOrDirExists(fname string) string {
+	fname = path.Clean(fname)
+	_, err := os.Stat(fname)
+	if err != nil && os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "File '%s' does not exist!\n", fname)
+		Usage(ErrorCodes["badfile"])
+	} else if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		Usage(ErrorCodes["badfile"])
+	}
+	return fname
+}
+
 func AssertFile(fname string) string {
 	fname = path.Clean(fname)
 	fi, err := os.Stat(fname)
@@ -435,7 +450,7 @@ func graphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice
 	return loader, fmtr, args
 }
 
-func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+func grapleMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hc",
@@ -460,7 +475,7 @@ func absorbingMode(argv []string, conf *config.Config) (miners.Miner, []string) 
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	return absorbing.NewWalker(conf, computePrMatrices), args
+	return graple.NewWalker(conf, computePrMatrices), args
 }
 
 func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
@@ -598,41 +613,22 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return miner, args
 }
 
-func types(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
-	switch argv[0] {
-	case "itemset":
-		return itemsetType(argv[1:], conf)
-	case "graph":
-		return graphType(argv[1:], conf)
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown data type '%v'\n", argv[0])
-		Usage(ErrorCodes["opts"])
-		panic("unreachable")
-	}
-}
-
-func modes(argv []string, conf *config.Config) (miners.Miner, []string) {
-	switch argv[0] {
-	case "absorbing":
-		return absorbingMode(argv[1:], conf)
-	case "fastmax":
-		return fastmaxMode(argv[1:], conf)
-	case "musk":
-		return muskMode(argv[1:], conf)
-	case "ospace":
-		return ospaceMode(argv[1:], conf)
-	case "premusk":
-		return premuskMode(argv[1:], conf)
-	case "uniprox":
-		return uniproxMode(argv[1:], conf)
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown mining mode '%v'\n", argv[0])
-		Usage(ErrorCodes["opts"])
-		panic("unreachable")
-	}
-}
-
 func main() {
+
+	modes := map[string]func([]string, *config.Config)(miners.Miner, []string) {
+		"graple": grapleMode,
+		"fastmax": fastmaxMode,
+		"musk": muskMode,
+		"ospace": ospaceMode,
+		"premusk": premuskMode,
+		"uniprox": uniproxMode,
+	}
+
+	types := map[string]func([]string, *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
+		"itemset": itemsetType,
+		"graph": graphType,
+	}
+
 	args, optargs, err := getopt.GetOpt(
 		os.Args[1:],
 		"ho:c:",
@@ -667,10 +663,16 @@ func main() {
 		case "--samples":
 			samples = ParseInt(oa.Arg())
 		case "--types":
-			fmt.Fprintln(os.Stderr, "Types: itemset, graph")
+			fmt.Fprintln(os.Stderr, "Types:")
+			for k := range types {
+				fmt.Fprintln(os.Stderr, "  ", k)
+			}
 			os.Exit(0)
 		case "--modes":
-			fmt.Fprintln(os.Stderr, "Modes: absorbing, musk, ospace, fastmax")
+			fmt.Fprintln(os.Stderr, "Modes:")
+			for k := range modes {
+				fmt.Fprintln(os.Stderr, "  ", k)
+			}
 			os.Exit(0)
 		case "--skip-log":
 			level := oa.Arg()
@@ -705,25 +707,40 @@ func main() {
 	}
 
 	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "You must supply a type and a mode)\n")
+		fmt.Fprintf(os.Stderr, "You must supply a type and a mode\n")
+		Usage(ErrorCodes["opts"])
+	} else if _, has := types[args[0]]; !has {
+		fmt.Fprintf(os.Stderr, "Unknown data type '%v'\n", args[0])
+		fmt.Fprintln(os.Stderr, "Types:")
+		for k := range types {
+			fmt.Fprintln(os.Stderr, "  ", k)
+		}
 		Usage(ErrorCodes["opts"])
 	}
-	loader, fmtr, args := types(args, conf)
+	loader, fmtr, args := types[args[0]](args[1:], conf)
 
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a mode\n")
 		Usage(ErrorCodes["opts"])
+	} else if _, has := modes[args[0]]; !has {
+		fmt.Fprintf(os.Stderr, "Unknown mining mode '%v'\n", args[0])
+		fmt.Fprintln(os.Stderr, "Modes:")
+		for k := range modes {
+			fmt.Fprintln(os.Stderr, "  ", k)
+		}
+		Usage(ErrorCodes["opts"])
 	}
-	mode, args := modes(args, conf)
+	mode, args := modes[args[0]](args[1:], conf)
 
 	if len(args) != 1 {
 		fmt.Fprintf(os.Stderr, "You must supply exactly one input path\n")
 		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
 		Usage(ErrorCodes["opts"])
 	}
+	inputPath := AssertFileOrDirExists(args[0])
 
 	getInput := func() (io.Reader, func()) {
-		return Input(args[0])
+		return Input(inputPath)
 	}
 
 	errors.Logf("INFO", "Got configuration about to load dataset")

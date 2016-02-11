@@ -12,7 +12,7 @@ import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/miners/absorbing"
+	"github.com/timtadh/sfp/miners/graple"
 	"github.com/timtadh/sfp/miners/walker"
 	"github.com/timtadh/sfp/stores/bytes_float"
 )
@@ -32,7 +32,7 @@ func NewWalker(conf *config.Config, estimatingWalks int) (*Walker, error) {
 		EstimatingWalks: estimatingWalks,
 		Ests: ests,
 	}
-	miner.Walker = *walker.NewWalker(conf, absorbing.MakeAbsorbingWalk(absorbing.MakeSample(miner), make(chan error)))
+	miner.Walker = *walker.NewWalker(conf, graple.MakeAbsorbingWalk(graple.MakeSample(miner), make(chan error)))
 	return miner, nil
 }
 
