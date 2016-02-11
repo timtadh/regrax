@@ -23,7 +23,6 @@ type Walker struct {
 	Start  []lattice.Node
 	Walk   Walk
 	Reject bool
-	Unique bool
 }
 
 func NewWalker(conf *config.Config, walk Walk) *Walker {
@@ -31,7 +30,6 @@ func NewWalker(conf *config.Config, walk Walk) *Walker {
 		Config: conf,
 		Walk:   walk,
 		Reject: true,
-		Unique: true,
 	}
 }
 
@@ -99,8 +97,8 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 			accept := false
 			if !w.Reject || w.Dt.Acceptable(sampled) {
 				label := types.ByteSlice(sampled.Pattern().Label())
-				if !w.Unique || !seen.Has(label) {
-					if w.Unique {
+				if !w.Config.Unique || !seen.Has(label) {
+					if w.Config.Unique {
 						seen.Add(label)
 					}
 					accept = true

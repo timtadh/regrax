@@ -740,6 +740,45 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 	return &reporters.Chain{rptrs}, args
 }
 
+func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	var rptr miners.Reporter
+	if len(args) == 0 {
+		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to unique")
+		fmt.Fprintln(os.Stderr, "try: unique file")
+        Usage(ErrorCodes["opts"])
+	} else if _, has := reports[args[0]]; !has {
+		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+		fmt.Fprintln(os.Stderr, "Reporters:")
+		for k := range reports {
+			fmt.Fprintln(os.Stderr, "  ", k)
+		}
+		Usage(ErrorCodes["opts"])
+	} else {
+		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
+	}
+	return reporters.NewUnique(rptr), nil
+}
+
 func main() {
 
 	modes := map[string]func([]string, *config.Config)(miners.Miner, []string) {
@@ -760,6 +799,7 @@ func main() {
 		"log": logReporter,
 		"file": fileReporter,
 		"chain": chainReporter,
+		"unique": uniqueReporter,
 	}
 
 	args, optargs, err := getopt.GetOpt(
@@ -769,6 +809,7 @@ func main() {
 			"help",
 			"output=", "cache=",
 			"modes", "types", "reporters",
+			"non-unique",
 			"support=",
 			"samples=",
 			"skip-log=",
@@ -783,6 +824,7 @@ func main() {
 
 	output := ""
 	cache := ""
+	unique := true
 	support := 0
 	samples := 0
 	for _, oa := range optargs {
@@ -797,6 +839,8 @@ func main() {
 			support = ParseInt(oa.Arg())
 		case "--samples":
 			samples = ParseInt(oa.Arg())
+		case "--non-unique":
+			unique = false
 		case "--types":
 			fmt.Fprintln(os.Stderr, "Types:")
 			for k := range types {
@@ -845,6 +889,7 @@ func main() {
 		Output:  output,
 		Support: support,
 		Samples: samples,
+		Unique: unique,
 	}
 
 	if len(args) < 1 {

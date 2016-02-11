@@ -57,10 +57,10 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	conf := &config.Config{
 		Support: len(patterns),
 		Samples: 5,
+		Unique: false,
 	}
 	wlkr := fastmax.NewWalker(conf)
 	wlkr.Reject = false
-	wlkr.Unique = false
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
 	rptr := &reporters.Chain{[]miners.Reporter{&reporters.Log{}, reporters.NewUnique(collector)}}
 

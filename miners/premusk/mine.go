@@ -40,9 +40,9 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 
 	pConf := w.Config.Copy()
 	pConf.Samples = 1000
+	pConf.Unique = false
 	premine := walker.NewWalker(pConf, ospace.MakeUniformWalk(.02, false))
 	premine.Reject = false
-	premine.Unique = false
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
 	pRptr := &reporters.Skip{
 		Skip: 10,

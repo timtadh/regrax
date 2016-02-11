@@ -24,6 +24,7 @@ type Config struct {
 	Cache            string
 	Output           string
 	Support, Samples int
+	Unique           bool
 	AsyncTasks       sync.WaitGroup
 }
 
@@ -33,6 +34,7 @@ func (c *Config) Copy() *Config {
 		Output: c.Output,
 		Support: c.Support,
 		Samples: c.Samples,
+		Unique: c.Unique,
 	}
 }
 
