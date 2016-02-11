@@ -93,11 +93,15 @@ $ sfp -o <path> --samples=<int> --support=<int> [Global Options] \
     [<reporter> [Reporter Options]]
 
 Note: You must supply [Global Options] then [<type> [Type Options]] then
-[<mode> [Mode Options]] and finally <input-path>. Changes in ordering are not
-supported.
+      [<mode> [Mode Options]] and finally <input-path>. Changes in ordering are
+      not supported.
 
 Note: You may either supply the <input-path> as a regular file or a gzipped
-file. If supplying a gzip file the file extension must be '.gz'.
+      file. If supplying a gzip file the file extension must be '.gz'.
+
+Note: If you don't supply a reporter by default it will use 'chain log file'.
+      See the the documentations for Reporters for details.
+
 
 Global Options
     -h, --help                view this message
@@ -113,9 +117,72 @@ Global Options
                               option allows non-unique samples.
     --skip-log=<level>        don't output the given log level.
 
+
 Types
     itemset                   sets of items, treated as sets of integers
     digraph                   large directed graphs
+
+    itemset Exmaple
+        $ sfp -o /tmp/sfp --support=1000 --samples=10 \
+            itemset --min-items=4 --max-items=4  ./data/transactions.dat.gz \
+            graple
+
+    itemset Options
+        -h, help                 view this message
+        -l, loader=<loader-name> the loader to use (default int)
+        --min-items=<int>        minimum items in a samplable set
+        --max-items=<int>        maximum items in a samplable set
+
+    itemset Loaders
+       int                         each line is a transaction
+                                   the items are integers
+                                   the items are space separated
+
+       int Example file:
+            10 1 5 7
+            213 2 5 1
+            23 1 4 5 7
+            3 4 1
+
+    digraph Example
+        $ sfp -o /tmp/sfp --support=5 --samples=100 \
+            digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
+                ./data/digraph.veg.gz \
+            graple
+
+    digraph Options
+        -h, help                 view this message
+        -l, loader=<loader-name> the loader to use (default veg)
+        --min-edges=<int>        minimum edges in a samplable digraph
+        --max-edges=<int>        maximum edges in a samplable digraph
+        --min-vertices=<int>     minimum vertices in a samplable digraph
+        --max-vertices=<int>     maximum vertices in a samplable digraph
+
+    digraph Loaders
+        veg File Format
+            The veg file format is a line delimited format with vertex lines and
+            edge lines. For example:
+
+            vertex	{"id":136,"label":""}
+            edge	{"src":23,"targ":25,"label":"ddg"}
+
+            Note: the spaces between vertex and {...} are tabs
+            Note: the spaces between edge and {...} are tabs
+
+        veg Grammar
+            line -> vertex "\n"
+                  | edge "\n"
+
+            vertex -> "vertex" "\t" vertex_json
+
+            edge -> "edge" "\t" edge_json
+
+            vertex_json -> {"id": int, "label": string, ...}
+            // other items are optional
+
+            edge_json -> {"src": int, "targ": int, "label": int, ...}
+            // other items are  optional
+
 
 Modes
     graple                    the GRAPLE (unweighted random walk) algorithm.
@@ -123,12 +190,22 @@ Modes
     ospace                    uniform sampling of all patterns.
     fastmax                   faster sampling of large max patterns than
                               graple.
+    premusk                   musk but with random teleports
     uniprox                   approximately uniform sampling of max patterns
                               using an absorbing chain
+
+    graple Options
+        --compute-pr-matrices compute the probability matrices uNR as described
+                              in the GRAPLE paper to use in computing the
+                              selection probability of each sample.
+
+    premusk Options
+        -t, teleports=<float> the probability of teleporting (default: .01)
 
     uniprox Options
         -w, walks=<int>       (default 15) number of estimating
                               walks
+
 
 Reporters
     chain                     chain several reporters together (end the chain
@@ -140,14 +217,14 @@ Reporters
                               conjunction with --non-unique)
 
     log Options
-        -l, --level=<string>  log level the logger should use
-        -p, --prefix=<string> a prefix to put before the log line
+        -l, level=<string>    log level the logger should use
+        -p, prefix=<string>   a prefix to put before the log line
 
     file Options
-        -e, --embeddings=<name> the prefix of the name of the file in the output
-                                directory to write the embeddings
-        -p, --patterns=<name>   the prefix of the name of the file in the output
-                                directory to write the patterns
+        -e, embeddings=<name> the prefix of the name of the file in the output
+                              directory to write the embeddings
+        -p, patterns=<name>   the prefix of the name of the file in the output
+                              directory to write the patterns
 
         Note: the file extension is chosen by the formatter for the datatype.
               Some data types may provide multiple formatters to choose from
@@ -176,69 +253,6 @@ Reporters
                         file -e unique-embeddings -p unique-patterns \
                     endchain \
                 file -e non-unique-embeddings -p non-unique-patterns
-
-
-Type: itemset
-
-$ sfp -o /tmp/sfp --support=1000 --samples=10 \
-    itemset --min-items=4 --max-items=4  ./data/transactions.dat.gz \
-    graple
-
-itemset Options
-    -h, --help                          view this message
-    -l, --loader=<loader-name>          the loader to use (default int)
-    --min-items=<int>                   minimum items in a samplable set
-    --max-items=<int>                   maximum items in a samplable set
-
-itemset Loaders
-    int                                 each line is a transaction
-                                        the items are integers
-                                        the items are space separated
-       ex.
-            10 1 5 7
-            213 2 5 1
-            23 1 4 5 7
-            3 4 1
-
-
-Type: digraph
-
-$ sfp -o /tmp/sfp --support=5 --samples=100 \
-    digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
-        ./data/digraph.veg.gz \
-    graple
-
-digraph Options
-    -h, --help                          view this message
-    -l, --loader=<loader-name>          the loader to use (default veg)
-    --min-edges=<int>                   minimum edges in a samplable digraph
-    --max-edges=<int>                   maximum edges in a samplable digraph
-    --min-vertices=<int>                minimum vertices in a samplable digraph
-    --max-vertices=<int>                maximum vertices in a samplable digraph
-
-digraph Loaders
-    veg File Format
-
-        The veg file format is a line delimited format with vertex lines and
-        edge lines. For example:
-
-        vertex	{"id":136,"label":""}
-        edge	{"src":23,"targ":25,"label":"ddg"}
-
-    veg Grammar
-
-        line -> vertex "\n"
-              | edge "\n"
-
-        vertex -> "vertex" "\t" vertex_json
-
-        edge -> "edge" "\t" edge_json
-
-        vertex_json -> {"id": int, "label": string, ...}
-        // other items are optional
-
-        edge_json -> {"src": int, "targ": int, "label": int, ...}
-        // other items are  optional
 `
 
 func Usage(code int) {
@@ -728,7 +742,6 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	fmt.Fprintf(os.Stderr, "There was error creating output files\n")
 	fr, err := reporters.NewFile(conf, fmtr, patterns, embeddings)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
