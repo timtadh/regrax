@@ -1,0 +1,1 @@
+go install github.com/timtadh/sfp && sfp -o /tmp/sfp --skip-log=DEBUG --skip-log=INFO --support=6 --samples=100000 --non-unique digraph ../fsm/data/fault-exposing-interactions.gz uniprox --walks=100 chain unique chain log -l SAMPLE -p unique --show-pr dir -d unique --show-pr

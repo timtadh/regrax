@@ -1,6 +1,7 @@
 package uniprox
 
 import (
+	"bytes"
 )
 
 import (
@@ -21,6 +22,7 @@ type Walker struct {
 	walker.Walker
 	EstimatingWalks int
 	Ests bytes_float.MultiMap
+	Prs bytes_float.MultiMap
 }
 
 func NewWalker(conf *config.Config, estimatingWalks int) (*Walker, error) {
@@ -28,12 +30,21 @@ func NewWalker(conf *config.Config, estimatingWalks int) (*Walker, error) {
 	if err != nil {
 		return nil, err
 	}
+	prs, err := conf.BytesFloatMultiMap("uniprox-selection-prs")
+	if err != nil {
+		return nil, err
+	}
 	miner := &Walker{
 		EstimatingWalks: estimatingWalks,
 		Ests: ests,
+		Prs: prs,
 	}
 	miner.Walker = *walker.NewWalker(conf, graple.MakeAbsorbingWalk(graple.MakeSample(miner), make(chan error)))
 	return miner, nil
+}
+
+func (w *Walker) PrFormatter() lattice.PrFormatter {
+	return NewPrFormatter(w)
 }
 
 func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.Formatter) error {
@@ -46,9 +57,43 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 		return nil, err
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
-	next, err := walker.Transition(cur, kids, w.weight)
-	// panic("stop")
-	return next, err
+	pr, next, err := walker.Transition(cur, kids, w.weight)
+	if err != nil {
+		return nil, err
+	}
+	return next, w.transitionProbability(cur, next, pr)
+}
+
+func (w *Walker) transitionProbability(cur, next lattice.Node, pr float64) error {
+	if next == nil {
+		return nil
+	}
+	if has, err := w.Prs.Has(next.Pattern().Label()); err != nil {
+		return err
+	} else if has {
+		return nil
+	}
+	var curPr float64
+	if bytes.Equal(w.Dt.Empty().Pattern().Label(), cur.Pattern().Label()) {
+		curPr = 1.0
+	} else {
+		err := w.Prs.DoFind(cur.Pattern().Label(), func(_ []byte, cpr float64) error {
+			// errors.Logf("PR", "cur %v curPr %v", cur, cpr)
+			curPr = cpr
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	nextPr := curPr * pr
+	// errors.Logf("PR", "adding next %v %v %v", next, next.Pattern().Label(), nextPr)
+	err := w.Prs.Add(next.Pattern().Label(), nextPr)
+	if err != nil {
+		return err
+	}
+	// errors.Logf("PR", "curPr %v  -> %v ->  nextPr %v", curPr, pr, nextPr)
+	return nil
 }
 
 func (w *Walker) weight(_, v lattice.Node) (float64, error) {
@@ -96,7 +141,7 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 	if kids, err := v.CanonKids(); err != nil {
 		return 0, 0, err
 	} else if len(kids) <= 0 {
-		return 0, 0, nil
+		return 1, 1, nil
 	}
 	var maxDepth int = 0
 	var maxTail lattice.Pattern = nil
@@ -128,7 +173,7 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 		return 0, 0, err
 	}
 	diameter = float64(maxTail.Level() - anc.Level()) + 1
-	depth = float64(maxDepth)
+	depth = float64(maxDepth) + 1
 	return depth, diameter, nil
 }
 
@@ -145,7 +190,8 @@ func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 		if err != nil {
 			return nil, err
 		}
-		return walker.Transition(c, kids, weight)
+		_, next, err := walker.Transition(c, kids, weight)
+		return next, err
 	}
 	c := v
 	n, err := transition(c)

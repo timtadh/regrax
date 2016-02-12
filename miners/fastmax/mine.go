@@ -30,7 +30,8 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 		return nil, err
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
-	return walker.Transition(cur, kids, w.weight)
+	_, next, err := walker.Transition(cur, kids, w.weight)
+	return next, err
 }
 
 func (w *Walker) weight(_, v lattice.Node) (float64, error) {

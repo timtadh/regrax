@@ -2,6 +2,7 @@ package stats
 
 import (
 	"log"
+	"math"
 	"math/rand"
 )
 
@@ -93,6 +94,22 @@ func Sum(list []float64) float64 {
 		sum += item
 	}
 	return sum
+}
+
+func Round(val float64, places int ) (newVal float64) {
+	var round float64
+	roundOn := .5
+	pow := math.Pow(10, float64(places))
+	digit := pow * val
+	_, div := math.Modf(digit)
+	_div := math.Copysign(div, val)
+	_roundOn := math.Copysign(roundOn, val)
+	if _div >= _roundOn {
+		round = math.Ceil(digit)
+	} else {
+		round = math.Floor(digit)
+	}
+	return round / pow
 }
 
 func Permutations(size int) (results [][]int) {
