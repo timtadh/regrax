@@ -26,13 +26,12 @@ func TransitionPrs(u lattice.Node, adjs []lattice.Node, weight Weight) ([]float6
 		weights = append(weights, wght)
 		total += wght
 	}
+	if total == 0 {
+		return nil, nil
+	}
 	prs := make([]float64, 0, len(adjs))
 	for _, wght := range weights {
-		if total != 0 {
-			prs = append(prs, wght/total)
-		} else {
-			prs = append(prs, 1.0/float64(len(adjs)))
-		}
+		prs = append(prs, wght/total)
 	}
 	return prs, nil
 }
@@ -47,6 +46,8 @@ func Transition(cur lattice.Node, adjs []lattice.Node, weight Weight) (float64, 
 	prs, err := TransitionPrs(cur, adjs, weight)
 	if err != nil {
 		return 0, nil, err
+	} else if prs == nil {
+		return 1, nil, nil
 	}
 	s := stats.Round(stats.Sum(prs), 3)
 	if s != 1.0 {
