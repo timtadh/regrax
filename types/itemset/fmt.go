@@ -16,26 +16,26 @@ func (f Formatter) FileExt() string {
 	return ".items"
 }
 
-func (f Formatter) Pattern(node lattice.Node) (string, error) {
+func (f Formatter) PatternName(node lattice.Node) string {
 	n := node.(*Node)
 	items := make([]string, 0, n.pat.Items.Size())
 	for i, next := n.pat.Items.Items()(); next != nil; i, next = next() {
 		items = append(items, fmt.Sprintf("%v", i))
 	}
-	return fmt.Sprintf("%s", strings.Join(items, " ")), nil
+	return fmt.Sprintf("%s", strings.Join(items, " "))
 }
 
-func (f Formatter) Embeddings(node lattice.Node) (string, error) {
+func (f Formatter) Pattern(node lattice.Node) (string, error) {
+	return f.PatternName(node), nil
+}
+
+func (f Formatter) Embeddings(node lattice.Node) ([]string, error) {
 	n := node.(*Node)
 	txs := make([]string, 0, len(n.txs))
 	for _, tx := range n.txs {
 		txs = append(txs, fmt.Sprintf("%v", tx))
 	}
-	pat, err := f.Pattern(node)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s : %s", pat, strings.Join(txs, " ")), nil
+	return txs, nil
 }
 
 func (f Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
@@ -55,10 +55,14 @@ func (f Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
 }
 
 func (f Formatter) FormatEmbeddings(w io.Writer, node lattice.Node) error {
-	emb, err := f.Embeddings(node)
+	txs, err := f.Embeddings(node)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(w, "%s\n", emb)
+	pat, err := f.Pattern(node)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(w, "%s : %s\n", pat, strings.Join(txs, " "))
 	return err
 }

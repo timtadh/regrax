@@ -50,8 +50,9 @@ type Pattern interface {
 
 type Formatter interface {
 	FileExt() string
+	PatternName(Node) string
 	Pattern(Node) (string, error)
-	Embeddings(Node) (string, error)
+	Embeddings(Node) ([]string, error)
 	FormatPattern(io.Writer, Node) error
 	FormatEmbeddings(io.Writer, Node) error
 }

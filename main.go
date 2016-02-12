@@ -212,6 +212,7 @@ Reporters
                               with endchain)
     log                       log the samples
     file                      write the samples to a file in the output dir
+    dir                       write samples to a nested dir format
     unique                    takes an "inner reporter" but only passes the
                               unique samples to inner reporter. (useful in
                               conjunction with --non-unique)
@@ -229,6 +230,9 @@ Reporters
         Note: the file extension is chosen by the formatter for the datatype.
               Some data types may provide multiple formatters to choose from
               however that is configured (at this time) from the <type> Options.
+
+    dir Options
+        -d, dir-name=<name>   name of the directory.
 
     Examples
 
@@ -751,6 +755,40 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
     return fr, args
 }
 
+func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hd:",
+		[]string{
+			"help",
+			"dir-name=",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	dir := "samples"
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		case "-d", "--dir-name":
+			dir = oa.Arg()
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	fr, err := reporters.NewDir(conf, fmtr, dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+    return fr, args
+}
+
 func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
@@ -856,6 +894,7 @@ func main() {
 	reports := map[string]Reporter {
 		"log": logReporter,
 		"file": fileReporter,
+		"dir": dirReporter,
 		"chain": chainReporter,
 		"unique": uniqueReporter,
 	}

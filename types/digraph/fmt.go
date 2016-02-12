@@ -42,9 +42,8 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
 }
 
-func (f *Formatter) Embeddings(node lattice.Node) (string, error) {
+func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
 	n := node.(*Node)
-	pat := n.sgs[0].Label()
 	embs := make([]string, 0, len(n.sgs))
 	for _, sg := range n.sgs {
 		allAttrs := make(map[int]map[string]interface{})
@@ -56,13 +55,12 @@ func (f *Formatter) Embeddings(node lattice.Node) (string, error) {
 					return nil
 				})
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 		}
 		embs = append(embs, sg.StringWithAttrs(allAttrs))
 	}
-	embeddings := strings.Join(embs, "\n")
-	return fmt.Sprintf("// %s\n\n%s\n", pat, embeddings), nil
+	return embs, nil
 }
 
 func (f *Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
@@ -75,11 +73,13 @@ func (f *Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
 }
 
 func (f *Formatter) FormatEmbeddings(w io.Writer, node lattice.Node) error {
-	emb, err := f.Embeddings(node)
+	embs, err := f.Embeddings(node)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(w, "%s\n", emb)
+	pat := f.PatternName(node)
+	embeddings := strings.Join(embs, "\n")
+	_, err = fmt.Fprintf(w, "// %s\n\n%s\n\n", pat, embeddings)
 	return err
 }
 
