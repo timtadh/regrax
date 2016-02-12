@@ -33,6 +33,10 @@ func NewWalker(conf *config.Config, walk Walk) *Walker {
 	}
 }
 
+func (w *Walker) PrFormatter() lattice.PrFormatter {
+	return nil
+}
+
 func (w *Walker) Init(dt lattice.DataType, rptr miners.Reporter) (err error) {
 	errors.Logf("INFO", "about to load singleton nodes")
 	w.Dt = dt
@@ -58,7 +62,7 @@ func (w *Walker) Close() error {
 	return nil
 }
 
-func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
+func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.Formatter) error {
 	err := w.Init(dt, rptr)
 	if err != nil {
 		return err

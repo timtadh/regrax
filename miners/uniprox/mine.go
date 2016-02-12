@@ -36,8 +36,8 @@ func NewWalker(conf *config.Config, estimatingWalks int) (*Walker, error) {
 	return miner, nil
 }
 
-func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
-	return (w.Walker).Mine(dt, rptr)
+func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.Formatter) error {
+	return (w.Walker).Mine(dt, rptr, fmtr)
 }
 
 func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {

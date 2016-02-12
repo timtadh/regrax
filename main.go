@@ -195,9 +195,14 @@ Modes
                               using an absorbing chain
 
     graple Options
-        --compute-pr-matrices compute the probability matrices uNR as described
-                              in the GRAPLE paper to use in computing the
-                              selection probability of each sample.
+        --pr-matrices         allow computation of the probability matrices uNR
+                              as described in the GRAPLE paper to use in
+                              computing the selection probability of each
+                              sample. Reporting of the probabilites (and
+                              matrices) is controlled by the reporters. At the
+                              present time computations are not cached (due to
+                              the large size of the matrices) so only have *one*
+                              reporter report the probability.
 
     premusk Options
         -t, teleports=<float> the probability of teleporting (default: .01)
@@ -220,19 +225,35 @@ Reporters
     log Options
         -l, level=<string>    log level the logger should use
         -p, prefix=<string>   a prefix to put before the log line
+        --show-pr             show the selection probability (when applicable)
+                              NB: may cause extra (and excessive computation)
 
     file Options
-        -e, embeddings=<name> the prefix of the name of the file in the output
-                              directory to write the embeddings
-        -p, patterns=<name>   the prefix of the name of the file in the output
-                              directory to write the patterns
+        -e, embeddings=<name>  the prefix of the name of the file in the output
+                               directory to write the embeddings
+        -p, patterns=<name>    the prefix of the name of the file in the output
+                               directory to write the patterns
+        --show-pr              show the selection probability (when applicable)
+                               NB: may cause extra (and excessive computation)
+        --matrices=<name>      when --show-pr (and the current <mode> supports
+                               probabilities) this the name of the file where
+                               the pr-matrices will be written. For some modes
+                               nothing will be written to this file even when
+                               probabilities are computed
+        --probabilities=<name> when --show-pr (with <mode> support) the
+                               probabilities computed will be written to this
+                               file.
 
         Note: the file extension is chosen by the formatter for the datatype.
               Some data types may provide multiple formatters to choose from
               however that is configured (at this time) from the <type> Options.
 
+        Note: all options are optional. There are default values setup.
+
     dir Options
         -d, dir-name=<name>   name of the directory.
+        --show-pr             show the selection probability (when applicable)
+                              NB: may cause extra (and excessive computation)
 
     Examples
 
@@ -416,7 +437,7 @@ func AssertFile(fname string) string {
 	return fname
 }
 
-func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
+func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{"help", "loader=", "min-items=", "max-items="},
@@ -456,13 +477,13 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	if err != nil {
 		log.Panic(err)
 	}
-	fmtr := func(_ lattice.DataType) lattice.Formatter {
-		return itemset.Formatter{}
+	fmtr := func(_ lattice.DataType, prfmt lattice.PrFormatter) lattice.Formatter {
+		return &itemset.Formatter{prfmt}
 	}
 	return loader, fmtr, args
 }
 
-func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
+func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{"help", "loader=",
@@ -513,9 +534,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	if err != nil {
 		log.Panic(err)
 	}
-	fmtr := func(dt lattice.DataType) lattice.Formatter {
+	fmtr := func(dt lattice.DataType, prfmt lattice.PrFormatter) lattice.Formatter {
 		g := dt.(*digraph.Graph)
-		return digraph.NewFormatter(g)
+		return digraph.NewFormatter(g, prfmt)
 	}
 	return loader, fmtr, args
 }
@@ -526,7 +547,7 @@ func grapleMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 		"hc",
 		[]string{
 			"help",
-			"compute-pr-matrices",
+			"pr-matrices",
 		},
 	)
 	if err != nil {
@@ -538,7 +559,7 @@ func grapleMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
-		case "-c", "--compute-pr-matrices":
+		case "-c", "--pr-matrices":
 			computePrMatrices = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
@@ -693,6 +714,7 @@ func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 			"help",
 			"level=",
 			"prefix=",
+			"show-pr",
 		},
 	)
 	if err != nil {
@@ -701,6 +723,7 @@ func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 	}
 	level := "INFO"
 	prefix := ""
+	showPr := false
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -709,12 +732,14 @@ func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 			level = oa.Arg()
 		case "-p", "--prefix":
 			prefix = oa.Arg()
+		case "--show-pr":
+			showPr = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	return reporters.NewLog(level, prefix), args
+	return reporters.NewLog(fmtr, showPr, level, prefix), args
 }
 
 func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
@@ -725,6 +750,9 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 			"help",
 			"patterns=",
 			"embeddings=",
+			"matrices=",
+			"probabilities=",
+			"show-pr",
 		},
 	)
 	if err != nil {
@@ -733,6 +761,9 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 	}
 	patterns := "patterns"
 	embeddings := "embeddigns"
+	matrices := "matrices.json"
+	probabilities := "probabilities.prs"
+	showPr := false
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -741,12 +772,18 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 			patterns = oa.Arg()
 		case "-e", "--embeddings":
 			embeddings = oa.Arg()
+		case "--matrices":
+			matrices = oa.Arg()
+		case "--probabilites":
+			probabilities = oa.Arg()
+		case "--show-pr":
+			showPr = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	fr, err := reporters.NewFile(conf, fmtr, patterns, embeddings)
+	fr, err := reporters.NewFile(conf, fmtr, showPr, patterns, embeddings, matrices, probabilities)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -762,6 +799,7 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 		[]string{
 			"help",
 			"dir-name=",
+			"show-pr",
 		},
 	)
 	if err != nil {
@@ -769,18 +807,21 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 		Usage(ErrorCodes["opts"])
 	}
 	dir := "samples"
+	showPr := false
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
 		case "-d", "--dir-name":
 			dir = oa.Arg()
+		case "--show-pr":
+			showPr = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	fr, err := reporters.NewDir(conf, fmtr, dir)
+	fr, err := reporters.NewDir(conf, fmtr, showPr, dir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -886,7 +927,7 @@ func main() {
 		"uniprox": uniproxMode,
 	}
 
-	types := map[string]func([]string, *config.Config) (lattice.Loader, func(lattice.DataType) lattice.Formatter, []string) {
+	types := map[string]func([]string, *config.Config) (lattice.Loader, func(lattice.DataType,lattice.PrFormatter) lattice.Formatter, []string) {
 		"itemset": itemsetType,
 		"digraph": digraphType,
 	}
@@ -1034,7 +1075,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	fmtr := makeFmtr(dt)
+	fmtr := makeFmtr(dt, mode.PrFormatter())
 
 	var rptr miners.Reporter
 	if len(args) == 0 {
@@ -1056,7 +1097,7 @@ func main() {
 	}
 
 	errors.Logf("INFO", "loaded data, about to start mining")
-	mineErr := mode.Mine(dt, rptr)
+	mineErr := mode.Mine(dt, rptr, fmtr)
 
 	code := 0
 	if e := mode.Close(); e != nil {

@@ -40,3 +40,4 @@ func NodeIteratorFromSlice(nodes []Node) (it NodeIterator, err error) {
 	}
 	return it, nil
 }
+

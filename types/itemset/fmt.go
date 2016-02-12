@@ -10,13 +10,19 @@ import (
 	"github.com/timtadh/sfp/lattice"
 )
 
-type Formatter struct{}
+type Formatter struct{
+	PrFmt lattice.PrFormatter
+}
 
-func (f Formatter) FileExt() string {
+func (f *Formatter) PrFormatter() lattice.PrFormatter {
+	return f.PrFmt
+}
+
+func (f *Formatter) FileExt() string {
 	return ".items"
 }
 
-func (f Formatter) PatternName(node lattice.Node) string {
+func (f *Formatter) PatternName(node lattice.Node) string {
 	n := node.(*Node)
 	items := make([]string, 0, n.pat.Items.Size())
 	for i, next := n.pat.Items.Items()(); next != nil; i, next = next() {
@@ -25,11 +31,11 @@ func (f Formatter) PatternName(node lattice.Node) string {
 	return fmt.Sprintf("%s", strings.Join(items, " "))
 }
 
-func (f Formatter) Pattern(node lattice.Node) (string, error) {
+func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	return f.PatternName(node), nil
 }
 
-func (f Formatter) Embeddings(node lattice.Node) ([]string, error) {
+func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
 	n := node.(*Node)
 	txs := make([]string, 0, len(n.txs))
 	for _, tx := range n.txs {
@@ -38,7 +44,7 @@ func (f Formatter) Embeddings(node lattice.Node) ([]string, error) {
 	return txs, nil
 }
 
-func (f Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
+func (f *Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
 	n := node.(*Node)
 	pat, err := f.Pattern(node)
 	if err != nil {
@@ -54,7 +60,7 @@ func (f Formatter) FormatPattern(w io.Writer, node lattice.Node) error {
 	return err
 }
 
-func (f Formatter) FormatEmbeddings(w io.Writer, node lattice.Node) error {
+func (f *Formatter) FormatEmbeddings(w io.Writer, node lattice.Node) error {
 	txs, err := f.Embeddings(node)
 	if err != nil {
 		return err

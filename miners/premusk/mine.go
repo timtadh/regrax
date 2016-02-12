@@ -35,7 +35,7 @@ func NewWalker(conf *config.Config, teleportProbability float64) *Walker {
 	return miner
 }
 
-func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
+func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.Formatter) error {
 	errors.Logf("INFO", "Customize creation")
 
 	pConf := w.Config.Copy()
@@ -46,10 +46,10 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
 	pRptr := &reporters.Skip{
 		Skip: 10,
-		Reporter: &reporters.Chain{[]miners.Reporter{reporters.NewLog("DEBUG", "premining"), reporters.NewUnique(collector)}},
+		Reporter: &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "premining"), reporters.NewUnique(collector)}},
 	}
 
-	err := premine.Mine(dt, pRptr)
+	err := premine.Mine(dt, pRptr, fmtr)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
 	w.Teleports = collector.Nodes
 	errors.Logf("INFO", "teleports %v", len(w.Teleports))
 
-	return (w.Walker).Mine(dt, rptr)
+	return (w.Walker).Mine(dt, rptr, fmtr)
 }
 
 func Next(ctx interface{}, cur lattice.Node) (lattice.Node, error) {

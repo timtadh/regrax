@@ -12,10 +12,12 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/miners/walker"
 )
+
+type Matrices struct {
+	Q, R, U *Sparse
+}
 
 type SparseEntry struct {
 	Row, Col int
@@ -43,45 +45,53 @@ func NewWalker(conf *config.Config, computePrMatrices bool) *Walker {
 	return miner
 }
 
-func (w *Walker) PrMatrices(n lattice.Node) (Q, R, u *Sparse, err error) {
+func (w *Walker) PrFormatter() lattice.PrFormatter {
+	if w.ComputePrMatrices {
+		return NewPrFormatter(w)
+	}
+	return nil
+}
+
+func (w *Walker) PrMatrices(n lattice.Node) (QRu *Matrices, err error) {
 	lat, err := lattice.MakeLattice(n)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 	p, err := w.probabilities(lat)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
-	Q = &Sparse{
+	QRu = new(Matrices)
+	QRu.Q = &Sparse{
 		Rows:    len(lat.V) - 1,
 		Cols:    len(lat.V) - 1,
 		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
-	R = &Sparse{
+	QRu.R = &Sparse{
 		Rows:    len(lat.V) - 1,
 		Cols:    1,
 		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
-	u = &Sparse{
+	QRu.U = &Sparse{
 		Rows:    1,
 		Cols:    len(lat.V) - 1,
 		Entries: make([]SparseEntry, 0, len(lat.V)-1),
 	}
 	for i, x := range lat.V {
 		if c, err := x.ParentCount(); err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		} else if c == 0 {
-			u.Entries = append(u.Entries, SparseEntry{0, i, 1.0, 1})
+			QRu.U.Entries = append(QRu.U.Entries, SparseEntry{0, i, 1.0, 1})
 		}
 	}
 	for _, e := range lat.E {
 		if e.Targ >= len(lat.V)-1 {
-			R.Entries = append(R.Entries, SparseEntry{e.Src, 0, 1.0 / float64(p[e.Src]), p[e.Src]})
+			QRu.R.Entries = append(QRu.R.Entries, SparseEntry{e.Src, 0, 1.0 / float64(p[e.Src]), p[e.Src]})
 		} else {
-			Q.Entries = append(Q.Entries, SparseEntry{e.Src, e.Targ, 1.0 / float64(p[e.Src]), p[e.Src]})
+			QRu.Q.Entries = append(QRu.Q.Entries, SparseEntry{e.Src, e.Targ, 1.0 / float64(p[e.Src]), p[e.Src]})
 		}
 	}
-	return Q, R, u, nil
+	return QRu, nil
 }
 
 func (m *Sparse) Dense() *matrix.DenseMatrix {
@@ -140,17 +150,6 @@ func (w *Walker) probabilities(lat *lattice.Lattice) ([]int, error) {
 		}
 	}
 	return P, nil
-}
-
-func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter) error {
-	if !w.ComputePrMatrices {
-		return (w.Walker).Mine(dt, rptr)
-	}
-	mr, err := NewMatrixReporter(w, w.Errors)
-	if err != nil {
-		return err
-	}
-	return (w.Walker).Mine(dt, &reporters.Chain{[]miners.Reporter{rptr, mr}})
 }
 
 func MakeAbsorbingWalk(sample func(lattice.Node) (lattice.Node, error), errs chan error) walker.Walk {

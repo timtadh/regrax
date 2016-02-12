@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 )
 
-import ()
+import (
+	"github.com/timtadh/data-structures/errors"
+)
 
 import (
 	"github.com/timtadh/sfp/config"
@@ -16,19 +18,25 @@ import (
 type Dir struct {
 	config *config.Config
 	fmt    lattice.Formatter
+	prfmt  lattice.PrFormatter
 	dir    string
 	count  int
 }
 
-func NewDir(c *config.Config, fmt lattice.Formatter, dirname string) (*Dir, error) {
+func NewDir(c *config.Config, fmt lattice.Formatter, showPr bool, dirname string) (*Dir, error) {
 	samples := c.OutputFile(dirname)
 	err := os.MkdirAll(samples, 0775)
 	if err != nil {
 		return nil, err
 	}
+	var prfmt lattice.PrFormatter
+	if showPr {
+		prfmt = fmt.PrFormatter()
+	}
 	r := &Dir{
 		config: c,
 		fmt:    fmt,
+		prfmt:  prfmt,
 		dir:    samples,
 	}
 	return r, nil
@@ -78,6 +86,32 @@ func (r *Dir) Report(n lattice.Node) error {
 		}
 		defer embedding.Close()
 		fmt.Fprintf(embedding, "%s\n", emb)
+	}
+	if r.prfmt != nil {
+		matrices, err := r.prfmt.Matrices(n)
+		if err == nil {
+			mw, err := os.Create(filepath.Join(dir, "matrices.json"))
+			if err != nil {
+				return err
+			}
+			defer mw.Close()
+			r.prfmt.FormatMatrices(mw, n, matrices)
+		}
+		if err != nil {
+			errors.Logf("ERROR", "Pr Matrices Computation Error: %v", err)
+		} else if r.prfmt.CanComputeSelPr(n, matrices) {
+			pr, err := r.prfmt.SelectionProbability(n, matrices)
+			if err != nil {
+				errors.Logf("ERROR", "PrComputation Error: %v", err)
+			} else {
+				pw, err := os.Create(filepath.Join(dir, "pattern.pr"))
+				if err != nil {
+					return err
+				}
+				defer pw.Close()
+				fmt.Fprintf(pw, "%g\n", pr)
+			}
+		}
 	}
 	return nil
 }

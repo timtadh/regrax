@@ -12,12 +12,18 @@ import (
 
 type Formatter struct {
 	g *Graph
+	prfmt lattice.PrFormatter
 }
 
-func NewFormatter(g *Graph) *Formatter {
+func NewFormatter(g *Graph, prfmt lattice.PrFormatter) *Formatter {
 	return &Formatter{
 		g: g,
+		prfmt: prfmt,
 	}
+}
+
+func (f *Formatter) PrFormatter() lattice.PrFormatter {
+	return f.prfmt
 }
 
 func (f *Formatter) FileExt() string {
