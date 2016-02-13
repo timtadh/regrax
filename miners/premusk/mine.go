@@ -44,12 +44,16 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.Fo
 	premine := walker.NewWalker(pConf, ospace.MakeUniformWalk(.02, false))
 	premine.Reject = false
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
+	uniq, err := reporters.NewUnique(pConf, fmtr, collector, "")
+	if err != nil {
+		return err
+	}
 	pRptr := &reporters.Skip{
 		Skip: 10,
-		Reporter: &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "premining"), reporters.NewUnique(collector)}},
+		Reporter: &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "premining"), uniq}},
 	}
 
-	err := premine.Mine(dt, pRptr, fmtr)
+	err = premine.Mine(dt, pRptr, fmtr)
 	if err != nil {
 		return err
 	}

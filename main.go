@@ -255,6 +255,10 @@ Reporters
         --show-pr             show the selection probability (when applicable)
                               NB: may cause extra (and excessive computation)
 
+    unique Options
+        --histogram=<name>    if set unique will write the histogram of how many
+                              times each node is sampled.
+
     Examples
 
         $ sfp -o <path> --samples=5 --support=5 \
@@ -883,16 +887,20 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 		"h",
 		[]string{
 			"help",
+			"histogram=",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
+	histogram := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
+		case "--histogram":
+			histogram = oa.Arg()
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -913,7 +921,12 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 	} else {
 		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
 	}
-	return reporters.NewUnique(rptr), args
+	uniq, err := reporters.NewUnique(conf, fmtr, rptr, histogram)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating unique reporter '%v'\n", err)
+		Usage(ErrorCodes["opts"])
+	}
+	return uniq, args
 }
 
 func main() {

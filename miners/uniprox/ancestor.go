@@ -115,7 +115,11 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	// create the reporter
 	fmtr := digraph.NewFormatter(v.G, nil)
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
-	rptr := &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "common-ancestor"), reporters.NewUnique(collector)}}
+	uniq, err := reporters.NewUnique(conf, fmtr, collector, "")
+	if err != nil {
+		return nil, err
+	}
+	rptr := &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "common-ancestor"), uniq}}
 
 	// mine
 	err = wlkr.Mine(dt, rptr, fmtr)
