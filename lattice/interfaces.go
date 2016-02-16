@@ -11,6 +11,7 @@ import (
 type Lattice struct {
 	V []Node
 	E []Edge
+	Kids [][]*Edge
 }
 
 type Input func() (reader io.Reader, closer func())

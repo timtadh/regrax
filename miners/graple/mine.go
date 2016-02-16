@@ -135,11 +135,18 @@ func (w *Walker) probabilities(lat *lattice.Lattice) ([]int, error) {
 		if err != nil {
 			return nil, err
 		}
+		if count < len(lat.Children(i)) {
+			errors.Logf("WARNING", "count < lat.Children count %v < %v", count, len(lat.Children(i)))
+			count = len(lat.Children(i))
+		}
+		if count > 0 && len(lat.Children(i)) == 0 {
+			errors.Logf("WARNING", "count > 0 && lat.Children == 0 : %v > 0 lat.Children == %v", count, len(lat.Children(i)))
+		}
 		if i+1 == len(lat.V) {
 			P[i] = -1
 		} else if count == 0 {
-			P[i] = 1
-			errors.Logf("INFO", "0 count for %v", node)
+			P[i] = len(lat.Children(i))
+			errors.Logf("WARNING", "0 count for %v, using %v", node, P[i])
 		} else {
 			P[i] = count
 		}

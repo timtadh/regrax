@@ -50,17 +50,30 @@ func lattice(node Node) (*Lattice, error) {
 		labels[string(lattice[len(lattice)-1].Pattern().Label())] = len(lattice) - 1
 	}
 	edges := make([]Edge, 0, len(lattice)*2)
+	lattice_kids := make([][]*Edge, 0, len(lattice)*2)
 	for i, n := range lattice {
 		kids, err := n.Children()
 		if err != nil {
 			return nil, err
 		}
+		lattice_kids = append(lattice_kids, make([]*Edge, 0, len(kids)))
 		for _, kid := range kids {
 			j, has := labels[string(kid.Pattern().Label())]
 			if has {
 				edges = append(edges, Edge{Src: i, Targ: j})
+				e := &edges[len(edges)-1]
+				lattice_kids[len(lattice_kids)-1] = append(lattice_kids[len(lattice_kids)-1], e)
 			}
 		}
 	}
-	return &Lattice{lattice, edges}, nil
+	return &Lattice{lattice, edges, lattice_kids}, nil
 }
+
+func (lat *Lattice) Children(i int) []Node {
+	kids := make([]Node, 0, len(lat.Kids[i]))
+	for _, e := range lat.Kids[i] {
+		kids = append(kids, lat.V[e.Targ])
+	}
+	return kids
+}
+
