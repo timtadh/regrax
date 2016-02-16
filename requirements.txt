@@ -1,3 +1,6 @@
 argparse==1.2.1
-numpy==1.10.1
-wsgiref==0.1.2
+numpy
+wsgiref
+scipy
+-e git+git@github.com:scikit-umfpack/scikit-umfpack.git#egg=scikit-umfpack
+
