@@ -19,6 +19,7 @@ import (
 )
 
 type Unique struct {
+	count int
 	fmtr lattice.Formatter
 	Seen bytes_int.MultiMap
 	Reporter miners.Reporter
@@ -52,6 +53,7 @@ func NewUnique(conf *config.Config, fmtr lattice.Formatter, reporter miners.Repo
 }
 
 func (r *Unique) Report(n lattice.Node) error {
+	r.count++
 	label := []byte(r.fmtr.PatternName(n))
 	if has, err := r.Seen.Has(label); err != nil {
 		return err
@@ -82,7 +84,7 @@ func (r *Unique) Close() error {
 	if r.histogram != nil {
 		err := bytes_int.Do(r.Seen.Iterate, func(k []byte, c int32) error {
 			name := string(k)
-			fmt.Fprintf(r.histogram, "%d, %v\n", c, name)
+			fmt.Fprintf(r.histogram, "%d, %.5g, %v\n", c, float64(c)/float64(r.count), name)
 			return nil
 		})
 		if err != nil {
