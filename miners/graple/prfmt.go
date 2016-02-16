@@ -39,9 +39,10 @@ func (r *PrFormatter) SelectionProbability(n lattice.Node, m interface{}) (float
 	return r.w.SelectionProbability(QRu.Q, QRu.R, QRu.U)
 }
 
-func (r *PrFormatter) FormatMatrices(w io.Writer, n lattice.Node, m interface{}) (error) {
+func (r *PrFormatter) FormatMatrices(w io.Writer, fmtr lattice.Formatter, n lattice.Node, m interface{}) (error) {
 	QRu := m.(*Matrices)
 	bytes, err := json.Marshal(map[string]interface{}{
+		"Name": fmtr.PatternName(n),
 		"Q":              QRu.Q,
 		"R":              QRu.R,
 		"u":              QRu.U,

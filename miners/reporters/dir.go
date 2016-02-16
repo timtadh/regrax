@@ -95,7 +95,7 @@ func (r *Dir) Report(n lattice.Node) error {
 				return err
 			}
 			defer mw.Close()
-			r.prfmt.FormatMatrices(mw, n, matrices)
+			r.prfmt.FormatMatrices(mw, r.fmt, n, matrices)
 		}
 		if err != nil {
 			errors.Logf("ERROR", "Pr Matrices Computation Error: %v", err)

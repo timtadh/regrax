@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import sys
 import os
@@ -53,10 +53,11 @@ def assert_file_exists(path):
 
 def load(line, retry):
     j = json.loads(line)
+    name = j['Name']
     Q = load_matrix((j['Q']['Rows'], j['Q']['Cols']), j['Q']['Entries'])
     R = load_matrix((j['R']['Rows'], j['R']['Cols']), j['R']['Entries'])
     u = load_matrix((j['u']['Rows'], j['u']['Cols']), j['u']['Entries'])
-    return Q, R, u
+    return name, Q, R, u
 
 def load_matrix(shape, entries):
     data = [float(e['Value']) for e in entries]
@@ -66,7 +67,7 @@ def load_matrix(shape, entries):
     assert len(data) == M.nnz
     return M
 
-def probability(Q, R, u):
+def probability(name, Q, R, u):
     print >>sys.stderr, Q.shape[0],
     I = sparse.eye(Q.shape[0], format=Q.format)
     print >>sys.stderr, "I",
@@ -76,7 +77,7 @@ def probability(Q, R, u):
     print >>sys.stderr, "B",
     P = u.dot(B)
     print >>sys.stderr, "P",
-    return P[0,0]
+    return name, P[0,0]
 
 def inverse(A):
     # return linalg.inv(A)
@@ -111,7 +112,7 @@ def main(argv):
         log(err)
         usage(1)
 
-    matrices = None
+    matrices = sys.stdin
     output = sys.stdout
     ex = None
     retry = False
@@ -119,7 +120,7 @@ def main(argv):
         if opt in ('-h', '--help',):
             usage(0)
         elif opt in ('-m', '--matrices',):
-            matrices = assert_file_exists(arg)
+            matrices = open(assert_file_exists(arg), 'r')
         elif opt in ('--retry',):
             retry = True
         elif opt in ('-o', '--output',):
@@ -137,17 +138,13 @@ def main(argv):
             log("unexpected option", opt, arg)
             usage(1)
 
-    if matrices is None:
-        log("must supply at least a path to the matrices.json")
-        usage(1)
-
-    with open(matrices, 'r') as m:
+    with matrices as m:
         with output as f:
             for line in m:
                 line = line.strip()
                 if not line: continue
                 s = time.time()
-                p = probability(*load(line, retry))
+                name, p = probability(*load(line, retry))
                 e = time.time()
                 print >>sys.stderr, round(p, 5),
                 log("time", round(e-s, 3))
@@ -158,7 +155,7 @@ def main(argv):
                 elif ex is not None:
                     log("had example no output written")
                 else:
-                    print >>f, p
+                    print >>f, '%g, %s' % (p, name)
                     log("wrote output")
 
 if __name__ == "__main__":

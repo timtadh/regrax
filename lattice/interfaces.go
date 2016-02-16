@@ -63,7 +63,7 @@ type PrFormatter interface {
 	Matrices(Node) (matrices interface{}, err error)
 	CanComputeSelPr(n Node, matrices interface{}) bool
 	SelectionProbability(n Node, matrices interface{}) (float64, error)
-	FormatMatrices(w io.Writer, n Node, matrices interface{}) error
+	FormatMatrices(w io.Writer, fmtr Formatter, n Node, matrices interface{}) error
 }
 
 type NoLattice struct{}

@@ -72,8 +72,9 @@ func (r *File) Report(n lattice.Node) error {
 	if r.prfmt != nil {
 		matrices, err := r.prfmt.Matrices(n)
 		if err == nil {
-			r.prfmt.FormatMatrices(r.matrices, n, matrices)
-		} else if err != nil {
+			r.prfmt.FormatMatrices(r.matrices, r.fmt, n, matrices)
+		}
+		if err != nil {
 			fmt.Fprintf(r.matrices, "ERR: %v\n", err)
 			errors.Logf("ERROR", "Pr Matrices Computation Error: vs", err)
 		} else if r.prfmt.CanComputeSelPr(n, matrices) {
@@ -82,7 +83,7 @@ func (r *File) Report(n lattice.Node) error {
 				fmt.Fprintf(r.prs, "ERR: %v\n", err)
 				errors.Logf("ERROR", "PrComputation Error: %v", err)
 			} else {
-				fmt.Fprintf(r.prs, "%g\n", pr)
+				fmt.Fprintf(r.prs, "%g, %v\n", pr, r.fmt.PatternName(n))
 			}
 		} else {
 			fmt.Fprintf(r.prs, "SKIPPED\n")

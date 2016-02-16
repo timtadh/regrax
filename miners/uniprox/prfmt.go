@@ -41,7 +41,7 @@ func (r *PrFormatter) SelectionProbability(n lattice.Node, m interface{}) (float
 	return nPr, nil
 }
 
-func (r *PrFormatter) FormatMatrices(w io.Writer, n lattice.Node, m interface{}) (error) {
+func (r *PrFormatter) FormatMatrices(w io.Writer, fmtr lattice.Formatter, n lattice.Node, m interface{}) (error) {
 	return nil
 }
 

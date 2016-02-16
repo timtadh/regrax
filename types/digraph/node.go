@@ -328,6 +328,9 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	}
 	partitioned := exts.Partition()
 	for _, sgs := range partitioned {
+		if len(sgs) < n.dt.Support() {
+			continue
+		}
 		sgs = n.dt.Supported(DedupSupported(sgs))
 		if len(sgs) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
