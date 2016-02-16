@@ -194,16 +194,6 @@ Modes
     uniprox                   approximately uniform sampling of max patterns
                               using an absorbing chain
 
-    graple Options
-        --pr-matrices         allow computation of the probability matrices uNR
-                              as described in the GRAPLE paper to use in
-                              computing the selection probability of each
-                              sample. Reporting of the probabilites (and
-                              matrices) is controlled by the reporters. At the
-                              present time computations are not cached (due to
-                              the large size of the matrices) so only have *one*
-                              reporter report the probability.
-
     premusk Options
         -t, teleports=<float> the probability of teleporting (default: .01)
 
@@ -551,26 +541,22 @@ func grapleMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 		"hc",
 		[]string{
 			"help",
-			"pr-matrices",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
-	computePrMatrices := false
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
-		case "-c", "--pr-matrices":
-			computePrMatrices = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	return graple.NewWalker(conf, computePrMatrices), args
+	return graple.NewWalker(conf), args
 }
 
 func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
