@@ -1,6 +1,8 @@
 package lattice
 
-import ()
+import (
+	"bytes"
+)
 
 func MakeLattice(n Node) (*Lattice, error) {
 	lat, err := n.Lattice()
@@ -29,13 +31,30 @@ func lattice(node Node) (*Lattice, error) {
 	for len(queue) > 0 {
 		var n Node
 		n, queue = pop(queue)
-		queued[string(n.Pattern().Label())] = true
+		nlabel := n.Pattern().Label()
+		queued[string(nlabel)] = true
 		rlattice = append(rlattice, n)
 		parents, err := n.Parents()
 		if err != nil {
 			return nil, err
 		}
 		for _, p := range parents {
+			haskid := false
+			pkids, err := p.Children()
+			if err != nil {
+				return nil, err
+			}
+			for _, k := range pkids {
+				if bytes.Equal(k.Pattern().Label(), nlabel) {
+					haskid = true
+					break
+				}
+			}
+			if !haskid {
+				// we were not able to compute the child from the parent
+				// so let's drop this parent.
+				continue
+			}
 			l := string(p.Pattern().Label())
 			if _, has := queued[l]; !has {
 				queue = append(queue, p)
