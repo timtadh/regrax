@@ -328,7 +328,7 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	}
 	partitioned := exts.Partition()
 	for _, sgs := range partitioned {
-		sgs = MinImgSupported(DedupSupported(sgs))
+		sgs = n.dt.Supported(DedupSupported(sgs))
 		if len(sgs) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
 			nodes = append(nodes, &Node{Pattern{label: label}, n.dt, sgs})

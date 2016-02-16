@@ -12,6 +12,8 @@ import (
 	"github.com/timtadh/sfp/stats"
 )
 
+type Supported func(sgs SubGraphs) SubGraphs
+
 func vertexMapSets(sgs SubGraphs) []*set.MapSet {
 	if len(sgs) == 0 {
 		return make([]*set.MapSet, 0)
@@ -79,24 +81,38 @@ func MaxIndepSupported(sgs SubGraphs) SubGraphs {
 		return sgs
 	}
 	sets := subgraphVertexSets(sgs)
-	perms := stats.Permutations(len(sets))
-	arg, max := stats.Max(stats.Srange(len(perms)), func(idx int) float64 {
-		perm := make([]*set.SortedSet, 0, len(sets))
-		for _, idx := range perms[idx] {
-			perm = append(perm, sets[idx])
+	errors.Logf("MAX-INDEP", "sets: %v", sets)
+	max := -1
+	var maxPerm []int = nil
+	var maxNonOverlap []int = nil
+	stats.Permutations(len(sets), func(perm []int) (dobreak bool) {
+		nonOverlap := nonOverlapping(perm, sets)
+		size := len(nonOverlap)
+		if size > max || maxPerm == nil {
+			max = size
+			maxPerm = perm
+			maxNonOverlap = nonOverlap
 		}
-		return float64(intersect(perm).Size())
+		// errors.Logf("MAX-INDEP", "perm %v %v %v :: max: %v %v %v", perm, size, nonOverlap, maxPerm, max, maxNonOverlap)
+		return false
 	})
-	vids := set.NewSortedSet(int(max))
-	nonOverlapping := make(SubGraphs, 0, len(sgs))
-	for _, idx := range perms[arg] {
+	nonOverlapping := make(SubGraphs, 0, len(maxNonOverlap))
+	for _, idx := range maxNonOverlap {
+		nonOverlapping = append(nonOverlapping, sgs[idx])
+	}
+	return nonOverlapping
+}
+
+func nonOverlapping(perm []int, sets []*set.SortedSet) []int {
+	nonOverlapping := make([]int, 0, len(sets))
+	idxs := set.NewSortedSet(len(sets))
+	for _, idx := range perm {
 		s := sets[idx]
-		if !vids.Overlap(s) {
-			errors.Logf("DEBUG", "sgs %v %v %v", len(sgs), idx, len(sets))
-			nonOverlapping = append(nonOverlapping, sgs[idx])
+		if !idxs.Overlap(s) {
+			nonOverlapping = append(nonOverlapping, idx)
 			for v, next := s.Items()(); next != nil; v, next = next() {
 				item := v.(types.Int)
-				if err := vids.Add(item); err != nil {
+				if err := idxs.Add(item); err != nil {
 					panic(err)
 				}
 			}
@@ -108,7 +124,10 @@ func MaxIndepSupported(sgs SubGraphs) SubGraphs {
 func intersect(sets []*set.SortedSet) *set.SortedSet {
 	s := sets[0]
 	for i := 1; i < len(sets); i++ {
-		x, _ := s.Intersect(sets[i])
+		x, err := s.Intersect(sets[i])
+		if err != nil {
+			panic(err)
+		}
 		s = x.(*set.SortedSet)
 	}
 	return s

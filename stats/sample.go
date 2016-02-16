@@ -112,7 +112,7 @@ func Round(val float64, places int ) (newVal float64) {
 	return round / pow
 }
 
-func Permutations(size int) (results [][]int) {
+func Permutations(size int, do func(perm []int) (dobreak bool)) {
 	slice := make([]int, size)
 	indices := make([]int, size)
 	cycles := make([]int, size)
@@ -124,7 +124,9 @@ func Permutations(size int) (results [][]int) {
 		cycles[i] = size - i
 		cur[i] = i
 	}
-	results = append(results, cur)
+	if do(cur) {
+		return
+	}
 	for {
 		prev = cur
 		cur = make([]int, size)
@@ -145,7 +147,9 @@ func Permutations(size int) (results [][]int) {
 				for k := i; k < size; k += 1 {
 					cur[k] = slice[indices[k]]
 				}
-				results = append(results, cur)
+				if do(cur) {
+					return
+				}
 				break
 			}
 		}
@@ -153,5 +157,4 @@ func Permutations(size int) (results [][]int) {
 			break
 		}
 	}
-	return results
 }

@@ -37,6 +37,7 @@ func (self ErrorList) Error() string {
 type Graph struct {
 	MinEdges, MaxEdges, MinVertices, MaxVertices int
 	G                                            *goiso.Graph
+	Supported                                    Supported
 	NodeAttrs                                    int_json.MultiMap
 	Embeddings                                   bytes_subgraph.MultiMap
 	Parents                                      bytes_bytes.MultiMap
@@ -49,7 +50,7 @@ type Graph struct {
 	config                                       *config.Config
 }
 
-func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err error) {
+func NewGraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (g *Graph, err error) {
 	nodeAttrs, err := config.IntJsonMultiMap("digraph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -79,6 +80,7 @@ func NewGraph(config *config.Config, minE, maxE, minV, maxV int) (g *Graph, err 
 		return nil, err
 	}
 	g = &Graph{
+		Supported:     sup,
 		MinEdges:      minE,
 		MaxEdges:      maxE,
 		MinVertices:   minV,
@@ -157,8 +159,8 @@ type VegLoader struct {
 	G *Graph
 }
 
-func NewVegLoader(config *config.Config, minE, maxE, minV, maxV int) (lattice.Loader, error) {
-	g, err := NewGraph(config, minE, maxE, minV, maxV)
+func NewVegLoader(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
+	g, err := NewGraph(config, sup, minE, maxE, minV, maxV)
 	if err != nil {
 		return nil, err
 	}

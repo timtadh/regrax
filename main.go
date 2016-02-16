@@ -481,6 +481,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:", []string{"help", "loader=",
+			"support=",
 			"min-edges=",
 			"max-edges=",
 			"min-vertices=",
@@ -493,6 +494,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 
 	loaderType := "veg"
+	supportedFunc := "min-image"
 	minE := 0
 	maxE := int(math.MaxInt32)
 	minV := 0
@@ -503,6 +505,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			Usage(0)
 		case "-l", "--loader":
 			loaderType = oa.Arg()
+		case "-s", "--support":
+			supportedFunc = oa.Arg()
 		case "--min-edges":
 			minE = ParseInt(oa.Arg())
 		case "--max-edges":
@@ -517,10 +521,22 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		}
 	}
 
+	var supported digraph.Supported
+	switch supportedFunc {
+	case "min-image":
+		supported = digraph.MinImgSupported
+	case "max-indep":
+		supported = digraph.MaxIndepSupported
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown support function '%v'\n", supportedFunc)
+		fmt.Fprintf(os.Stderr, "funcs: min-image, max-indep\n")
+		Usage(ErrorCodes["opts"])
+	}
+
 	var loader lattice.Loader
 	switch loaderType {
 	case "veg":
-		loader, err = digraph.NewVegLoader(conf, minE, maxE, minV, maxV)
+		loader, err = digraph.NewVegLoader(conf, supported, minE, maxE, minV, maxV)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
