@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+YAHOO_1000=$1
+
+GRAPLE=$(mktemp --tmpdir yahoo-1000-graple-results-XXX)
+UNIPROX=$(mktemp --tmpdir yahoo-1000-uniprox-25-results-XXX)
+
+function cleanup {
+	kill -- -$BASHPID
+}
+trap cleanup 0
+
+echo $GRAPLE
+echo $UNIPROX
+
+uniformity-emperiment $GRAPLE "graple" "itemset $YAHOO_1000" 2 1000000 &
+uniformity-emperiment $UNIPROX "graple" "itemset $YAHOO_1000" 2 1000000 &
+wait
+
