@@ -195,6 +195,7 @@ def main(argv):
     }
     with output as f:
         json.dump(outdata, f)
+        print >>f
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
