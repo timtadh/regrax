@@ -7,12 +7,13 @@ import random
 import getopt
 import json
 import time
+import math
 random.seed(os.urandom(16))
 
 import numpy as np
 from numpy import linalg
-import matplotlib.pyplot as plt
-import seaborn as sns
+#import matplotlib.pyplot as plt
+#import seaborn as sns
 import pandas as pd
 
 
@@ -69,6 +70,44 @@ def load_csv_into(table, f, cols):
         else:
             table[data_name] = data
 
+def add_uniform(table):
+    expected = 1.0/float(len(table))
+    for k in table:
+        table[k]['uniform'] = expected
+
+def stats(df, col_name):
+    col = df[col_name]
+    expected = 1.0/float(len(col))
+    stderr = round(np.sqrt(sum((p - expected)**2 for p in col)), 10)
+    return {
+        'expected uniform pr': expected,
+        'sum': np.sum(col),
+        'mean': np.mean(col),
+        'stdev': np.std(col),
+        'median': np.median(col),
+        'min': np.min(col),
+        'max': np.max(col),
+        'stderr': stderr,
+    }
+
+def ttest_rel(df, a, b):
+    from scipy import stats
+    _, pval = stats.ttest_rel(df[a], df[b])
+    return {
+        'type': 'ttest-rel',
+        'between': [a, b],
+        'pval': pval
+    }
+
+def ttest_ind(df, a, b):
+    from scipy import stats
+    _, pval = stats.ttest_ind(df[a], df[b])
+    return {
+        'type': 'ttest-ind',
+        'between': [a, b],
+        'pval': pval
+    }
+
 def main(argv):
     try:
         opts, args = getopt.getopt(argv, "he:p:o:",
@@ -112,25 +151,50 @@ def main(argv):
     with open(predicted, 'r') as f:
         load_csv_into(data_table, f, ['theoretical probability', 'name'])
 
+    add_uniform(data_table)
+
     records = list()
     for name, data in data_table.iteritems():
         record = {"name":name}
         record.update(data)
         records.append(record)
 
-    prs = ['observed probability', 'theoretical probability']
-    df = pd.DataFrame(records, columns=(['count', 'observed probability', 'theoretical probability']))
-    print df['observed probability'].tolist()
+    df = pd.DataFrame(records, columns=(['name', 'count', 'observed probability', 'theoretical probability', 'uniform']))
+    #print df['observed probability'].tolist()
 
-    g = sns.distplot(df['observed probability'], kde=False).figure
-    g.savefig("/tmp/observed.png")
-    plt.close()
+    ## g = sns.PairGrid(
+    ##         data=df[:150],
+    ##         size=int(round(.15*len(df[:150]))),
+    ##         aspect=.25,
+    ##         y_vars=['name'],
+    ##         x_vars=['observed probability', 'theoretical probability'],
+    ##     )
+    ##     #).figure
 
-    g = sns.distplot(df['theoretical probability'], kde=False).figure
-    g.savefig("/tmp/theoretical.png")
-    plt.close()
+    #g.set(xlim=(0,max(max(df['theoretical probability']), max(df['observed probability']))))
+    #g.map(sns.stripplot, orient="h")
+    #g.savefig("/tmp/fig.png")
+    #plt.close()
 
+    #g = sns.distplot(df['observed probability']).figure
+    #g.savefig("/tmp/observed.png")
+    #plt.close()
 
+    #g = sns.distplot(df['theoretical probability'], kde=False).figure
+    #g.savefig("/tmp/theoretical.png")
+    #plt.close()
+
+    outdata = {
+        'observed probabiliy': stats(df, 'observed probability'),
+        'theoretical probabiliy': stats(df, 'theoretical probability'),
+        'tests': [
+            ttest_rel(df, 'uniform', 'theoretical probability'),
+            ttest_rel(df, 'uniform', 'observed probability'),
+            ttest_rel(df, 'observed probability', 'theoretical probability'),
+        ],
+    }
+    with output as f:
+        json.dump(outdata, f)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

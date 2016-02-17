@@ -156,7 +156,7 @@ def main(argv):
                     log("had example no output written")
                 else:
                     print >>f, '%g, %s' % (p, name)
-                    log("wrote output")
+                    #log("wrote output")
 
 if __name__ == "__main__":
     main(sys.argv[1:])

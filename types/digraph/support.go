@@ -52,7 +52,7 @@ func MinImgSupported(sgs SubGraphs) SubGraphs {
 		return sgs
 	}
 	sets := vertexMapSets(sgs)
-	arg, size := stats.Min(stats.Srange(len(sets)), func(i int) float64 {
+	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
 		return float64(sets[i].Size())
 	})
 	supported := make(SubGraphs, 0, int(size)+1)

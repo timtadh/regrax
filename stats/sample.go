@@ -16,32 +16,26 @@ func Srange(size int) []int {
 }
 
 func Sample(size, populationSize int) (sample []int) {
-	if size >= populationSize {
+	if size > populationSize {
 		return Srange(populationSize)
 	}
-	in := func(x int, items []int) bool {
-		for _, y := range items {
-			if x == y {
-				return true
-			}
-		}
-		return false
+	pop := func(items []int) ([]int, int) {
+		i := rand.Intn(len(items))
+		item := items[i]
+		copy(items[i:], items[i+1:])
+		return items[:len(items)-1], item
 	}
+	items := Srange(populationSize)
 	sample = make([]int, 0, size)
 	for i := 0; i < size; i++ {
-		j := rand.Intn(populationSize)
-		for in(j, sample) {
-			j = rand.Intn(populationSize)
-		}
-		sample = append(sample, j)
+		var item int
+		items, item = pop(items)
+		sample = append(sample, item)
 	}
 	return sample
 }
 
 func ReplacingSample(size, populationSize int) (sample []int) {
-	if size >= populationSize {
-		return Srange(populationSize)
-	}
 	sample = make([]int, 0, size)
 	for i := 0; i < size; i++ {
 		j := rand.Intn(populationSize)
@@ -110,6 +104,10 @@ func Round(val float64, places int ) (newVal float64) {
 		round = math.Floor(digit)
 	}
 	return round / pow
+}
+
+func RandomPermutation(size int) (perm []int) {
+	return Sample(size, size)
 }
 
 func Permutations(size int, do func(perm []int) (dobreak bool)) {

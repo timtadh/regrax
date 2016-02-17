@@ -145,7 +145,7 @@ func (w *Walker) probabilities(lat *lattice.Lattice) ([]int, error) {
 		if i+1 == len(lat.V) {
 			P[i] = -1
 		} else if count == 0 {
-			P[i] = len(lat.Children(i))
+			P[i] = 1
 			errors.Logf("WARNING", "0 count for %v, using %v", node, P[i])
 		} else {
 			P[i] = count
