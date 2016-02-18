@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import random
+import getopt
+import json
+import time
+import math
+random.seed(os.urandom(16))
+
+import numpy as np
+from numpy import linalg
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+
+def usage(code=None):
+    '''Prints the usage and exits with an error code specified by code. If
+    code is not given it exits with error_codes['usage']'''
+    print USAGE
+    if code is None:
+        print EXTENDED
+    else:
+        code = 0
+    sys.exit(code)
+
+def log(*msgs):
+    '''Log a message to the user'''
+    for msg in msgs:
+        print >>sys.stderr, str(msg),
+    print >>sys.stderr
+    sys.stderr.flush()
+
+def assert_file_exists(path):
+    '''checks if the file exists. If it doesn't causes the program to exit.
+    @param path : path to file
+    @returns : the abs path to the file (an echo) [only on success]
+    '''
+    path = os.path.abspath(os.path.expanduser(path))
+    if not os.path.exists(path):
+        log('No file found. "%(path)s"' % locals())
+        usage(2)
+    return path
+
+def ttest_rel(df, a, b):
+    from scipy import stats
+    _, pval = stats.ttest_rel(df[a], df[b])
+    return {
+        'type': 'ttest-rel',
+        'between': [a, b],
+        'pval': pval
+    }
+
+def ttest_ind(df, a, b):
+    from scipy import stats
+    _, pval = stats.ttest_ind(df[a], df[b])
+    return {
+        'type': 'ttest-ind',
+        'between': [a, b],
+        'pval': pval
+    }
+
+def load(records, inf, name, stat_names):
+    for i, line in enumerate(inf):
+        if not line: continue
+        line = json.loads(line)
+        print line
+        data = {
+            #'observed': line['observed probabiliy'],
+            'predicted': line['theoretical probabiliy'],
+        }
+        for k, stats in data.iteritems():
+            row = list()
+            row.append(i)
+            row.append(name)
+            row.append(k)
+            for sn in stat_names:
+                row.append(stats[sn])
+            records.append(row)
+
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv, "hd:o:",
+            ["help","dataset=","output="])
+    except getopt.GetoptError, err:
+        log(err)
+        usage(1)
+
+    output = sys.stdout
+    datasets = list()
+    for opt, arg in opts:
+        if opt in ('-h', '--help',):
+            usage(0)
+        elif opt in ('-d', '--dataset',):
+            datasets.append(assert_file_exists(arg))
+        elif opt in ('-o', '--output',):
+            path = os.path.abspath(arg)
+            expath = path + '.ex'
+            if os.path.exists(expath) and os.stat(expath).st_size > 0:
+                with open(expath) as f:
+                    ex = float(f.read())
+            elif os.path.exists(path) and os.stat(path).st_size > 0:
+                log(path)
+                log("cowardly refusing to overwrite output")
+                sys.exit(0)
+            output = open(path, 'w')
+        else:
+            log("unexpected option", opt, arg)
+            usage(1)
+
+    stat_names = ['stderr', 'stdev', 'min', 'max', 'median']
+
+    records = list()
+    for dataset in datasets:
+        with open(dataset, 'r') as f:
+            name = os.path.splitext(os.path.basename(dataset))[0]
+            load(records, f, name, stat_names)
+    df = pd.DataFrame(records, columns=(['graph', 'chain', 'probability'] + stat_names))
+    g = sns.pairplot(df, aspect=3.5,
+        hue="chain", x_vars='graph', y_vars=stat_names)
+    g.savefig("/tmp/fig.png")
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
