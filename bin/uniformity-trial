@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+>&2 echo
 >&2 echo $ $0 "$@"
 
 DATAFILE=$1
@@ -11,12 +12,10 @@ SAMPLES=$5
 CACHE=$(mktemp --tmpdir -d sfp-cache-XXXXXXX)
 OUTPUT=$(mktemp --tmpdir -d sfp-output-XXXXXXX)
 
-# echo "wizard" $1 $2 $3 $4 $5 $CACHE $OUTPUT >> $DATAFILE
-# exit 0
-
 function cleanup {
 	line=(rm -rf $CACHE $OUTPUT)
-	>&2 echo "${line[@]}"
+	>&2 echo
+	>&2 echo $ "${line[@]}"
 	"${line[@]}"
 }
 trap cleanup 0
@@ -28,24 +27,20 @@ line=(sfp --skip-log=DEBUG --skip-log=INFO
 		$ALGORITHM
 		chain unique --histogram=histogram chain log -l SAMPLE -p unique file --show-pr)
 
+>&2 echo
 >&2 echo $ "${line[@]}"
 "${line[@]}"
->&2 echo
 
 if [[ $ALGORITHM == graple* ]]
 then
+	>&2 echo
 	line=(graple-selection-probabilities -m $OUTPUT/matrices.json)
 	>&2 echo $ "${line[@]}" \> $OUTPUT/probabilities.prs
 	"${line[@]}" > $OUTPUT/probabilities.prs
-	>&2 echo
 fi
 
+>&2 echo
 line=(uniformity-test -e "$OUTPUT"/histogram.csv -p "$OUTPUT"/probabilities.prs)
 >&2 echo $ "${line[@]}" \>\> "$DATAFILE"
 "${line[@]}" >> "$DATAFILE"
->&2 echo
 
-cleanup
-
->&2 echo
->&2 echo

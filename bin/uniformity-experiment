@@ -1,35 +1,58 @@
 #!/usr/bin/env bash
 
-DATAFILE=$1
-TS=(
-  $(mktemp --tmpdir trial-1-XXXXXX)
-  $(mktemp --tmpdir trial-2-XXXXXX)
-  $(mktemp --tmpdir trial-3-XXXXXX)
-  $(mktemp --tmpdir trial-4-XXXXXX)
-)
+CPUS=$1
+DATAFILE=$2
+ALGORITHM=$3
+DATASET=$4
+SUPPORT=$5
+SAMPLES=$6
+
+TRIALS=$(dc -e "$CPUS 1 - p")
+TRIAL_GROUPS=$(dc -e "50 $CPUS / p")
+TS=()
+
+for trial in $(seq 0 $TRIALS)
+do
+	TS[$trial]=$(mktemp --tmpdir trial-$trial-XXXXXX)
+done
 
 function cleanfiles {
-	rm "${TS[@]}"
+	line=(rm "${TS[@]}")
+	>&2 echo $ "${line[@]}"
+	"${line[@]}"
 }
 
 function cleanup {
 	cleanfiles
-	kill -- -$BASHPID
+	line=(kill -- -$BASHPID)
+	>&2 echo $ "${line[@]}"
+	"${line[@]}"
 }
 trap cleanup 0
 
-for group in {1..12}
+for group in $(seq 1 $TRIAL_GROUPS)
 do
-  cleanfiles
-	for trial in {0..3}
+	cleanfiles
+	>&2 echo
+	trial=1
+	for file in ${TS[*]}
 	do
-		uniformity-trial "${TS[$trial]}" "$2" "$3" "$4" "$5" &
+		>&2 echo
+		>&2 echo staring group: $group trial: $trial into: $file
+		line=(uniformity-trial "$file" "$ALGORITHM" "$DATASET" "$SUPPORT" "$SAMPLES")
+		>&2 echo $ "${line[@]}" \&
+		"${line[@]}" &
+		let trial=trial+1
 	done
 	wait
-	for trial in {0..3}
+	>&2 echo
+	for file in ${TS[*]}
 	do
-    cat ${TS[$trial]} >> $DATAFILE
+		line=(cat $file)
+		>&2 echo $ "${line[@]}" \>\> $DATAFILE
+		"${line[@]}" >> $DATAFILE
 	done
+	>&2 echo
 done
-trap '' 0
+trap cleanfiles 0
 

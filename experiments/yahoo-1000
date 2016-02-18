@@ -19,8 +19,8 @@ trap cleanup 0
 1>&2 echo $GRAPLE
 1>&2 echo $UNIPROX
 
-uniformity-experiment $GRAPLE "graple" "itemset $YAHOO_1000" 2 1000000 &
-uniformity-experiment $UNIPROX "uniprox --walks=25" "itemset $YAHOO_1000" 2 1000000 &
+uniformity-experiment 4 $GRAPLE "graple" "itemset $YAHOO_1000" 2 1000000 &
+uniformity-experiment 4 $UNIPROX "uniprox --walks=25" "itemset $YAHOO_1000" 2 1000000 &
 wait
 trap '' 0
 
