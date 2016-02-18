@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+>&2 echo $ $0 "$@"
+
 DATAFILE=$1
 ALGORITHM=$2
 DATASET=$3
@@ -8,6 +10,9 @@ SAMPLES=$5
 
 CACHE=$(mktemp --tmpdir -d sfp-cache-XXXXXXX)
 OUTPUT=$(mktemp --tmpdir -d sfp-output-XXXXXXX)
+
+# echo "wizard" $1 $2 $3 $4 $5 $CACHE $OUTPUT >> $DATAFILE
+# exit 0
 
 function cleanup {
 	line=(rm -rf $CACHE $OUTPUT)

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-go install github.com/timtadh/sfp
-
 DATAFILE=$1
 TS=(
   $(mktemp --tmpdir trial-1-XXXXXX)
@@ -20,16 +18,18 @@ function cleanup {
 }
 trap cleanup 0
 
-cleanfiles
-
 for group in {1..12}
 do
+  cleanfiles
 	for trial in {0..3}
 	do
 		uniformity-trial "${TS[$trial]}" "$2" "$3" "$4" "$5" &
 	done
 	wait
-	cat ${TS[@]} >> $DATAFILE
-	cleanfiles
+	for trial in {0..3}
+	do
+    cat ${TS[$trial]} >> $DATAFILE
+	done
 done
+trap '' 0
 
