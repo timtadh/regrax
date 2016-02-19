@@ -67,10 +67,11 @@ def load(records, inf, name, stat_names):
         line = json.loads(line)
         print line
         data = {
-            #'observed': line['observed probabiliy'],
+            'observed': line['observed probabiliy'],
             'predicted': line['theoretical probabiliy'],
         }
         for k, stats in data.iteritems():
+            if stats is None: continue
             row = list()
             row.append(i)
             row.append(name)
@@ -117,10 +118,18 @@ def main(argv):
             name = os.path.splitext(os.path.basename(dataset))[0]
             load(records, f, name, stat_names)
     df = pd.DataFrame(records, columns=(['graph', 'chain', 'probability'] + stat_names))
-    g = sns.pairplot(df, aspect=3.5,
-        hue="chain", x_vars='graph', y_vars=stat_names)
-    g.savefig("/tmp/fig.png")
+    print df
 
+    g = sns.pairplot(df[df.probability == 'observed'], aspect=3.5,
+        hue="chain", x_vars='graph', y_vars=stat_names)
+    g.savefig("/tmp/observed.png")
+    plt.close()
+
+    if len(df[df.probability == 'predicted']) > 0:
+        g = sns.pairplot(df[df.probability == 'predicted'], aspect=3.5,
+            hue="chain", x_vars='graph', y_vars=stat_names)
+        g.savefig("/tmp/predicted.png")
+        plt.close()
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

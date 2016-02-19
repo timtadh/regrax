@@ -77,6 +77,8 @@ def add_uniform(table):
 
 def stats(df, col_name):
     col = df[col_name]
+    if col.hasnans:
+        return None
     expected = 1.0/float(len(col))
     stderr = round(np.sqrt(sum((p - expected)**2 for p in col)), 10)
     return {
@@ -160,6 +162,7 @@ def main(argv):
         records.append(record)
 
     df = pd.DataFrame(records, columns=(['name', 'count', 'observed probability', 'theoretical probability', 'uniform']))
+    #print df
     #print df['observed probability'].tolist()
 
     ## g = sns.PairGrid(
@@ -184,9 +187,12 @@ def main(argv):
     #g.savefig("/tmp/theoretical.png")
     #plt.close()
 
+    observed = stats(df, 'observed probability')
+    theoretical = stats(df, 'theoretical probability')
+
     outdata = {
-        'observed probabiliy': stats(df, 'observed probability'),
-        'theoretical probabiliy': stats(df, 'theoretical probability'),
+        'observed probabiliy': observed,
+        'theoretical probabiliy': theoretical,
         'tests': [
             ttest_rel(df, 'uniform', 'theoretical probability'),
             ttest_rel(df, 'uniform', 'observed probability'),
