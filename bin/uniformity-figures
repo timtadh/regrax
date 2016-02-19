@@ -78,6 +78,8 @@ def load(records, inf, name, stat_names):
             row.append(k)
             for sn in stat_names:
                 row.append(stats[sn])
+            for sn in stat_names:
+                row.append(math.log(stats[sn]))
             records.append(row)
 
 def main(argv):
@@ -110,24 +112,29 @@ def main(argv):
             log("unexpected option", opt, arg)
             usage(1)
 
-    stat_names = ['stderr', 'stdev', 'min', 'max', 'median']
+    stats_to_load = ['stderr', 'stdev', 'min', 'max', 'median', 'mean', 'sum']
+    stat_names = stats_to_load + [
+        "log(%s)" % name
+        for name in stats_to_load
+    ]
+    stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max']
 
     records = list()
     for dataset in datasets:
         with open(dataset, 'r') as f:
             name = os.path.splitext(os.path.basename(dataset))[0]
-            load(records, f, name, stat_names)
+            load(records, f, name, stats_to_load)
     df = pd.DataFrame(records, columns=(['graph', 'chain', 'probability'] + stat_names))
     print df
 
     g = sns.pairplot(df[df.probability == 'observed'], aspect=3.5,
-        hue="chain", x_vars='graph', y_vars=stat_names)
+        hue="chain", x_vars='graph', y_vars=stats_to_show)
     g.savefig("/tmp/observed.png")
     plt.close()
 
     if len(df[df.probability == 'predicted']) > 0:
         g = sns.pairplot(df[df.probability == 'predicted'], aspect=3.5,
-            hue="chain", x_vars='graph', y_vars=stat_names)
+            hue="chain", x_vars='graph', y_vars=stats_to_show)
         g.savefig("/tmp/predicted.png")
         plt.close()
 
