@@ -579,6 +579,94 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 	return uniq, args
 }
 
+func maxReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	var rptr miners.Reporter
+	if len(args) == 0 {
+		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to max")
+		fmt.Fprintln(os.Stderr, "try: unique file")
+        Usage(ErrorCodes["opts"])
+	} else if _, has := reports[args[0]]; !has {
+		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+		fmt.Fprintln(os.Stderr, "Reporters:")
+		for k := range reports {
+			fmt.Fprintln(os.Stderr, "  ", k)
+		}
+		Usage(ErrorCodes["opts"])
+	} else {
+		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
+	}
+	m, err := reporters.NewMax(rptr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating max reporter '%v'\n", err)
+		Usage(ErrorCodes["opts"])
+	}
+	return m, args
+}
+
+func canonMaxReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	var rptr miners.Reporter
+	if len(args) == 0 {
+		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to canon-max")
+		fmt.Fprintln(os.Stderr, "try: unique file")
+        Usage(ErrorCodes["opts"])
+	} else if _, has := reports[args[0]]; !has {
+		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+		fmt.Fprintln(os.Stderr, "Reporters:")
+		for k := range reports {
+			fmt.Fprintln(os.Stderr, "  ", k)
+		}
+		Usage(ErrorCodes["opts"])
+	} else {
+		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
+	}
+	m, err := reporters.NewCanonMax(rptr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating canon-max reporter '%v'\n", err)
+		Usage(ErrorCodes["opts"])
+	}
+	return m, args
+}
+
 var Types map[string]Type = map[string]Type{
 	"itemset": itemsetType,
 	"digraph": digraphType,
@@ -590,6 +678,8 @@ var Reporters  map[string]Reporter = map[string]Reporter{
 	"dir": dirReporter,
 	"chain": chainReporter,
 	"unique": uniqueReporter,
+	"max": maxReporter,
+	"canon-max": canonMaxReporter,
 }
 
 type Mode func(argv []string, conf *config.Config) (miners.Miner, []string)
