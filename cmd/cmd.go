@@ -287,7 +287,7 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hl:", []string{"help", "loader=",
+		"hl:s:", []string{"help", "loader=",
 			"support=",
 			"min-edges=",
 			"max-edges=",
