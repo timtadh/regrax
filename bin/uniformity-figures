@@ -72,8 +72,9 @@ def load(records, inf, name, stat_names):
         }
         for k, stats in data.iteritems():
             if stats is None: continue
+            if round(stats['sum']) + .2 < 1.0: continue
             row = list()
-            row.append(i)
+            row.append(i+1)
             row.append(name)
             row.append(k)
             for sn in stat_names:
@@ -117,7 +118,7 @@ def main(argv):
         "log(%s)" % name
         for name in stats_to_load
     ]
-    stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max']
+    stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max', 'sum']
 
     records = list()
     for dataset in datasets:
