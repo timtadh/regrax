@@ -36,6 +36,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/afp/miners/vsigram"
+	"github.com/timtadh/sfp/afp/miners/stack"
 	"github.com/timtadh/sfp/cmd"
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/miners"
@@ -239,9 +240,34 @@ func vsigramMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return vsigram.NewMiner(conf), args
 }
 
+func stackMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hc",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		cmd.Usage(cmd.ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			cmd.Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			cmd.Usage(cmd.ErrorCodes["opts"])
+		}
+	}
+	return stack.NewMiner(conf), args
+}
+
 func main() {
 
 	modes := map[string]cmd.Mode {
+		"stack": stackMode,
 		"vsigram": vsigramMode,
 	}
 

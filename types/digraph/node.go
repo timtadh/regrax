@@ -362,7 +362,7 @@ func firstParent(sg *goiso.SubGraph) (*goiso.SubGraph, error) {
 			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
 			return p, nil
 		} else if len(sg.V) == 1 && len(sg.E) == 1 {
-			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
+			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Targ].Id)
 			return p, nil
 		} else {
 			p, _ := sg.RemoveEdge(i)
