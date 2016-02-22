@@ -10,6 +10,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/sfp/stacks/subgraph"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_float"
 	"github.com/timtadh/sfp/stores/bytes_int"
@@ -51,6 +52,17 @@ func (c *Config) MultiMap(name string) (bytes_bytes.MultiMap, error) {
 		return bytes_bytes.AnonBpTree()
 	} else {
 		return bytes_bytes.NewBpTree(c.CacheFile(name + ".bptree"))
+	}
+}
+
+func (c *Config) SubgraphList(
+	name string,
+	deserializeValue func([]byte) *goiso.SubGraph,
+) (subgraph.List, error) {
+	if c.Cache == "" {
+		return subgraph.AnonList(bytes_subgraph.SerializeSubGraph, deserializeValue)
+	} else {
+		return subgraph.NewList(c.CacheFile(name+".mmlist"), bytes_subgraph.SerializeSubGraph, deserializeValue)
 	}
 }
 

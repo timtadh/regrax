@@ -39,13 +39,13 @@ func (lr *Log) Report(n lattice.Node) error {
 		}
 	}
 	if lr.prefix != "" && pr > -1.0 {
-		errors.Logf(lr.level, "%s: sample %v (pr = %5.3g) %v", lr.prefix, lr.count, pr, n)
+		errors.Logf(lr.level, "%s %v (pr = %5.3g) %v", lr.prefix, lr.count, pr, n)
 	} else if lr.prefix != "" {
-		errors.Logf(lr.level, "%s: sample %v %v", lr.prefix, lr.count, n)
+		errors.Logf(lr.level, "%s %v %v", lr.prefix, lr.count, n)
 	} else if pr > -1.0 {
-		errors.Logf(lr.level, "sample %v (pr = %5.3g) %v", lr.count, pr, n)
+		errors.Logf(lr.level, "%v (pr = %5.3g) %v", lr.count, pr, n)
 	} else {
-		errors.Logf(lr.level, "sample %v %v", lr.count, n)
+		errors.Logf(lr.level, "%v %v", lr.count, n)
 	}
 	return nil
 }
