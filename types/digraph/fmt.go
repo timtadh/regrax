@@ -7,6 +7,11 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/goiso"
+)
+
+import (
 	"github.com/timtadh/sfp/lattice"
 )
 
@@ -31,27 +36,63 @@ func (f *Formatter) FileExt() string {
 }
 
 func (f *Formatter) PatternName(node lattice.Node) string {
-	n := node.(*Node)
-	return n.sgs[0].Label()
+	switch n := node.(type) {
+	case *Node:
+		return n.sgs[0].Label()
+	case *SearchNode:
+		return n.pat.String()
+	default:
+		panic(errors.Errorf("unknown node type %v", node))
+	}
 }
 
 func (f *Formatter) Pattern(node lattice.Node) (string, error) {
-	n := node.(*Node)
-	max := ""
-	if ismax, err := n.Maximal(); err != nil {
-		return "", err
-	} else if ismax {
-		max = " # maximal"
+	switch n := node.(type) {
+	case *Node:
+		max := ""
+		if ismax, err := n.Maximal(); err != nil {
+			return "", err
+		} else if ismax {
+			max = " # maximal"
+		}
+		pat := n.sgs[0].Label()
+		dot := n.sgs[0].String()
+		return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
+	case *SearchNode:
+		max := ""
+		if ismax, err := n.Maximal(); err != nil {
+			return "", err
+		} else if ismax {
+			max = " # maximal"
+		}
+		pat := n.pat.String()
+		embs, err := n.Embeddings()
+		if err != nil {
+			return "", err
+		}
+		dot := embs[0].String()
+		return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
+	default:
+		return "", errors.Errorf("unknown node type %v", node)
 	}
-	pat := n.sgs[0].Label()
-	dot := n.sgs[0].String()
-	return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
 }
 
 func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
-	n := node.(*Node)
-	embs := make([]string, 0, len(n.sgs))
-	for _, sg := range n.sgs {
+	var sgs []*goiso.SubGraph = nil
+	switch n := node.(type) {
+	case *Node:
+		sgs = n.sgs
+	case *SearchNode:
+		embs, err := n.Embeddings()
+		if err != nil {
+			return nil, err
+		}
+		sgs = embs
+	default:
+		return nil, errors.Errorf("unknown node type %v", node)
+	}
+	embs := make([]string, 0, len(sgs))
+	for _, sg := range sgs {
 		allAttrs := make(map[int]map[string]interface{})
 		for _, v := range sg.V {
 			err := f.g.NodeAttrs.DoFind(

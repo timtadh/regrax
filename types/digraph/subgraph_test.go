@@ -33,7 +33,7 @@ func graph(t *testing.T) (*Graph, *goiso.Graph, *goiso.SubGraph, *SubGraph) {
 		Support: 2,
 	}
 
-	l, err := NewVegLoader(conf, MinImgSupported, 0, len(G.V), 0, len(G.E))
+	l, err := NewVegLoader(conf, true, MinImgSupported, 0, len(G.V), 0, len(G.E))
 	if err != nil {
 		t.Fatal(err)
 	}

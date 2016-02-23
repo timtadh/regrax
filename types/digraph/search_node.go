@@ -13,6 +13,8 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/stores/bytes_bytes"
+	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
 
@@ -87,7 +89,7 @@ func (n *SearchNode) ParentCount() (int, error) {
 }
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
-	return nil, errors.Errorf("unimplemented")
+	return n.children(false, n.dt.Children, n.dt.ChildCount)
 }
 
 func (n *SearchNode) ChildCount() (int, error) {
@@ -95,13 +97,90 @@ func (n *SearchNode) ChildCount() (int, error) {
 }
 
 func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
-	return nil, errors.Errorf("unimplemented")
+	return n.children(true, n.dt.CanonKids, n.dt.CanonKidCount)
 }
 
 func (n *SearchNode) Maximal() (bool, error) {
-	return false, errors.Errorf("unimplemented")
+	kids, err := n.Children()
+	if err != nil {
+		return false, err
+	}
+	return len(kids) == 0, nil
 }
 
+func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
+	if len(n.pat.V) == 0 {
+		return n.dt.FrequentVertices, nil
+	}
+	if len(n.pat.E) >= n.dt.MaxEdges {
+		return []lattice.Node{}, nil
+	}
+	// errors.Logf("DEBUG", "Children of %v", n)
+	exts := make(SubGraphs, 0, 10)
+	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
+		if n.dt.G.ColorFrequency(e.Color) < n.dt.Support() {
+			return exts, nil
+		} else if n.dt.G.ColorFrequency(n.dt.G.V[e.Src].Color) < n.dt.Support() {
+			return exts, nil
+		} else if n.dt.G.ColorFrequency(n.dt.G.V[e.Targ].Color) < n.dt.Support() {
+			return exts, nil
+		}
+		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
+			ext, _ := sg.EdgeExtend(e)
+			if len(ext.V) > n.dt.MaxVertices {
+				return exts, nil
+			}
+			exts = append(exts, ext)
+		}
+		return exts, nil
+	}
+	embs, err := n.Embeddings()
+	if err != nil {
+		return nil, err
+	}
+	for _, sg := range embs {
+		for _, u := range sg.V {
+			for _, e := range n.dt.G.Kids[u.Id] {
+				exts, err = add(exts, sg, e)
+				if err != nil {
+					return nil, err
+				}
+			}
+			for _, e := range n.dt.G.Parents[u.Id] {
+				exts, err = add(exts, sg, e)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	// errors.Logf("DEBUG", "len(exts) %v", len(exts))
+	partitioned := exts.Partition()
+	sum := 0
+	for _, sgs := range partitioned {
+		sum += len(sgs)
+		// errors.Logf("DEBUG", "len(partition) %v %v", len(sgs), sgs[0].Label())
+		if len(sgs) < n.dt.Support() {
+			continue
+		}
+		sgs = n.dt.Supported(sgs)
+		// errors.Logf("DEBUG", "len(supported) %v %v", len(sgs), sgs[0].Label())
+		if len(sgs) >= n.dt.Support() {
+			if checkCanon {
+				if canonized, err := isCanonicalExtension(embs[0], sgs[0]); err != nil {
+					return nil, err
+				} else if !canonized {
+					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
+				} else {
+					nodes = append(nodes, NewSearchNode(n.dt, sgs[0]))
+				}
+			} else {
+				nodes = append(nodes, NewSearchNode(n.dt, sgs[0]))
+			}
+		}
+	}
+	return nodes, nil
+}
 
 func (n *SearchNode) Lattice() (*lattice.Lattice, error) {
 	return nil, &lattice.NoLattice{}

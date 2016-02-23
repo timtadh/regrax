@@ -142,7 +142,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	if len(n.sgs[0].V) == 1 && len(n.sgs[0].E) == 0 {
 		return []lattice.Node{&Node{dt: n.dt}}, nil
 	}
-	if nodes, has, err := n.cached(n.dt.ParentCount, n.dt.Parents, n.pat.label); err != nil {
+	if nodes, has, err := cached(n.dt, n.dt.ParentCount, n.dt.Parents, n.pat.label); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -159,7 +159,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	if len(parents) == 0 {
 		return nil, errors.Errorf("Found no parents!!\n    node %v", n)
 	}
-	return parents, n.cache(n.dt.ParentCount, n.dt.Parents, n.pat.label, parents)
+	return parents, cache(n.dt, n.dt.ParentCount, n.dt.Parents, n.pat.label, parents)
 }
 
 func FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
@@ -269,7 +269,7 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	if len(n.sgs[0].E) >= n.dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
-	if nodes, has, err := n.cached(childCount, children, n.pat.label); err != nil {
+	if nodes, has, err := cached(n.dt, childCount, children, n.pat.label); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -337,103 +337,7 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	}
 	// errors.Logf("DEBUG", "sum(len(partition)) %v", sum)
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
-	return nodes, n.cache(childCount, children, n.pat.label, nodes)
-}
-
-func isCanonicalExtension(cur *goiso.SubGraph, ext *goiso.SubGraph) (bool, error) {
-	// errors.Logf("DEBUG", "is %v a canonical ext of %v", ext.Label(), n)
-	parents, err := allParents(ext)
-	if err != nil {
-		return false, err
-	} else if len(parents) == 0 {
-		return false, errors.Errorf("ext %v of node %v has no parents", ext.Label(), cur.Label())
-	}
-	parent := parents[0]
-	if bytes.Equal(parent.ShortLabel(), cur.ShortLabel()) {
-		return true, nil
-	}
-	return false, nil
-	// this check is really about seeing if the canon parent is reliably reachable
-	// however that should always be the case. In some instances it is not because
-	// of the choices made in which subgraphs are kep
-	// p, err := FindNode(n.dt, parent)
-	// if err != nil {
-	// 	return false, err
-	// } else if p != nil {
-	// 	return false, nil
-	// }
-	// return false, errors.Errorf("could not find parent %v of extention %v for node %v", parent.Label(), ext.Label(), n)
-}
-
-func allParents(sg *goiso.SubGraph) ([]*goiso.SubGraph, error) {
-	if len(sg.E) <= 0 {
-		return nil, nil
-	}
-	parents := make([]*goiso.SubGraph, 0, 10)
-	for i := len(sg.E)-1; i >= 0; i-- {
-		if len(sg.V) == 2 && len(sg.E) == 1 {
-			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
-			parents = append(parents, p)
-		} else if len(sg.V) == 1 && len(sg.E) == 1 {
-			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
-			parents = append(parents, p)
-			p, _ = sg.G.VertexSubGraph(sg.V[sg.E[0].Targ].Id)
-			parents = append(parents, p)
-		} else {
-			p, _ := sg.RemoveEdge(i)
-			if p.Connected() {
-				parents = append(parents, p)
-			}
-		}
-	}
-	return parents, nil
-}
-
-func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
-	if has, err := count.Has(key); err != nil {
-		return err
-	} else if has {
-		return nil
-	}
-	err = count.Add(key, int32(len(nodes)))
-	if err != nil {
-		return err
-	}
-	for _, node := range nodes {
-		err = node.(*Node).Save()
-		if err != nil {
-			return err
-		}
-		err = cache.Add(key, node.(*Node).pat.label)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (n *Node) cached(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte) (nodes []lattice.Node, has bool, err error) {
-	if has, err := count.Has(key); err != nil {
-		return nil, false, err
-	} else if !has {
-		return nil, false, nil
-	}
-	err = cache.DoFind(key, func(_, adj []byte) error {
-		sgs := make(SubGraphs, 0, 10)
-		err := n.dt.Embeddings.DoFind(adj, func(_ []byte, sg *goiso.SubGraph) error {
-			sgs = append(sgs, sg)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		nodes = append(nodes, &Node{Pattern{label: adj}, n.dt, sgs})
-		return nil
-	})
-	if err != nil {
-		return nil, false, err
-	}
-	return nodes, true, nil
+	return nodes, cache(n.dt, childCount, children, n.pat.label, nodes)
 }
 
 func (n *Node) AdjacentCount() (int, error) {
