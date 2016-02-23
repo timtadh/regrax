@@ -323,7 +323,7 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 		if len(sgs) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
 			if checkCanon {
-				if canonized, err := n.isCanonicalExtension(sgs[0]); err != nil {
+				if canonized, err := isCanonicalExtension(n.sgs[0], sgs[0]); err != nil {
 					return nil, err
 				} else if !canonized {
 					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
@@ -340,17 +340,16 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	return nodes, n.cache(childCount, children, n.pat.label, nodes)
 }
 
-func (n *Node) isCanonicalExtension(ext *goiso.SubGraph) (bool, error) {
+func isCanonicalExtension(cur *goiso.SubGraph, ext *goiso.SubGraph) (bool, error) {
 	// errors.Logf("DEBUG", "is %v a canonical ext of %v", ext.Label(), n)
 	parents, err := allParents(ext)
 	if err != nil {
 		return false, err
 	} else if len(parents) == 0 {
-		return false, errors.Errorf("ext %v of node %v has no parents", ext.Label(), n)
+		return false, errors.Errorf("ext %v of node %v has no parents", ext.Label(), cur.Label())
 	}
 	parent := parents[0]
-	parentLabel := parent.ShortLabel()
-	if bytes.Equal(parentLabel, n.Pattern().Label()) {
+	if bytes.Equal(parent.ShortLabel(), cur.ShortLabel()) {
 		return true, nil
 	}
 	return false, nil

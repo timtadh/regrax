@@ -50,9 +50,10 @@ type Graph struct {
 	ColorMap                                     int_int.MultiMap
 	FrequentVertices                             []lattice.Node
 	config                                       *config.Config
+	search                                       bool
 }
 
-func NewGraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (g *Graph, err error) {
+func NewGraph(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (g *Graph, err error) {
 	nodeAttrs, err := config.IntJsonMultiMap("digraph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -100,6 +101,7 @@ func NewGraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int) 
 		CanonKidCount: canonKidCount,
 		ColorMap:      colorMap,
 		config:        config,
+		search:        search,
 	}
 	return g, nil
 }
@@ -126,7 +128,11 @@ func (g *Graph) MinimumLevel() int {
 }
 
 func (g *Graph) Empty() lattice.Node {
-	return &Node{dt: g}
+	if g.search {
+		return NewSearchNode(g, nil)
+	} else {
+		return &Node{dt: g}
+	}
 }
 
 func (g *Graph) Acceptable(node lattice.Node) bool {
@@ -166,8 +172,8 @@ type VegLoader struct {
 	G *Graph
 }
 
-func NewVegLoader(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
-	g, err := NewGraph(config, sup, minE, maxE, minV, maxV)
+func NewVegLoader(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
+	g, err := NewGraph(config, search, sup, minE, maxE, minV, maxV)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +205,10 @@ func (v *VegLoader) ComputeStartingPoints(G *goiso.Graph) (nodes []lattice.Node,
 
 	for i := range G.V {
 		u := &G.V[i]
+		err = v.G.ColorMap.Add(int32(u.Color), int32(u.Idx))
+		if err != nil {
+			return nil, err
+		}
 		if G.ColorFrequency(u.Color) >= v.G.config.Support {
 			sg, _ := G.VertexSubGraph(u.Idx)
 			err := v.G.Embeddings.Add(sg.ShortLabel(), sg)
@@ -218,12 +228,16 @@ func (v *VegLoader) ComputeStartingPoints(G *goiso.Graph) (nodes []lattice.Node,
 			return err
 		}
 		if len(sgs) >= v.G.Support() {
-			nodes = append(nodes, &Node{
-				pat: Pattern{label: label},
-				dt: v.G,
-				sgs: sgs,
-			})
-			errors.Logf("INFO", "start %v %v", sgs[0].Label(), len(sgs))
+			if v.G.search {
+				nodes = append(nodes, NewSearchNode(v.G, sgs[0]))
+			} else {
+				nodes = append(nodes, &Node{
+					pat: Pattern{label: label},
+					dt: v.G,
+					sgs: sgs,
+				})
+			}
+			errors.Logf("INFO", "start %v %v", len(sgs), nodes[len(nodes)-1])
 		}
 		return nil
 	})
@@ -294,10 +308,6 @@ func (v *VegLoader) loadVertex(g *goiso.Graph, vids types.Map, data []byte) (err
 		if err != nil {
 			return err
 		}
-	}
-	err = v.G.ColorMap.Add(int32(vertex.Color), int32(vertex.Idx))
-	if err != nil {
-		return err
 	}
 	return nil
 }

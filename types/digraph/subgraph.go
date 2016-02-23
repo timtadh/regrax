@@ -7,7 +7,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/data-structures/errors"
+	// "github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
 )
 
@@ -28,6 +28,13 @@ type Edge struct {
 }
 
 func NewSubGraph(sg *goiso.SubGraph) *SubGraph {
+	if sg == nil {
+		return &SubGraph{
+			V: make([]Vertex, 0),
+			E: make([]Edge, 0),
+			Adj: make([][]int, 0),
+		}
+	}
 	pat := &SubGraph{
 		V: make([]Vertex, len(sg.V)),
 		E: make([]Edge, len(sg.E)),
@@ -49,6 +56,7 @@ func NewSubGraph(sg *goiso.SubGraph) *SubGraph {
 }
 
 func (sg *SubGraph) Embeddings(dt *Graph) ([]*goiso.SubGraph, error) {
+	// errors.Logf("DEBUG", "Embeddings of %v", sg)
 	if len(sg.V) == 0 {
 		return nil, nil
 	}
@@ -58,14 +66,17 @@ func (sg *SubGraph) Embeddings(dt *Graph) ([]*goiso.SubGraph, error) {
 	if err != nil {
 		return nil, err
 	}
+	// errors.Logf("DEBUG", "startIdx %v", startIdx)
+	// errors.Logf("DEBUG", "chain %v", chain)
 	for _, e := range chain {
+		// errors.Logf("DEBUG", "cur %v e %v", len(cur), e)
 		next := make([]*goiso.SubGraph, 0, len(cur))
 		for _, emb := range cur {
 			for _, ext := range sg.ExtendEmbedding(dt, emb, e) {
 				next = append(next, ext)
 			}
 		}
-		cur = next
+		cur = DedupSupported(next)
 	}
 	return cur, nil
 }
@@ -111,24 +122,52 @@ func (sg *SubGraph) EdgeChainFrom(idx int) []*Edge {
 			}
 		}
 		for _, e := range sg.Adj[u] {
-			v := sg.E[e].Targ
+			// errors.Logf("DEBUG", "u %v adj %v", u, sg.E[e])
+			v := sg.E[e].Src
+			if !seen[v] {
+				visit(v)
+			}
+			v = sg.E[e].Targ
 			if !seen[v] {
 				visit(v)
 			}
 		}
 	}
 	visit(idx)
+	// errors.Logf("DEBUG", "edge chain seen %v", seen)
+	// errors.Logf("DEBUG", "edge chain added %v", added)
 	return edges
 }
 
 func (sg *SubGraph) ExtendEmbedding(dt *Graph, cur *goiso.SubGraph, e *Edge) []*goiso.SubGraph {
+	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	exts := make([]*goiso.SubGraph, 0, 10)
-	for _, src := range sg.findSrcs(cur, e) {
+	srcs := sg.findSrcs(cur, e)
+	// errors.Logf("DEBUG", "  srcs %v", srcs)
+	seen := make(map[int]bool)
+	for _, src := range srcs {
 		for _, ke := range sg.findEdgesFromSrc(dt, cur, src, e) {
-			exts = append(exts, cur.EdgeExtend(ke))
+			// errors.Logf("DEBUG", "    ke %v %v", ke.Idx, ke)
+			if !seen[ke.Idx] {
+				seen[ke.Idx] = true
+				ext, _ := cur.EdgeExtend(ke)
+				exts = append(exts, ext)
+			}
 		}
 	}
-	return exts, nil
+	targs := sg.findTargs(cur, e)
+	// errors.Logf("DEBUG", "  targs %v", targs)
+	for _, targ := range targs {
+		for _, pe := range sg.findEdgesFromTarg(dt, cur, targ, e) {
+			// errors.Logf("DEBUG", "    pe %v %v", pe.Idx, pe)
+			if !seen[pe.Idx] {
+				seen[pe.Idx] = true
+				ext, _ := cur.EdgeExtend(pe)
+				exts = append(exts, ext)
+			}
+		}
+	}
+	return exts
 }
 
 func (sg *SubGraph) findSrcs(cur *goiso.SubGraph, e *Edge) []int {
@@ -142,6 +181,17 @@ func (sg *SubGraph) findSrcs(cur *goiso.SubGraph, e *Edge) []int {
 	return srcs
 }
 
+func (sg *SubGraph) findTargs(cur *goiso.SubGraph, e *Edge) []int {
+	color := sg.V[e.Targ].Color
+	targs := make([]int, 0, 10)
+	for i := range cur.V {
+		if cur.V[i].Color == color {
+			targs = append(targs, i)
+		}
+	}
+	return targs
+}
+
 func (sg *SubGraph) findEdgesFromSrc(dt *Graph, cur *goiso.SubGraph, src int, e *Edge) []*goiso.Edge {
 	srcDtIdx := cur.V[src].Id
 	tcolor := sg.V[e.Targ].Color
@@ -153,8 +203,26 @@ func (sg *SubGraph) findEdgesFromSrc(dt *Graph, cur *goiso.SubGraph, src int, e 
 		} else if dt.G.V[ke.Targ].Color != tcolor {
 			continue
 		}
-		if !cur.HasEdge(ke) {
+		if !cur.HasEdge(goiso.ColoredArc{ke.Arc, ke.Color}) {
 			edges = append(edges, ke)
+		}
+	}
+	return edges
+}
+
+func (sg *SubGraph) findEdgesFromTarg(dt *Graph, cur *goiso.SubGraph, targ int, e *Edge) []*goiso.Edge {
+	targDtIdx := cur.V[targ].Id
+	scolor := sg.V[e.Src].Color
+	ecolor := e.Color
+	edges := make([]*goiso.Edge, 0, 10)
+	for _, pe := range dt.G.Parents[targDtIdx] {
+		if pe.Color != ecolor {
+			continue
+		} else if dt.G.V[pe.Src].Color != scolor {
+			continue
+		}
+		if !cur.HasEdge(goiso.ColoredArc{pe.Arc, pe.Color}) {
+			edges = append(edges, pe)
 		}
 	}
 	return edges
