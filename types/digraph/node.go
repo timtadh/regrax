@@ -149,7 +149,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	}
 	parents := make([]lattice.Node, 0, 10)
 	for _, parent := range n.sgs[0].SubGraphs() {
-		p, err := n.FindNode(n.dt, parent)
+		p, err := FindNode(n.dt, parent)
 		if err != nil {
 			errors.Logf("ERROR", "%v", err)
 		} else if p != nil {
@@ -162,24 +162,23 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	return parents, n.cache(n.dt.ParentCount, n.dt.Parents, n.pat.label, parents)
 }
 
-func (n *Node) FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
+func FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 	label := target.ShortLabel()
-	if has, err := n.dt.Embeddings.Has(label); err != nil {
+	if has, err := dt.Embeddings.Has(label); err != nil {
 		return nil, err
 	} else if has {
 		sgs := make(SubGraphs, 0, 10)
-		err := n.dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
+		err := dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
 			sgs = append(sgs, sg)
 			return nil
 		})
 		if err != nil {
 			return nil, err
 		}
-		return &Node{Pattern{label: label}, n.dt, sgs}, nil
+		return &Node{Pattern{label: label}, dt, sgs}, nil
 	}
 	// errors.Logf("DEBUG", "target %v", target.Label())
-	// errors.Logf("DEBUG", "compute Parent\n    of %v", target.Label())
-	cur, graphs, err := edgeChain(n.dt, target)
+	cur, graphs, err := edgeChain(dt, target)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +187,7 @@ func (n *Node) FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 		return nil, err
 	}
 	for _, sg := range graphs {
-		// errors.Logf("DEBUG", "\n    extend %v\n        to %v", cur.sgs[0].Label(), sg.Label())
+		// errors.Logf("DEBUG", "extend %v to %v", cur, sg.Label())
 		cur, err = cur.extendTo(sg)
 		if err != nil {
 			return nil, err
@@ -209,24 +208,14 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	// errors.Logf("DEBUG", "doing edgeChain\n    of %v", target.Label())
 	graphs = make([]*goiso.SubGraph, len(cur.E))
 	for chainIdx := len(graphs) - 1; chainIdx >= 0; chainIdx-- {
-		if len(cur.V) <= 2 && len(cur.E) <= 1 {
-			a, _ := cur.G.VertexSubGraph(cur.V[0].Id)
-			graphs[chainIdx] = cur
-			// errors.Logf("DEBUG", "small parent a %v cur %v", a.Label(), cur.Label())
-			cur = a
-		} else {
-			for i := range cur.E {
-				p, _ := cur.RemoveEdge(i)
-				if p.Connected() {
-					graphs[chainIdx] = cur
-					cur = p
-					break
-				}
-			}
-		}
-		// errors.Logf("DEBUG", "rgraph %v %v", chainIdx, graphs[chainIdx].Label())
-		if graphs[chainIdx] == nil {
+		parents, err := allParents(cur)
+		if err != nil {
+			return nil, nil, err
+		} else if len(parents) == 0 {
 			return nil, nil, errors.Errorf("Could not find a connected parent!")
+		} else {
+			graphs[chainIdx] = cur
+			cur = parents[0]
 		}
 	}
 	// for i, g := range graphs {
@@ -246,7 +235,7 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 }
 
 func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
-	// errors.Logf("DEBUG", "doing extendTo\n    extend %v\n        to %v", n.sgs[0].Label(), sg.Label())
+	// errors.Logf("DEBUG", "doing extendTo extend %v to %v", n, sg.Label())
 	latKids, err := n.Children()
 	if err != nil {
 		return nil, err
@@ -254,7 +243,7 @@ func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
 	label := sg.ShortLabel()
 	for _, lkid := range latKids {
 		kid := lkid.(*Node)
-		// errors.Logf("DEBUG", "trying to find extension\n    from %v\n      to %v\n    have %v", n.sgs[0].Label(), sg.Label(), kid.sgs[0].Label())
+		// errors.Logf("DEBUG", "trying to find extension, have %v", kid)
 		if bytes.Equal(label, kid.pat.label) {
 			// errors.Logf("DEBUG", "FOUND extension\n    from %v\n      to %v\n    have %v", n.sgs[0].Label(), sg.Label(), kid.sgs[0].Label())
 			return kid, nil
@@ -269,6 +258,7 @@ func (n *Node) Children() (nodes []lattice.Node, err error) {
 }
 
 func (n *Node) CanonKids() (nodes []lattice.Node, err error) {
+	// errors.Logf("DEBUG", "CanonKids of %v", n)
 	return n.children(true, n.dt.CanonKids, n.dt.CanonKidCount)
 }
 
@@ -284,6 +274,7 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	} else if has {
 		return nodes, nil
 	}
+	// errors.Logf("DEBUG", "Children of %v", n)
 	exts := make(SubGraphs, 0, 10)
 	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
 		if n.dt.G.ColorFrequency(e.Color) < n.dt.Support() {
@@ -298,15 +289,7 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 			if len(ext.V) > n.dt.MaxVertices {
 				return exts, nil
 			}
-			if checkCanon {
-				if canonized, err := n.isCanonicalExtension(ext); err != nil {
-					return nil, err
-				} else if canonized {
-					exts = append(exts, ext)
-				}
-			} else {
-				exts = append(exts, ext)
-			}
+			exts = append(exts, ext)
 		}
 		return exts, nil
 	}
@@ -326,52 +309,85 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 			}
 		}
 	}
+	// errors.Logf("DEBUG", "len(exts) %v", len(exts))
 	partitioned := exts.Partition()
+	sum := 0
 	for _, sgs := range partitioned {
+		sum += len(sgs)
+		// errors.Logf("DEBUG", "len(partition) %v %v", len(sgs), sgs[0].Label())
 		if len(sgs) < n.dt.Support() {
 			continue
 		}
-		sgs = n.dt.Supported(DedupSupported(sgs))
+		sgs = n.dt.Supported(sgs)
+		// errors.Logf("DEBUG", "len(supported) %v %v", len(sgs), sgs[0].Label())
 		if len(sgs) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
-			nodes = append(nodes, &Node{Pattern{label: label}, n.dt, sgs})
+			if checkCanon {
+				if canonized, err := n.isCanonicalExtension(sgs[0]); err != nil {
+					return nil, err
+				} else if !canonized {
+					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
+				} else {
+					nodes = append(nodes, &Node{Pattern{label: label}, n.dt, sgs})
+				}
+			} else {
+				nodes = append(nodes, &Node{Pattern{label: label}, n.dt, sgs})
+			}
 		}
 	}
+	// errors.Logf("DEBUG", "sum(len(partition)) %v", sum)
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
 	return nodes, n.cache(childCount, children, n.pat.label, nodes)
 }
 
 func (n *Node) isCanonicalExtension(ext *goiso.SubGraph) (bool, error) {
-	parent, err := firstParent(ext)
+	// errors.Logf("DEBUG", "is %v a canonical ext of %v", ext.Label(), n)
+	parents, err := allParents(ext)
 	if err != nil {
 		return false, err
+	} else if len(parents) == 0 {
+		return false, errors.Errorf("ext %v of node %v has no parents", ext.Label(), n)
 	}
+	parent := parents[0]
 	parentLabel := parent.ShortLabel()
 	if bytes.Equal(parentLabel, n.Pattern().Label()) {
 		return true, nil
 	}
 	return false, nil
+	// this check is really about seeing if the canon parent is reliably reachable
+	// however that should always be the case. In some instances it is not because
+	// of the choices made in which subgraphs are kep
+	// p, err := FindNode(n.dt, parent)
+	// if err != nil {
+	// 	return false, err
+	// } else if p != nil {
+	// 	return false, nil
+	// }
+	// return false, errors.Errorf("could not find parent %v of extention %v for node %v", parent.Label(), ext.Label(), n)
 }
 
-func firstParent(sg *goiso.SubGraph) (*goiso.SubGraph, error) {
+func allParents(sg *goiso.SubGraph) ([]*goiso.SubGraph, error) {
 	if len(sg.E) <= 0 {
 		return nil, nil
 	}
+	parents := make([]*goiso.SubGraph, 0, 10)
 	for i := len(sg.E)-1; i >= 0; i-- {
 		if len(sg.V) == 2 && len(sg.E) == 1 {
 			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
-			return p, nil
+			parents = append(parents, p)
 		} else if len(sg.V) == 1 && len(sg.E) == 1 {
-			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Targ].Id)
-			return p, nil
+			p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
+			parents = append(parents, p)
+			p, _ = sg.G.VertexSubGraph(sg.V[sg.E[0].Targ].Id)
+			parents = append(parents, p)
 		} else {
 			p, _ := sg.RemoveEdge(i)
 			if p.Connected() {
-				return p, nil
+				parents = append(parents, p)
 			}
 		}
 	}
-	return nil, errors.Errorf("no firstParent() found for %v", sg)
+	return parents, nil
 }
 
 func (n *Node) cache(count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
