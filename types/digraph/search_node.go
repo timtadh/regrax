@@ -14,9 +14,17 @@ import (
 	"github.com/timtadh/sfp/lattice"
 )
 
+
 type SearchNode struct {
 	dt    *Graph
-	pat   *goiso.SubGraph
+	pat   *SubGraph
+}
+
+func NewSearchNode(dt *Graph, sg *goiso.SubGraph) *SearchNode {
+	return &SearchNode{
+		dt: dt,
+		pat: NewSubGraph(sg),
+	}
 }
 
 func (n *SearchNode) Pattern() lattice.Pattern {
@@ -61,11 +69,11 @@ func (n *SearchNode) Level() int {
 }
 
 func (n *SearchNode) Label() []byte {
-	return n.pat.ShortLabel()
+	return n.pat.Label()
 }
 
 func (n *SearchNode) String() string {
-	return fmt.Sprintf("<SearchNode %v>", n.pat.Label())
+	return fmt.Sprintf("<SearchNode %v>", n.pat)
 }
 
 func (n *SearchNode) Equals(o types.Equatable) bool {
@@ -87,5 +95,4 @@ func (n *SearchNode) Less(o types.Sortable) bool {
 func (n *SearchNode) Hash() int {
 	return types.ByteSlice(n.Label()).Hash()
 }
-
 

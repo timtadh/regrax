@@ -22,6 +22,7 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
 	"github.com/timtadh/sfp/stores/int_json"
+	"github.com/timtadh/sfp/stores/int_int"
 )
 
 type ErrorList []error
@@ -46,6 +47,7 @@ type Graph struct {
 	ChildCount                                   bytes_int.MultiMap
 	CanonKids                                    bytes_bytes.MultiMap
 	CanonKidCount                                bytes_int.MultiMap
+	ColorMap                                     int_int.MultiMap
 	FrequentVertices                             []lattice.Node
 	config                                       *config.Config
 }
@@ -79,6 +81,10 @@ func NewGraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int) 
 	if err != nil {
 		return nil, err
 	}
+	colorMap, err := config.IntIntMultiMap("digraph-color-map")
+	if err != nil {
+		return nil, err
+	}
 	g = &Graph{
 		Supported:     sup,
 		MinEdges:      minE,
@@ -92,6 +98,7 @@ func NewGraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int) 
 		ChildCount:    childCount,
 		CanonKids:     canonKids,
 		CanonKidCount: canonKidCount,
+		ColorMap:      colorMap,
 		config:        config,
 	}
 	return g, nil
@@ -287,6 +294,10 @@ func (v *VegLoader) loadVertex(g *goiso.Graph, vids types.Map, data []byte) (err
 		if err != nil {
 			return err
 		}
+	}
+	err = v.G.ColorMap.Add(int32(vertex.Color), int32(vertex.Idx))
+	if err != nil {
+		return err
 	}
 	return nil
 }
