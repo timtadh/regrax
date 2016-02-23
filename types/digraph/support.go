@@ -3,7 +3,7 @@ package digraph
 import ()
 
 import (
-	"github.com/timtadh/data-structures/errors"
+	// "github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 )
@@ -52,9 +52,13 @@ func MinImgSupported(sgs SubGraphs) SubGraphs {
 		return sgs
 	}
 	sets := vertexMapSets(sgs)
+	// errors.Logf("MIN-IMAGE", "sets: %v", sets)
 	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
 		return float64(sets[i].Size())
 	})
+	if int(size) == len(sgs) {
+		return sgs
+	}
 	supported := make(SubGraphs, 0, int(size)+1)
 	for sgIdx, next := sets[arg].Values()(); next != nil; sgIdx, next = next() {
 		idx := sgIdx.(int)
@@ -77,11 +81,12 @@ func DedupSupported(sgs SubGraphs) SubGraphs {
 }
 
 func MaxIndepSupported(sgs SubGraphs) SubGraphs {
+	sgs = MinImgSupported(sgs)
 	if len(sgs) <= 1 {
 		return sgs
 	}
 	sets := subgraphVertexSets(sgs)
-	errors.Logf("MAX-INDEP", "sets: %v", sets)
+	// errors.Logf("MAX-INDEP", "sets: %v", sets)
 	max := -1
 	var maxPerm []int = nil
 	var maxNonOverlap []int = nil
@@ -92,6 +97,9 @@ func MaxIndepSupported(sgs SubGraphs) SubGraphs {
 			max = size
 			maxPerm = perm
 			maxNonOverlap = nonOverlap
+		}
+		if size == len(sgs) {
+			return true
 		}
 		// errors.Logf("MAX-INDEP", "perm %v %v %v :: max: %v %v %v", perm, size, nonOverlap, maxPerm, max, maxNonOverlap)
 		return false
