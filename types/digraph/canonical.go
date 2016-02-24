@@ -24,6 +24,7 @@ func isCanonicalExtension(cur *goiso.SubGraph, ext *goiso.SubGraph) (bool, error
 	if bytes.Equal(parent.ShortLabel(), cur.ShortLabel()) {
 		return true, nil
 	}
+	// errors.Logf("DEBUG", "canon-parent %v cur %v ext %v", parent.Label(), cur.Label(), ext.Label())
 	return false, nil
 	// this check is really about seeing if the canon parent is reliably reachable
 	// however that should always be the case. In some instances it is not because

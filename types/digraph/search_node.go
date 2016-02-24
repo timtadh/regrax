@@ -89,6 +89,7 @@ func (n *SearchNode) ParentCount() (int, error) {
 }
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
+	// errors.Logf("DEBUG", "Children of %v", n)
 	return n.children(false, n.dt.Children, n.dt.ChildCount)
 }
 
@@ -97,10 +98,12 @@ func (n *SearchNode) ChildCount() (int, error) {
 }
 
 func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
+	// errors.Logf("DEBUG", "CanonKids of %v", n)
 	return n.children(true, n.dt.CanonKids, n.dt.CanonKidCount)
 }
 
 func (n *SearchNode) Maximal() (bool, error) {
+	// errors.Logf("DEBUG", "Maximal of %v", n)
 	kids, err := n.Children()
 	if err != nil {
 		return false, err
@@ -159,26 +162,30 @@ func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, ch
 	sum := 0
 	for _, sgs := range partitioned {
 		sum += len(sgs)
-		// errors.Logf("DEBUG", "len(partition) %v %v", len(sgs), sgs[0].Label())
-		if len(sgs) < n.dt.Support() {
+		sn := NewSearchNode(n.dt, sgs[0])
+		snembs, err := sn.Embeddings()
+		if err != nil {
+			return nil, err
+		}
+		if len(snembs) < n.dt.Support() {
 			continue
 		}
-		sgs = n.dt.Supported(sgs)
-		// errors.Logf("DEBUG", "len(supported) %v %v", len(sgs), sgs[0].Label())
-		if len(sgs) >= n.dt.Support() {
+		if len(n.dt.Supported(snembs)) >= n.dt.Support() {
 			if checkCanon {
 				if canonized, err := isCanonicalExtension(embs[0], sgs[0]); err != nil {
 					return nil, err
 				} else if !canonized {
 					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
 				} else {
-					nodes = append(nodes, NewSearchNode(n.dt, sgs[0]))
+					// errors.Logf("DEBUG", "len(embs) %v len(partition) %v len(supported) %v %v", len(embs), len(sgs), len(n.dt.Supported(embs)), sgs[0].Label())
+					nodes = append(nodes, sn)
 				}
 			} else {
-				nodes = append(nodes, NewSearchNode(n.dt, sgs[0]))
+				nodes = append(nodes, sn)
 			}
 		}
 	}
+	// errors.Logf("DEBUG", "nodes %v", nodes)
 	return nodes, nil
 }
 

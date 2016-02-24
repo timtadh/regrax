@@ -27,6 +27,9 @@ type Edge struct {
 	Src, Targ, Color int
 }
 
+// Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
+// canonical ordering. This is a necessary assumption for Embeddings() to 
+// work properly.
 func NewSubGraph(sg *goiso.SubGraph) *SubGraph {
 	if sg == nil {
 		return &SubGraph{
@@ -78,7 +81,39 @@ func (sg *SubGraph) Embeddings(dt *Graph) ([]*goiso.SubGraph, error) {
 		}
 		cur = DedupSupported(next)
 	}
-	return cur, nil
+	final := make([]*goiso.SubGraph, 0, len(cur))
+	for _, emb := range cur {
+		if sg.Matches(emb) {
+			final = append(final, emb)
+		}
+	}
+	return final, nil
+}
+
+func (sg *SubGraph) Matches(emb *goiso.SubGraph) bool {
+	if len(sg.V) != len(emb.V) {
+		return false
+	}
+	if len(sg.E) != len(emb.E) {
+		return false
+	}
+	for i := range sg.V {
+		if sg.V[i].Color != emb.V[i].Color {
+			return false
+		}
+	}
+	for i := range sg.E {
+		if sg.E[i].Src != emb.E[i].Src {
+			return false
+		}
+		if sg.E[i].Targ != emb.E[i].Targ {
+			return false
+		}
+		if sg.E[i].Color != emb.E[i].Color {
+			return false
+		}
+	}
+	return true
 }
 
 func (sg *SubGraph) LeastCommonVertex(dt *Graph) int {
