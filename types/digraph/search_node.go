@@ -118,6 +118,13 @@ func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, ch
 	if len(n.pat.E) >= n.dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
+	/*
+	if nodes, has, err := cached(n.dt, childCount, children, n.Label()); err != nil {
+		return nil, err
+	} else if has {
+		return nodes, nil
+	}
+	*/
 	// errors.Logf("DEBUG", "Children of %v", n)
 	exts := make(SubGraphs, 0, 10)
 	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
@@ -186,6 +193,7 @@ func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, ch
 		}
 	}
 	// errors.Logf("DEBUG", "nodes %v", nodes)
+	// return nodes, cache(n.dt, childCount, children, n.Label(), nodes)
 	return nodes, nil
 }
 

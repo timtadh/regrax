@@ -7,7 +7,7 @@ import (
 )
 
 import (
-	// "github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
 )
 
@@ -25,6 +25,10 @@ type Vertex struct {
 
 type Edge struct {
 	Src, Targ, Color int
+}
+
+func EmptySubGraph() *SubGraph {
+	return &SubGraph{}
 }
 
 // Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
@@ -262,6 +266,56 @@ func (sg *SubGraph) findEdgesFromTarg(dt *Graph, cur *goiso.SubGraph, targ int, 
 	}
 	return edges
 }
+
+func (sg *SubGraph) MarshalBinary() ([]byte, error) {
+	return sg.Label(), nil
+}
+
+func (sg *SubGraph) UnmarshalBinary(bytes []byte) (error) {
+	if sg.V != nil || sg.E != nil || sg.Adj != nil {
+		return errors.Errorf("sg is already loaded! will not load serialized data")
+	}
+	if len(bytes) < 8 {
+		return errors.Errorf("bytes was too small %v < 8", len(bytes))
+	}
+	lenE := int(binary.BigEndian.Uint32(bytes[0:4]))
+	lenV := int(binary.BigEndian.Uint32(bytes[4:8]))
+	off := 8
+	expected := 8 + lenV*4 + lenE*12
+	if len(bytes) < expected {
+		return errors.Errorf("bytes was too small %v < %v", len(bytes), expected)
+	}
+	sg.V = make([]Vertex, lenV)
+	sg.E = make([]Edge, lenE)
+	sg.Adj = make([][]int, lenV)
+	for i := 0; i < lenV; i++ {
+		s := off + i*4
+		e := s + 4
+		color := int(binary.BigEndian.Uint32(bytes[s:e]))
+		sg.V[i].Idx = i
+		sg.V[i].Color = color
+		sg.Adj[i] = make([]int, 0, 5)
+	}
+	off += lenV*4
+	for i := 0; i < lenE; i++ {
+		s := off + i*12
+		e := s + 4
+		src := int(binary.BigEndian.Uint32(bytes[s:e]))
+		s += 4
+		e += 4
+		targ := int(binary.BigEndian.Uint32(bytes[s:e]))
+		s += 4
+		e += 4
+		color := int(binary.BigEndian.Uint32(bytes[s:e]))
+		sg.E[i].Src = src
+		sg.E[i].Targ = targ
+		sg.E[i].Color = color
+		sg.Adj[src] = append(sg.Adj[src], i)
+		sg.Adj[targ] = append(sg.Adj[targ], i)
+	}
+	return nil
+}
+
 
 func (sg *SubGraph) Label() []byte {
 	size := 8 + len(sg.V)*4 + len(sg.E)*12

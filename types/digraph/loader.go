@@ -131,7 +131,7 @@ func (g *Graph) Empty() lattice.Node {
 	if g.search {
 		return NewSearchNode(g, nil)
 	} else {
-		return &Node{dt: g}
+		return NewNode(g, nil, nil)
 	}
 }
 
@@ -231,11 +231,7 @@ func (v *VegLoader) ComputeStartingPoints(G *goiso.Graph) (nodes []lattice.Node,
 			if v.G.search {
 				nodes = append(nodes, NewSearchNode(v.G, sgs[0]))
 			} else {
-				nodes = append(nodes, &Node{
-					pat: Pattern{label: label},
-					dt: v.G,
-					sgs: sgs,
-				})
+				nodes = append(nodes, NewNode(v.G, label, sgs))
 			}
 			errors.Logf("INFO", "start %v %v", len(sgs), nodes[len(nodes)-1])
 		}

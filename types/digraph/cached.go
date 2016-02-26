@@ -5,7 +5,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
 )
 
 import (
@@ -24,18 +23,21 @@ func cache(dt *Graph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key 
 	if err != nil {
 		return err
 	}
-	for _, node := range nodes {
-		if dt.search {
+	for _, n := range nodes {
+		switch node := n.(type) {
+		case *SearchNode:
 			return errors.Errorf("unimplemented")
-		} else {
-			err = node.(*Node).Save()
+		case *Node:
+			err = node.Save()
 			if err != nil {
 				return err
 			}
-			err = cache.Add(key, node.(*Node).pat.label)
+			err = cache.Add(key, node.pat.label)
 			if err != nil {
 				return err
 			}
+		default:
+			return errors.Errorf("unexpected lattice.Node type %T %v", n, n)
 		}
 	}
 	return nil
@@ -51,15 +53,11 @@ func cached(dt *Graph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key
 		if dt.search {
 			return errors.Errorf("unimplemented")
 		} else {
-			sgs := make(SubGraphs, 0, 10)
-			err := dt.Embeddings.DoFind(adj, func(_ []byte, sg *goiso.SubGraph) error {
-				sgs = append(sgs, sg)
-				return nil
-			})
+			node, err := LoadNode(dt, adj)
 			if err != nil {
 				return err
 			}
-			nodes = append(nodes, &Node{Pattern{label: adj}, dt, sgs})
+			nodes = append(nodes, node)
 		}
 		return nil
 	})

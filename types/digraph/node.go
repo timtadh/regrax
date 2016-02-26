@@ -96,6 +96,22 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 	return parts
 }
 
+func NewNode(dt *Graph, label []byte, sgs SubGraphs) *Node {
+	return &Node{Pattern{label: label}, dt, sgs}
+}
+
+func LoadNode(dt *Graph, label []byte) (*Node, error) {
+	sgs := make(SubGraphs, 0, 10)
+	err := dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
+		sgs = append(sgs, sg)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return NewNode(dt, label, sgs), nil
+}
+
 func (n *Node) Pattern() lattice.Pattern {
 	n.pat.level = n.Level()
 	if n.pat.level > 0 {
@@ -140,7 +156,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 		return []lattice.Node{}, nil
 	}
 	if len(n.sgs[0].V) == 1 && len(n.sgs[0].E) == 0 {
-		return []lattice.Node{&Node{dt: n.dt}}, nil
+		return []lattice.Node{NewNode(n.dt, nil, nil)}, nil
 	}
 	if nodes, has, err := cached(n.dt, n.dt.ParentCount, n.dt.Parents, n.pat.label); err != nil {
 		return nil, err
@@ -175,7 +191,7 @@ func FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &Node{Pattern{label: label}, dt, sgs}, nil
+		return NewNode(dt, label, sgs), nil
 	}
 	// errors.Logf("DEBUG", "target %v", target.Label())
 	cur, graphs, err := edgeChain(dt, target)
@@ -231,7 +247,7 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	if err != nil {
 		return nil, nil, err
 	}
-	return &Node{Pattern{label: startLabel}, dt, sgs}, graphs, nil
+	return NewNode(dt, startLabel, sgs), graphs, nil
 }
 
 func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
@@ -328,10 +344,10 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 				} else if !canonized {
 					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
 				} else {
-					nodes = append(nodes, &Node{Pattern{label: label}, n.dt, sgs})
+					nodes = append(nodes, NewNode(n.dt, label, sgs))
 				}
 			} else {
-				nodes = append(nodes, &Node{Pattern{label: label}, n.dt, sgs})
+				nodes = append(nodes, NewNode(n.dt, label, sgs))
 			}
 		}
 	}
