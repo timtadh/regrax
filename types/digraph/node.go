@@ -31,9 +31,9 @@ var EmptyPattern = &Pattern{
 }
 
 type Node struct {
-	pat   Pattern
-	dt    *Graph
-	sgs   SubGraphs
+	pat     Pattern
+	dt      *Graph
+	sgs     SubGraphs
 }
 
 type Embedding struct {
@@ -137,9 +137,9 @@ func (n *Node) Save() error {
 
 func (n *Node) String() string {
 	if len(n.sgs) > 0 {
-		return fmt.Sprintf("<Node %v %v>", len(n.sgs), n.sgs[0].Label())
+		return fmt.Sprintf("<Node %v>", n.sgs[0].Label())
 	} else {
-		return fmt.Sprintf("<Node %v {}>", len(n.sgs))
+		return fmt.Sprintf("<Node {}>")
 	}
 }
 
@@ -183,15 +183,7 @@ func FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 	if has, err := dt.Embeddings.Has(label); err != nil {
 		return nil, err
 	} else if has {
-		sgs := make(SubGraphs, 0, 10)
-		err := dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
-			sgs = append(sgs, sg)
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-		return NewNode(dt, label, sgs), nil
+		return LoadNode(dt, label)
 	}
 	// errors.Logf("DEBUG", "target %v", target.Label())
 	cur, graphs, err := edgeChain(dt, target)
@@ -239,15 +231,11 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	// }
 	startSg, _ := dt.G.VertexSubGraph(cur.V[0].Id)
 	startLabel := startSg.ShortLabel()
-	var sgs SubGraphs
-	err = dt.Embeddings.DoFind(startLabel, func(_ []byte, sg *goiso.SubGraph) error {
-		sgs = append(sgs, sg)
-		return nil
-	})
+	node, err := LoadNode(dt, startLabel)
 	if err != nil {
 		return nil, nil, err
 	}
-	return NewNode(dt, startLabel, sgs), graphs, nil
+	return node, graphs, nil
 }
 
 func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
@@ -334,9 +322,9 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 		if len(sgs) < n.dt.Support() {
 			continue
 		}
-		sgs = n.dt.Supported(sgs)
+		supported := n.dt.Supported(sgs)
 		// errors.Logf("DEBUG", "len(supported) %v %v", len(sgs), sgs[0].Label())
-		if len(sgs) >= n.dt.Support() {
+		if len(supported) >= n.dt.Support() {
 			label := sgs[0].ShortLabel()
 			if checkCanon {
 				if canonized, err := isCanonicalExtension(n.sgs[0], sgs[0]); err != nil {
