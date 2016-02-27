@@ -85,7 +85,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	// construct the digraph from the patterns
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
-	l, err := digraph.NewVegLoader(conf, digraph.MinImgSupported, 0, maxE, 0, maxV)
+	l, err := digraph.NewVegLoader(conf, false, digraph.MinImgSupported, 0, maxE, 0, maxV)
 	if err != nil {
 		return nil, err
 	}

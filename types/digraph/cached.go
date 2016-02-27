@@ -27,7 +27,7 @@ func cache(dt *Graph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key 
 		switch node := n.(type) {
 		case *SearchNode:
 			return errors.Errorf("unimplemented")
-		case *Node:
+		case *EmbListNode:
 			err = node.Save()
 			if err != nil {
 				return err
@@ -53,7 +53,7 @@ func cached(dt *Graph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key
 		if dt.search {
 			return errors.Errorf("unimplemented")
 		} else {
-			node, err := LoadNode(dt, adj)
+			node, err := LoadEmbListNode(dt, adj)
 			if err != nil {
 				return err
 			}

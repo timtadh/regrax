@@ -30,7 +30,7 @@ var EmptyPattern = &Pattern{
 	Sg: nil,
 }
 
-type Node struct {
+type EmbListNode struct {
 	pat     Pattern
 	dt      *Graph
 	sgs     SubGraphs
@@ -96,11 +96,11 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 	return parts
 }
 
-func NewNode(dt *Graph, label []byte, sgs SubGraphs) *Node {
-	return &Node{Pattern{label: label}, dt, sgs}
+func NewEmbListNode(dt *Graph, label []byte, sgs SubGraphs) *EmbListNode {
+	return &EmbListNode{Pattern{label: label}, dt, sgs}
 }
 
-func LoadNode(dt *Graph, label []byte) (*Node, error) {
+func LoadEmbListNode(dt *Graph, label []byte) (*EmbListNode, error) {
 	sgs := make(SubGraphs, 0, 10)
 	err := dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
 		sgs = append(sgs, sg)
@@ -109,10 +109,10 @@ func LoadNode(dt *Graph, label []byte) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewNode(dt, label, sgs), nil
+	return NewEmbListNode(dt, label, sgs), nil
 }
 
-func (n *Node) Pattern() lattice.Pattern {
+func (n *EmbListNode) Pattern() lattice.Pattern {
 	n.pat.level = n.Level()
 	if n.pat.level > 0 {
 		n.pat.Sg = n.sgs[0]
@@ -120,7 +120,7 @@ func (n *Node) Pattern() lattice.Pattern {
 	return &n.pat
 }
 
-func (n *Node) Save() error {
+func (n *EmbListNode) Save() error {
 	if has, err := n.dt.Embeddings.Has(n.pat.label); err != nil {
 		return err
 	} else if has {
@@ -135,28 +135,28 @@ func (n *Node) Save() error {
 	return nil
 }
 
-func (n *Node) String() string {
+func (n *EmbListNode) String() string {
 	if len(n.sgs) > 0 {
-		return fmt.Sprintf("<Node %v>", n.sgs[0].Label())
+		return fmt.Sprintf("<EmbListNode %v>", n.sgs[0].Label())
 	} else {
-		return fmt.Sprintf("<Node {}>")
+		return fmt.Sprintf("<EmbListNode {}>")
 	}
 }
 
-func (n *Node) Level() int {
+func (n *EmbListNode) Level() int {
 	if len(n.sgs) > 0 {
 		return len(n.sgs[0].E) + 1
 	}
 	return 0
 }
 
-func (n *Node) Parents() ([]lattice.Node, error) {
+func (n *EmbListNode) Parents() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "compute Parents\n    of %v", n)
 	if len(n.sgs) == 0 {
 		return []lattice.Node{}, nil
 	}
 	if len(n.sgs[0].V) == 1 && len(n.sgs[0].E) == 0 {
-		return []lattice.Node{NewNode(n.dt, nil, nil)}, nil
+		return []lattice.Node{NewEmbListNode(n.dt, nil, nil)}, nil
 	}
 	if nodes, has, err := cached(n.dt, n.dt.ParentCount, n.dt.Parents, n.pat.label); err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	}
 	parents := make([]lattice.Node, 0, 10)
 	for _, parent := range n.sgs[0].SubGraphs() {
-		p, err := FindNode(n.dt, parent)
+		p, err := FindEmbListNode(n.dt, parent)
 		if err != nil {
 			errors.Logf("ERROR", "%v", err)
 		} else if p != nil {
@@ -178,12 +178,12 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 	return parents, cache(n.dt, n.dt.ParentCount, n.dt.Parents, n.pat.label, parents)
 }
 
-func FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
+func FindEmbListNode(dt *Graph, target *goiso.SubGraph) (*EmbListNode, error) {
 	label := target.ShortLabel()
 	if has, err := dt.Embeddings.Has(label); err != nil {
 		return nil, err
 	} else if has {
-		return LoadNode(dt, label)
+		return LoadEmbListNode(dt, label)
 	}
 	// errors.Logf("DEBUG", "target %v", target.Label())
 	cur, graphs, err := edgeChain(dt, target)
@@ -211,7 +211,7 @@ func FindNode(dt *Graph, target *goiso.SubGraph) (*Node, error) {
 	return cur, cur.Save()
 }
 
-func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.SubGraph, err error) {
+func edgeChain(dt *Graph, target *goiso.SubGraph) (start *EmbListNode, graphs []*goiso.SubGraph, err error) {
 	cur := target
 	// errors.Logf("DEBUG", "doing edgeChain\n    of %v", target.Label())
 	graphs = make([]*goiso.SubGraph, len(cur.E))
@@ -231,14 +231,14 @@ func edgeChain(dt *Graph, target *goiso.SubGraph) (start *Node, graphs []*goiso.
 	// }
 	startSg, _ := dt.G.VertexSubGraph(cur.V[0].Id)
 	startLabel := startSg.ShortLabel()
-	node, err := LoadNode(dt, startLabel)
+	node, err := LoadEmbListNode(dt, startLabel)
 	if err != nil {
 		return nil, nil, err
 	}
 	return node, graphs, nil
 }
 
-func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
+func (n *EmbListNode) extendTo(sg *goiso.SubGraph) (exts *EmbListNode, err error) {
 	// errors.Logf("DEBUG", "doing extendTo extend %v to %v", n, sg.Label())
 	latKids, err := n.Children()
 	if err != nil {
@@ -246,7 +246,7 @@ func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
 	}
 	label := sg.ShortLabel()
 	for _, lkid := range latKids {
-		kid := lkid.(*Node)
+		kid := lkid.(*EmbListNode)
 		// errors.Logf("DEBUG", "trying to find extension, have %v", kid)
 		if bytes.Equal(label, kid.pat.label) {
 			// errors.Logf("DEBUG", "FOUND extension\n    from %v\n      to %v\n    have %v", n.sgs[0].Label(), sg.Label(), kid.sgs[0].Label())
@@ -257,16 +257,16 @@ func (n *Node) extendTo(sg *goiso.SubGraph) (exts *Node, err error) {
 	return nil, nil
 }
 
-func (n *Node) Children() (nodes []lattice.Node, err error) {
+func (n *EmbListNode) Children() (nodes []lattice.Node, err error) {
 	return n.children(false, n.dt.Children, n.dt.ChildCount)
 }
 
-func (n *Node) CanonKids() (nodes []lattice.Node, err error) {
+func (n *EmbListNode) CanonKids() (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "CanonKids of %v", n)
 	return n.children(true, n.dt.CanonKids, n.dt.CanonKidCount)
 }
 
-func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
+func (n *EmbListNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
 	if len(n.sgs) == 0 {
 		return n.dt.FrequentVertices, nil
 	}
@@ -332,10 +332,10 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 				} else if !canonized {
 					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
 				} else {
-					nodes = append(nodes, NewNode(n.dt, label, sgs))
+					nodes = append(nodes, NewEmbListNode(n.dt, label, sgs))
 				}
 			} else {
-				nodes = append(nodes, NewNode(n.dt, label, sgs))
+				nodes = append(nodes, NewEmbListNode(n.dt, label, sgs))
 			}
 		}
 	}
@@ -344,7 +344,7 @@ func (n *Node) children(checkCanon bool, children bytes_bytes.MultiMap, childCou
 	return nodes, cache(n.dt, childCount, children, n.pat.label, nodes)
 }
 
-func (n *Node) AdjacentCount() (int, error) {
+func (n *EmbListNode) AdjacentCount() (int, error) {
 	pc, err := n.ParentCount()
 	if err != nil {
 		return 0, err
@@ -356,7 +356,7 @@ func (n *Node) AdjacentCount() (int, error) {
 	return pc + cc, nil
 }
 
-func (n *Node) ParentCount() (int, error) {
+func (n *EmbListNode) ParentCount() (int, error) {
 	if len(n.sgs) == 0 {
 		return 0, nil
 	}
@@ -380,7 +380,7 @@ func (n *Node) ParentCount() (int, error) {
 	return int(count), nil
 }
 
-func (n *Node) ChildCount() (int, error) {
+func (n *EmbListNode) ChildCount() (int, error) {
 	if len(n.sgs) == 0 {
 		return len(n.dt.FrequentVertices), nil
 	}
@@ -404,7 +404,7 @@ func (n *Node) ChildCount() (int, error) {
 	return int(count), nil
 }
 
-func (n *Node) Maximal() (bool, error) {
+func (n *EmbListNode) Maximal() (bool, error) {
 	cc, err := n.ChildCount()
 	if err != nil {
 		return false, err
@@ -458,6 +458,6 @@ func (g *Pattern) Hash() int {
 
 
 
-func (n *Node) Lattice() (*lattice.Lattice, error) {
+func (n *EmbListNode) Lattice() (*lattice.Lattice, error) {
 	return nil, &lattice.NoLattice{}
 }

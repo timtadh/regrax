@@ -37,7 +37,7 @@ func (f *Formatter) FileExt() string {
 
 func (f *Formatter) PatternName(node lattice.Node) string {
 	switch n := node.(type) {
-	case *Node:
+	case *EmbListNode:
 		return n.sgs[0].Label()
 	case *SearchNode:
 		return n.pat.String()
@@ -48,7 +48,7 @@ func (f *Formatter) PatternName(node lattice.Node) string {
 
 func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	switch n := node.(type) {
-	case *Node:
+	case *EmbListNode:
 		max := ""
 		if ismax, err := n.Maximal(); err != nil {
 			return "", err
@@ -80,7 +80,7 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
 	var sgs []*goiso.SubGraph = nil
 	switch n := node.(type) {
-	case *Node:
+	case *EmbListNode:
 		sgs = n.sgs
 	case *SearchNode:
 		embs, err := n.Embeddings()

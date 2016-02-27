@@ -131,27 +131,35 @@ func (g *Graph) Empty() lattice.Node {
 	if g.search {
 		return NewSearchNode(g, nil)
 	} else {
-		return NewNode(g, nil, nil)
+		return NewEmbListNode(g, nil, nil)
 	}
 }
 
-func (g *Graph) Acceptable(node lattice.Node) bool {
-	n := node.(*Node)
-	if len(n.sgs) <= 0 {
-		return g.MinEdges <= 0 && g.MinVertices <= 0
+func VE(node lattice.Node) (V, E int) {
+	E = 0
+	V = 0
+	switch n := node.(type) {
+	case *EmbListNode: 
+		if len(n.sgs) > 0 {
+			E = len(n.sgs[0].E)
+			V = len(n.sgs[0].V)
+		}
+	case *SearchNode:
+		E = len(n.pat.E)
+		V = len(n.pat.V)
+	default:
+		panic(errors.Errorf("unknown node type %T %v", node, node))
 	}
-	E := len(n.sgs[0].E)
-	V := len(n.sgs[0].V)
+	return V, E
+}
+
+func (g *Graph) Acceptable(node lattice.Node) bool {
+	V, E := VE(node)
 	return g.MinEdges <= E && E <= g.MaxEdges && g.MinVertices <= V && V <= g.MaxVertices
 }
 
 func (g *Graph) TooLarge(node lattice.Node) bool {
-	n := node.(*Node)
-	if len(n.sgs) <= 0 {
-		return false
-	}
-	E := len(n.sgs[0].E)
-	V := len(n.sgs[0].V)
+	V, E := VE(node)
 	return E > g.MaxEdges || V > g.MaxVertices
 }
 
@@ -231,7 +239,7 @@ func (v *VegLoader) ComputeStartingPoints(G *goiso.Graph) (nodes []lattice.Node,
 			if v.G.search {
 				nodes = append(nodes, NewSearchNode(v.G, sgs[0]))
 			} else {
-				nodes = append(nodes, NewNode(v.G, label, sgs))
+				nodes = append(nodes, NewEmbListNode(v.G, label, sgs))
 			}
 			errors.Logf("INFO", "start %v %v", len(sgs), nodes[len(nodes)-1])
 		}
