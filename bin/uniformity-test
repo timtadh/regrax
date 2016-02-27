@@ -83,6 +83,7 @@ def stats(df, col_name):
     stderr = round(np.sqrt(sum((p - expected)**2 for p in col)), 10)
     return {
         'expected uniform pr': expected,
+        'count': len(col),
         'sum': np.sum(col),
         'mean': np.mean(col),
         'stdev': np.std(col),
@@ -191,6 +192,7 @@ def main(argv):
     theoretical = stats(df, 'theoretical probability')
 
     outdata = {
+        'data': data_table,
         'observed probabiliy': observed,
         'theoretical probabiliy': theoretical,
         'tests': [
