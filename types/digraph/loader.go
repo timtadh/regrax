@@ -35,6 +35,12 @@ func (self ErrorList) Error() string {
 	return "Errors [" + strings.Join(s, ", ") + "]"
 }
 
+
+/// Tim you are here: You removed the FrequentVertices list of lattice.Node in order to 
+/// make Graph able to support both SearchNode and EmbListNode at the same time. The .search
+/// value would simply be a hint of which type of vertice to use for .Root(). However, the
+/// first extension is special cased to just give the FrequentVertices. How to handle this?
+
 type Graph struct {
 	MinEdges, MaxEdges, MinVertices, MaxVertices int
 	G                                            *goiso.Graph
@@ -48,7 +54,6 @@ type Graph struct {
 	CanonKids                                    bytes_bytes.MultiMap
 	CanonKidCount                                bytes_int.MultiMap
 	ColorMap                                     int_int.MultiMap
-	FrequentVertices                             []lattice.Node
 	config                                       *config.Config
 	search                                       bool
 }
@@ -106,10 +111,6 @@ func NewGraph(config *config.Config, search bool, sup Supported, minE, maxE, min
 	return g, nil
 }
 
-func (g *Graph) Singletons() ([]lattice.Node, error) {
-	return g.FrequentVertices, nil
-}
-
 func (g *Graph) Support() int {
 	return g.config.Support
 }
@@ -127,11 +128,19 @@ func (g *Graph) MinimumLevel() int {
 	return 0
 }
 
-func (g *Graph) Empty() lattice.Node {
+func RootSearchNode(g *Graph) *SearchNode {
+	return NewSearchNode(g, nil)
+}
+
+func RootEmbListNode(g *Graph) *EmbListNode {
+	return NewEmbListNode(g, nil, nil)
+}
+
+func (g *Graph) Root() lattice.Node {
 	if g.search {
-		return NewSearchNode(g, nil)
+		return RootSearchNode(g)
 	} else {
-		return NewEmbListNode(g, nil, nil)
+		return RootEmbListNode(g)
 	}
 }
 
@@ -173,11 +182,12 @@ func (g *Graph) Close() error {
 	g.CanonKidCount.Close()
 	g.Embeddings.Close()
 	g.NodeAttrs.Close()
+	g.ColorMap.Close()
 	return nil
 }
 
 type VegLoader struct {
-	G *Graph
+	dt *Graph
 }
 
 func NewVegLoader(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
@@ -186,7 +196,7 @@ func NewVegLoader(config *config.Config, search bool, sup Supported, minE, maxE,
 		return nil, err
 	}
 	v := &VegLoader{
-		G: g,
+		dt: g,
 	}
 	return v, nil
 }
@@ -196,60 +206,36 @@ func (v *VegLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
 	if err != nil {
 		return nil, err
 	}
-	start, err := v.ComputeStartingPoints(G)
+	err = v.dt.Init(G)
 	if err != nil {
 		return nil, err
 	}
-	v.G.FrequentVertices = start
-	return v.G, nil
+	return v.dt, nil
 }
 
-func (v *VegLoader) ComputeStartingPoints(G *goiso.Graph) (nodes []lattice.Node, err error) {
-	v.G.G = G
-	v.G.Embeddings, err = v.G.config.BytesSubgraphMultiMap("digraph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
+func (dt *Graph) Init(G *goiso.Graph) (err error) {
+	dt.G = G
+	dt.Embeddings, err = dt.config.BytesSubgraphMultiMap("digraph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for i := range G.V {
 		u := &G.V[i]
-		err = v.G.ColorMap.Add(int32(u.Color), int32(u.Idx))
-		if err != nil {
-			return nil, err
-		}
-		if G.ColorFrequency(u.Color) >= v.G.config.Support {
-			sg, _ := G.VertexSubGraph(u.Idx)
-			err := v.G.Embeddings.Add(sg.ShortLabel(), sg)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	err = bytes_subgraph.DoKey(v.G.Embeddings.Keys, func(label []byte) error {
-		sgs := make([]*goiso.SubGraph, 0, 10)
-		err := v.G.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
-			sgs = append(sgs, sg)
-			return nil
-		})
+		err = dt.ColorMap.Add(int32(u.Color), int32(u.Idx))
 		if err != nil {
 			return err
 		}
-		if len(sgs) >= v.G.Support() {
-			if v.G.search {
-				nodes = append(nodes, NewSearchNode(v.G, sgs[0]))
-			} else {
-				nodes = append(nodes, NewEmbListNode(v.G, label, sgs))
+		if G.ColorFrequency(u.Color) >= dt.config.Support {
+			sg, _ := G.VertexSubGraph(u.Idx)
+			err := dt.Embeddings.Add(sg.ShortLabel(), sg)
+			if err != nil {
+				return err
 			}
-			errors.Logf("INFO", "start %v %v", len(sgs), nodes[len(nodes)-1])
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
-	return nodes, nil
+	return nil
 }
 
 func (v *VegLoader) loadGraph(input lattice.Input) (graph *goiso.Graph, err error) {
@@ -307,8 +293,8 @@ func (v *VegLoader) loadVertex(g *goiso.Graph, vids types.Map, data []byte) (err
 	if err != nil {
 		return err
 	}
-	if v.G.NodeAttrs != nil {
-		err = v.G.NodeAttrs.Add(int32(vertex.Id), obj)
+	if v.dt.NodeAttrs != nil {
+		err = v.dt.NodeAttrs.Add(int32(vertex.Id), obj)
 		if err != nil {
 			return err
 		}

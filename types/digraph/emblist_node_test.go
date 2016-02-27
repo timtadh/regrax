@@ -4,23 +4,19 @@ import "testing"
 import "github.com/stretchr/testify/assert"
 
 import (
-	// "github.com/timtadh/goiso"
 )
 
 import (
-	// "github.com/timtadh/sfp/config"
 )
 
-func TestSearchChildren(t *testing.T) {
+func TestEmbChildren(t *testing.T) {
 	x := assert.New(t)
-	_, _, _, _, _, n := graph(t)
+	_, _, _, _, n, _ := graph(t)
 	x.NotNil(n)
-	t.Log(n)
 	kids, err := n.Children()
 	x.Nil(err)
 	var next *SearchNode = nil
 	for _, k := range kids {
-		t.Log(k)
 		kid := k.(*SearchNode)
 		embs, err := kid.Embeddings()
 		x.Nil(err)

@@ -11,7 +11,7 @@ import (
 	"github.com/timtadh/sfp/config"
 )
 
-func graph(t *testing.T) (*Graph, *goiso.Graph, *goiso.SubGraph, *SubGraph) {
+func graph(t *testing.T) (*Graph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *EmbListNode, *SearchNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 	n1 := G.AddVertex(1, "black")
@@ -33,25 +33,23 @@ func graph(t *testing.T) (*Graph, *goiso.Graph, *goiso.SubGraph, *SubGraph) {
 		Support: 2,
 	}
 
-	l, err := NewVegLoader(conf, true, MinImgSupported, 0, len(G.V), 0, len(G.E))
+	// make the *Graph
+	dt, err := NewGraph(conf, false, MinImgSupported, 0, len(G.V), 0, len(G.E))
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := l.(*VegLoader)
 
-	// compute the starting points (we are now ready to mine)
-	start, err := v.ComputeStartingPoints(G)
+	err = dt.Init(G)
 	if err != nil {
 		t.Fatal(err)
 	}
-	v.G.FrequentVertices = start
 
-	return v.G, G, sg, NewSubGraph(sg)
+	return dt, G, sg, NewSubGraph(sg), RootEmbListNode(dt), RootSearchNode(dt)
 }
 
 func TestEmebeddings(t *testing.T) {
 	x := assert.New(t)
-	dt, _, _, sg := graph(t)
+	dt, _, _, sg, _, _ := graph(t)
 	t.Log(sg)
 	t.Log(sg.Adj)
 
