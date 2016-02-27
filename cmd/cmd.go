@@ -406,11 +406,12 @@ func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hp:e:",
+		"hp:e:n:",
 		[]string{
 			"help",
 			"patterns=",
 			"embeddings=",
+			"names=",
 			"matrices=",
 			"probabilities=",
 			"show-pr",
@@ -421,7 +422,8 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 		Usage(ErrorCodes["opts"])
 	}
 	patterns := "patterns"
-	embeddings := "embeddigns"
+	embeddings := "embeddings"
+	names := "names.txt"
 	matrices := "matrices.json"
 	probabilities := "probabilities.prs"
 	showPr := false
@@ -433,6 +435,8 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 			patterns = oa.Arg()
 		case "-e", "--embeddings":
 			embeddings = oa.Arg()
+		case "-n", "--names":
+			names = oa.Arg()
 		case "--matrices":
 			matrices = oa.Arg()
 		case "--probabilites":
@@ -444,7 +448,7 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 			Usage(ErrorCodes["opts"])
 		}
 	}
-	fr, err := reporters.NewFile(conf, fmtr, showPr, patterns, embeddings, matrices, probabilities)
+	fr, err := reporters.NewFile(conf, fmtr, showPr, patterns, embeddings, names, matrices, probabilities)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)

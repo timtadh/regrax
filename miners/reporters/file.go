@@ -21,16 +21,21 @@ type File struct {
 	prfmt      lattice.PrFormatter
 	patterns   io.WriteCloser
 	embeddings io.WriteCloser
+	names      io.WriteCloser
 	matrices   io.WriteCloser
 	prs        io.WriteCloser
 }
 
-func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilename, embeddingsFilename, matricesFilename, prsFilename string) (*File, error) {
+func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilename, embeddingsFilename, namesFilename, matricesFilename, prsFilename string) (*File, error) {
 	patterns, err := os.Create(c.OutputFile(patternsFilename + fmt.FileExt()))
 	if err != nil {
 		return nil, err
 	}
 	embeddings, err := os.Create(c.OutputFile(embeddingsFilename + fmt.FileExt()))
+	if err != nil {
+		return nil, err
+	}
+	names, err := os.Create(c.OutputFile(namesFilename))
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +59,7 @@ func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilen
 		prfmt:      prfmt,
 		patterns:   patterns,
 		embeddings: embeddings,
+		names:      names,
 		matrices:   matrices,
 		prs:        prs,
 	}
@@ -66,6 +72,10 @@ func (r *File) Report(n lattice.Node) error {
 		return err
 	}
 	err = r.fmt.FormatEmbeddings(r.embeddings, n)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(r.names, "%v\n", r.fmt.PatternName(n))
 	if err != nil {
 		return err
 	}

@@ -189,6 +189,8 @@ Reporters
                                directory to write the embeddings
         -p, patterns=<name>    the prefix of the name of the file in the output
                                directory to write the patterns
+        -n, names=<name>       the name of the file in the output directory to
+                               write the pattern names
         --show-pr              show the selection probability (when applicable)
                                NB: may cause extra (and excessive computation)
         --matrices=<name>      when --show-pr (and the current <mode> supports
