@@ -134,7 +134,7 @@ func RootSearchNode(g *Digraph) *SearchNode {
 }
 
 func RootEmbListNode(g *Digraph) *EmbListNode {
-	return NewEmbListNode(g, nil, nil)
+	return NewEmbListNode(g, nil)
 }
 
 func (g *Digraph) Root() lattice.Node {
@@ -155,8 +155,8 @@ func VE(node lattice.Node) (V, E int) {
 			V = len(n.sgs[0].V)
 		}
 	case *SearchNode:
-		E = len(n.pat.E)
-		V = len(n.pat.V)
+		E = len(n.Pat.E)
+		V = len(n.Pat.V)
 	default:
 		panic(errors.Errorf("unknown node type %T %v", node, node))
 	}

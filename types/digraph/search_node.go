@@ -19,23 +19,28 @@ import (
 
 
 type SearchNode struct {
-	dt    *Digraph
-	pat   *SubGraph
+	Dt    *Digraph
+	Pat   *SubGraph
 }
 
-func NewSearchNode(dt *Digraph, sg *goiso.SubGraph) *SearchNode {
-	return &SearchNode{
-		dt: dt,
-		pat: NewSubGraph(sg),
+func newSearchNode(Dt *Digraph, sg *goiso.SubGraph) SearchNode {
+	return SearchNode{
+		Dt: Dt,
+		Pat: NewSubGraph(sg),
 	}
 }
 
-func LoadSearchNode(dt *Digraph, label []byte) (*SearchNode, error) {
+func NewSearchNode(Dt *Digraph, sg *goiso.SubGraph) *SearchNode {
+	n := newSearchNode(Dt, sg)
+	return &n
+}
+
+func LoadSearchNode(Dt *Digraph, label []byte) (*SearchNode, error) {
 	pat, err := LoadSubgraphFromLabel(label)
 	if err != nil {
 		return nil, err
 	}
-	return &SearchNode{dt: dt, pat: pat}, nil
+	return &SearchNode{Dt: Dt, Pat: pat}, nil
 }
 
 func (n *SearchNode) Save() error {
@@ -44,12 +49,12 @@ func (n *SearchNode) Save() error {
 }
 
 func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {
-	if has, err := n.dt.Embeddings.Has(n.Label()); err != nil {
+	if has, err := n.Dt.Embeddings.Has(n.Label()); err != nil {
 		return nil, err
 	} else if has {
 		return n.loadEmbeddings()
 	} else {
-		embs, err := n.pat.Embeddings(n.dt)
+		embs, err := n.Pat.Embeddings(n.Dt)
 		if err != nil {
 			return nil, err
 		}
@@ -62,9 +67,9 @@ func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {
 }
 
 func (n *SearchNode) loadEmbeddings() ([]*goiso.SubGraph, error) {
-	embs := make([]*goiso.SubGraph, 0, n.dt.Support())
+	embs := make([]*goiso.SubGraph, 0, n.Dt.Support())
 	label := n.Label()
-	err := n.dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
+	err := n.Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
 		embs = append(embs, sg)
 		return nil
 	})
@@ -77,7 +82,7 @@ func (n *SearchNode) loadEmbeddings() ([]*goiso.SubGraph, error) {
 func (n *SearchNode) saveEmbeddings(embs []*goiso.SubGraph) (error) {
 	label := n.Label()
 	for _, emb := range embs {
-		err := n.dt.Embeddings.Add(label, emb)
+		err := n.Dt.Embeddings.Add(label, emb)
 		if err != nil {
 			return err
 		}
@@ -86,9 +91,9 @@ func (n *SearchNode) saveEmbeddings(embs []*goiso.SubGraph) (error) {
 }
 
 func (n *SearchNode) loadFrequentVertices() ([]lattice.Node, error) {
-	nodes := make([]lattice.Node, 0, len(n.dt.FrequentVertices))
-	for _, label := range n.dt.FrequentVertices {
-		node, err := LoadSearchNode(n.dt, label)
+	nodes := make([]lattice.Node, 0, len(n.Dt.FrequentVertices))
+	for _, label := range n.Dt.FrequentVertices {
+		node, err := LoadSearchNode(n.Dt, label)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +120,7 @@ func (n *SearchNode) ParentCount() (int, error) {
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "Children of %v", n)
-	return n.children(false, n.dt.Children, n.dt.ChildCount)
+	return n.children(false, n.Dt.Children, n.Dt.ChildCount)
 }
 
 func (n *SearchNode) ChildCount() (int, error) {
@@ -124,7 +129,7 @@ func (n *SearchNode) ChildCount() (int, error) {
 
 func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "CanonKids of %v", n)
-	return n.children(true, n.dt.CanonKids, n.dt.CanonKidCount)
+	return n.children(true, n.Dt.CanonKids, n.Dt.CanonKidCount)
 }
 
 func (n *SearchNode) Maximal() (bool, error) {
@@ -137,13 +142,13 @@ func (n *SearchNode) Maximal() (bool, error) {
 }
 
 func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
-	if len(n.pat.V) == 0 {
+	if len(n.Pat.V) == 0 {
 		return n.loadFrequentVertices()
 	}
-	if len(n.pat.E) >= n.dt.MaxEdges {
+	if len(n.Pat.E) >= n.Dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
-	if nodes, has, err := cached(n.dt, childCount, children, n.Label()); err != nil {
+	if nodes, has, err := cached(n.Dt, childCount, children, n.Label()); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -151,16 +156,16 @@ func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, ch
 	// errors.Logf("DEBUG", "Children of %v", n)
 	exts := make(SubGraphs, 0, 10)
 	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
-		if n.dt.G.ColorFrequency(e.Color) < n.dt.Support() {
+		if n.Dt.G.ColorFrequency(e.Color) < n.Dt.Support() {
 			return exts, nil
-		} else if n.dt.G.ColorFrequency(n.dt.G.V[e.Src].Color) < n.dt.Support() {
+		} else if n.Dt.G.ColorFrequency(n.Dt.G.V[e.Src].Color) < n.Dt.Support() {
 			return exts, nil
-		} else if n.dt.G.ColorFrequency(n.dt.G.V[e.Targ].Color) < n.dt.Support() {
+		} else if n.Dt.G.ColorFrequency(n.Dt.G.V[e.Targ].Color) < n.Dt.Support() {
 			return exts, nil
 		}
 		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
 			ext, _ := sg.EdgeExtend(e)
-			if len(ext.V) > n.dt.MaxVertices {
+			if len(ext.V) > n.Dt.MaxVertices {
 				return exts, nil
 			}
 			exts = append(exts, ext)
@@ -173,13 +178,13 @@ func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, ch
 	}
 	for _, sg := range embs {
 		for _, u := range sg.V {
-			for _, e := range n.dt.G.Kids[u.Id] {
+			for _, e := range n.Dt.G.Kids[u.Id] {
 				exts, err = add(exts, sg, e)
 				if err != nil {
 					return nil, err
 				}
 			}
-			for _, e := range n.dt.G.Parents[u.Id] {
+			for _, e := range n.Dt.G.Parents[u.Id] {
 				exts, err = add(exts, sg, e)
 				if err != nil {
 					return nil, err
@@ -192,22 +197,22 @@ func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, ch
 	sum := 0
 	for _, sgs := range partitioned {
 		sum += len(sgs)
-		sn := NewSearchNode(n.dt, sgs[0])
+		sn := NewSearchNode(n.Dt, sgs[0])
 		snembs, err := sn.Embeddings()
 		if err != nil {
 			return nil, err
 		}
-		if len(snembs) < n.dt.Support() {
+		if len(snembs) < n.Dt.Support() {
 			continue
 		}
-		if len(n.dt.Supported(snembs)) >= n.dt.Support() {
+		if len(n.Dt.Supported(snembs)) >= n.Dt.Support() {
 			if checkCanon {
 				if canonized, err := isCanonicalExtension(embs[0], sgs[0]); err != nil {
 					return nil, err
 				} else if !canonized {
 					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
 				} else {
-					// errors.Logf("DEBUG", "len(embs) %v len(partition) %v len(supported) %v %v", len(embs), len(sgs), len(n.dt.Supported(embs)), sgs[0].Label())
+					// errors.Logf("DEBUG", "len(embs) %v len(partition) %v len(supported) %v %v", len(embs), len(sgs), len(n.Dt.Supported(embs)), sgs[0].Label())
 					nodes = append(nodes, sn)
 				}
 			} else {
@@ -216,7 +221,7 @@ func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, ch
 		}
 	}
 	// errors.Logf("DEBUG", "nodes %v", nodes)
-	return nodes, cache(n.dt, childCount, children, n.Label(), nodes)
+	return nodes, cache(n.Dt, childCount, children, n.Label(), nodes)
 }
 
 func (n *SearchNode) Lattice() (*lattice.Lattice, error) {
@@ -224,22 +229,22 @@ func (n *SearchNode) Lattice() (*lattice.Lattice, error) {
 }
 
 func (n *SearchNode) Level() int {
-	return len(n.pat.E) + 1
+	return len(n.Pat.E) + 1
 }
 
 func (n *SearchNode) Label() []byte {
-	return n.pat.Label()
+	return n.Pat.Label()
 }
 
 func (n *SearchNode) String() string {
-	sg := n.pat
+	sg := n.Pat
 	V := make([]string, 0, len(sg.V))
 	E := make([]string, 0, len(sg.E))
 	for _, v := range sg.V {
 		V = append(V, fmt.Sprintf(
 			"(%v:%v)",
 			v.Idx,
-			n.dt.G.Colors[v.Color],
+			n.Dt.G.Colors[v.Color],
 		))
 	}
 	for _, e := range sg.E {
@@ -247,16 +252,20 @@ func (n *SearchNode) String() string {
 			"[%v->%v:%v]",
 			e.Src,
 			e.Targ,
-			n.dt.G.Colors[e.Color],
+			n.Dt.G.Colors[e.Color],
 		))
 	}
 	return fmt.Sprintf("<SearchNode %v:%v%v%v>", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
 }
 
+type Labeled interface {
+	Label() []byte
+}
+
 func (n *SearchNode) Equals(o types.Equatable) bool {
 	a := types.ByteSlice(n.Label())
 	switch b := o.(type) {
-	case *Pattern: return a.Equals(types.ByteSlice(b.Label()))
+	case Labeled: return a.Equals(types.ByteSlice(b.Label()))
 	default: return false
 	}
 }
@@ -264,7 +273,7 @@ func (n *SearchNode) Equals(o types.Equatable) bool {
 func (n *SearchNode) Less(o types.Sortable) bool {
 	a := types.ByteSlice(n.Label())
 	switch b := o.(type) {
-	case *Pattern: return a.Less(types.ByteSlice(b.Label()))
+	case Labeled: return a.Less(types.ByteSlice(b.Label()))
 	default: return false
 	}
 }

@@ -44,7 +44,7 @@ func (f *Formatter) PatternName(node lattice.Node) string {
 			return "0:0"
 		}
 	case *SearchNode:
-		return n.pat.String()
+		return n.Pat.String()
 	default:
 		panic(errors.Errorf("unknown node type %v", node))
 	}
@@ -60,9 +60,9 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 			max = " # maximal"
 		}
 		if len(n.sgs) > 0 {
-			pat := n.sgs[0].Label()
+			Pat := n.sgs[0].Label()
 			dot := n.sgs[0].String()
-			return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
+			return fmt.Sprintf("// %s%s\n\n%s\n", Pat, max, dot), nil
 		} else {
 			return fmt.Sprintf("// 0:0\n\ndigraph{}\n", ), nil
 		}
@@ -73,7 +73,7 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 		} else if ismax {
 			max = " # maximal"
 		}
-		pat := n.pat.String()
+		pat := n.Pat.String()
 		embs, err := n.Embeddings()
 		if err != nil {
 			return "", err
