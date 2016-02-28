@@ -62,6 +62,15 @@ func NewSubGraph(sg *goiso.SubGraph) *SubGraph {
 	return pat
 }
 
+func LoadSubgraphFromLabel(label []byte) (*SubGraph, error) {
+	sg := new(SubGraph)
+	err := sg.UnmarshalBinary(label)
+	if err != nil {
+		return nil, err
+	}
+	return sg, nil
+}
+
 func (sg *SubGraph) Embeddings(dt *Digraph) ([]*goiso.SubGraph, error) {
 	// errors.Logf("DEBUG", "Embeddings of %v", sg)
 	if len(sg.V) == 0 {
@@ -315,7 +324,6 @@ func (sg *SubGraph) UnmarshalBinary(bytes []byte) (error) {
 	}
 	return nil
 }
-
 
 func (sg *SubGraph) Label() []byte {
 	size := 8 + len(sg.V)*4 + len(sg.E)*12

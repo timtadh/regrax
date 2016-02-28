@@ -30,6 +30,19 @@ func NewSearchNode(dt *Digraph, sg *goiso.SubGraph) *SearchNode {
 	}
 }
 
+func LoadSearchNode(dt *Digraph, label []byte) (*SearchNode, error) {
+	pat, err := LoadSubgraphFromLabel(label)
+	if err != nil {
+		return nil, err
+	}
+	return &SearchNode{dt: dt, pat: pat}, nil
+}
+
+func (n *SearchNode) Save() error {
+	_, err := n.Embeddings() // ensures that the label is in the embeddings table
+	return err
+}
+
 func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {
 	if has, err := n.dt.Embeddings.Has(n.Label()); err != nil {
 		return nil, err
@@ -72,6 +85,18 @@ func (n *SearchNode) saveEmbeddings(embs []*goiso.SubGraph) (error) {
 	return nil
 }
 
+func (n *SearchNode) loadFrequentVertices() ([]lattice.Node, error) {
+	nodes := make([]lattice.Node, 0, len(n.dt.FrequentVertices))
+	for _, label := range n.dt.FrequentVertices {
+		node, err := LoadSearchNode(n.dt, label)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes, nil
+}
+
 func (n *SearchNode) Pattern() lattice.Pattern {
 	return n
 }
@@ -112,11 +137,9 @@ func (n *SearchNode) Maximal() (bool, error) {
 }
 
 func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
-	return nil, errors.Errorf("unfinished")
-	// need to rewrite this line
-	// if len(n.pat.V) == 0 {
-	// 	return n.dt.FrequentVertices, nil
-	// }
+	if len(n.pat.V) == 0 {
+		return n.loadFrequentVertices()
+	}
 	if len(n.pat.E) >= n.dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
