@@ -13,6 +13,10 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
+type Saveable interface {
+	Save() error
+}
+
 func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
 	if has, err := count.Has(key); err != nil {
 		return err
@@ -25,19 +29,17 @@ func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, ke
 	}
 	for _, n := range nodes {
 		switch node := n.(type) {
-		case *SearchNode:
-			return errors.Errorf("unimplemented")
-		case *EmbListNode:
+		case Saveable:
 			err = node.Save()
-			if err != nil {
-				return err
-			}
-			err = cache.Add(key, node.pat.label)
 			if err != nil {
 				return err
 			}
 		default:
 			return errors.Errorf("unexpected lattice.Node type %T %v", n, n)
+		}
+		err = cache.Add(key, n.Pattern().Label())
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -49,16 +51,17 @@ func cached(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, k
 	} else if !has {
 		return nil, false, nil
 	}
-	err = cache.DoFind(key, func(_, adj []byte) error {
+	err = cache.DoFind(key, func(_, adj []byte) (err error) {
+		var node lattice.Node
 		if dt.search {
-			return errors.Errorf("unimplemented")
+			node, err = LoadSearchNode(dt, adj)
 		} else {
-			node, err := LoadEmbListNode(dt, adj)
-			if err != nil {
-				return err
-			}
-			nodes = append(nodes, node)
+			node, err = LoadEmbListNode(dt, adj)
 		}
+		if err != nil {
+			return err
+		}
+		nodes = append(nodes, node)
 		return nil
 	})
 	if err != nil {
