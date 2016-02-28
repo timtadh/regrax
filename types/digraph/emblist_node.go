@@ -266,9 +266,21 @@ func (n *EmbListNode) CanonKids() (nodes []lattice.Node, err error) {
 	return n.children(true, n.dt.CanonKids, n.dt.CanonKidCount)
 }
 
+func (n *EmbListNode) loadFrequentVertices() ([]lattice.Node, error) {
+	nodes := make([]lattice.Node, 0, len(n.dt.FrequentVertices))
+	for _, label := range n.dt.FrequentVertices {
+		node, err := LoadEmbListNode(n.dt, label)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes, nil
+}
+
 func (n *EmbListNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
 	if len(n.sgs) == 0 {
-		return n.dt.FrequentVertices, nil
+		return n.loadFrequentVertices()
 	}
 	if len(n.sgs[0].E) >= n.dt.MaxEdges {
 		return []lattice.Node{}, nil
@@ -318,6 +330,7 @@ func (n *EmbListNode) children(checkCanon bool, children bytes_bytes.MultiMap, c
 	sum := 0
 	for _, sgs := range partitioned {
 		sum += len(sgs)
+		sgs = DedupSupported(sgs)
 		// errors.Logf("DEBUG", "len(partition) %v %v", len(sgs), sgs[0].Label())
 		if len(sgs) < n.dt.Support() {
 			continue

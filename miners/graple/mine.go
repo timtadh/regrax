@@ -98,9 +98,6 @@ func (m *Sparse) Dense() *matrix.DenseMatrix {
 }
 
 func (w *Walker) SelectionProbability(Q_, R_, u_ *Sparse) (float64, error) {
-	if Q_.Rows == 0 && Q_.Cols == 0 {
-		return 1.0 / float64(len(w.Start)), nil
-	}
 	Q := Q_.Dense()
 	R := R_.Dense()
 	u := u_.Dense()
@@ -160,7 +157,7 @@ func MakeAbsorbingWalk(sample func(lattice.Node) (lattice.Node, error), errs cha
 		terminate := make(chan bool)
 		go func() {
 			for {
-				sampled, err := sample(wlkr.Dt.Empty())
+				sampled, err := sample(wlkr.Dt.Root())
 				if err != nil {
 					errs <- err
 					break

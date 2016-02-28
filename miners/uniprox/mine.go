@@ -74,7 +74,7 @@ func (w *Walker) transitionProbability(cur, next lattice.Node, pr float64) error
 		return nil
 	}
 	var curPr float64
-	if bytes.Equal(w.Dt.Empty().Pattern().Label(), cur.Pattern().Label()) {
+	if bytes.Equal(w.Dt.Root().Pattern().Label(), cur.Pattern().Label()) {
 		curPr = 1.0
 	} else {
 		err := w.Prs.DoFind(cur.Pattern().Label(), func(_ []byte, cpr float64) error {

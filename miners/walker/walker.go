@@ -20,7 +20,6 @@ type Walker struct {
 	Config *config.Config
 	Dt     lattice.DataType
 	Rptr   miners.Reporter
-	Start  []lattice.Node
 	Walk   Walk
 	Reject bool
 }
@@ -41,8 +40,7 @@ func (w *Walker) Init(dt lattice.DataType, rptr miners.Reporter) (err error) {
 	errors.Logf("INFO", "about to load singleton nodes")
 	w.Dt = dt
 	w.Rptr = rptr
-	w.Start, err = w.Dt.Singletons()
-	return err
+	return nil
 }
 
 func (w *Walker) Close() error {

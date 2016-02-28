@@ -38,7 +38,11 @@ func (f *Formatter) FileExt() string {
 func (f *Formatter) PatternName(node lattice.Node) string {
 	switch n := node.(type) {
 	case *EmbListNode:
-		return n.sgs[0].Label()
+		if len(n.sgs) > 0 {
+			return n.sgs[0].Label()
+		} else {
+			return "0:0"
+		}
 	case *SearchNode:
 		return n.pat.String()
 	default:
@@ -55,9 +59,13 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 		} else if ismax {
 			max = " # maximal"
 		}
-		pat := n.sgs[0].Label()
-		dot := n.sgs[0].String()
-		return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
+		if len(n.sgs) > 0 {
+			pat := n.sgs[0].Label()
+			dot := n.sgs[0].String()
+			return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
+		} else {
+			return fmt.Sprintf("// 0:0\n\ndigraph{}\n", ), nil
+		}
 	case *SearchNode:
 		max := ""
 		if ismax, err := n.Maximal(); err != nil {

@@ -21,7 +21,7 @@ func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {
 		terminate := make(chan bool)
 		errs := make(chan error)
 		go func() {
-			cur := w.Start[rand.Intn(len(w.Start))]
+			cur := w.Dt.Root()
 		loop:
 			for {
 				samples <- cur
@@ -30,7 +30,7 @@ func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {
 				}
 				if rand.Float64() < restartPr {
 					errors.Logf("INFO", "a random restart occured with probability %v", restartPr)
-					cur = w.Start[rand.Intn(len(w.Start))]
+					cur = w.Dt.Root()
 				} else {
 					curLabel := cur.Pattern().Label()
 					nextLabel := curLabel

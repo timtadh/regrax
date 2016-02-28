@@ -112,9 +112,11 @@ func (n *SearchNode) Maximal() (bool, error) {
 }
 
 func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
-	if len(n.pat.V) == 0 {
-		return n.dt.FrequentVertices, nil
-	}
+	return nil, errors.Errorf("unfinished")
+	// need to rewrite this line
+	// if len(n.pat.V) == 0 {
+	// 	return n.dt.FrequentVertices, nil
+	// }
 	if len(n.pat.E) >= n.dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}

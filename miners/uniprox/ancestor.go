@@ -85,11 +85,10 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	// construct the digraph from the patterns
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
-	l, err := digraph.NewVegLoader(conf, false, digraph.MinImgSupported, 0, maxE, 0, maxV)
+	dt, err := digraph.NewGraph(conf, false, digraph.MinImgSupported, 0, maxE, 0, maxV)
 	if err != nil {
 		return nil, err
 	}
-	v := l.(*digraph.VegLoader)
 	offset := 0
 	for _, pat := range patterns {
 		sg := pat.(*digraph.Pattern).Sg
@@ -102,18 +101,16 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 		offset += len(sg.V)
 	}
 
-	// compute the starting points (we are now ready to mine)
-	start, err := v.ComputeStartingPoints(G)
+	// init the datatype (we are now ready to mine)
+	err = dt.Init(G)
 	if err != nil {
 		return nil, err
 	}
-	v.G.FrequentVertices = start
-	var dt lattice.DataType = v.G
 
 	errors.Logf("DEBUG", "patterns %v %v", len(patterns), G)
 
 	// create the reporter
-	fmtr := digraph.NewFormatter(v.G, nil)
+	fmtr := digraph.NewFormatter(dt, nil)
 	collector := &reporters.Collector{make([]lattice.Node, 0, 10)}
 	uniq, err := reporters.NewUnique(conf, fmtr, collector, "")
 	if err != nil {

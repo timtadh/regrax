@@ -44,6 +44,7 @@ func (self ErrorList) Error() string {
 type Graph struct {
 	MinEdges, MaxEdges, MinVertices, MaxVertices int
 	G                                            *goiso.Graph
+	FrequentVertices                             [][]byte
 	Supported                                    Supported
 	NodeAttrs                                    int_json.MultiMap
 	Embeddings                                   bytes_subgraph.MultiMap
@@ -234,6 +235,11 @@ func (dt *Graph) Init(G *goiso.Graph) (err error) {
 			}
 		}
 	}
+
+	err = bytes_subgraph.DoKey(dt.Embeddings.Keys, func(label []byte) error {
+		dt.FrequentVertices = append(dt.FrequentVertices, label)
+		return nil
+	})
 
 	return nil
 }

@@ -17,7 +17,6 @@ type Miner struct {
 	Config *config.Config
 	Dt     lattice.DataType
 	Rptr   miners.Reporter
-	Start  []lattice.Node
 }
 
 func NewMiner(conf *config.Config) *Miner {
@@ -34,8 +33,7 @@ func (m *Miner) Init(dt lattice.DataType, rptr miners.Reporter) (err error) {
 	errors.Logf("INFO", "about to load singleton nodes")
 	m.Dt = dt
 	m.Rptr = rptr
-	m.Start, err = m.Dt.Singletons()
-	return err
+	return nil
 }
 
 func (m *Miner) Close() error {
@@ -73,10 +71,8 @@ func (m *Miner) mine() error {
 	pop := func(stack []lattice.Node) ([]lattice.Node, lattice.Node) {
 		return stack[:len(stack)-1], stack[len(stack)-1]
 	}
-	stack := make([]lattice.Node, 0, len(m.Start))
-	for _, n := range m.Start {
-		stack = append(stack, n)
-	}
+	stack := make([]lattice.Node, 0, 10)
+	stack = append(stack, m.Dt.Root())
 	for len(stack) > 0 {
 		var n lattice.Node
 		stack, n = pop(stack)

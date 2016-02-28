@@ -123,7 +123,7 @@ func (i *ItemSets) MinimumLevel() int {
 	return i.MinItems
 }
 
-func (i *ItemSets) Empty() lattice.Node {
+func (i *ItemSets) Root() lattice.Node {
 	return i.empty
 }
 

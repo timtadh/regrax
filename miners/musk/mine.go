@@ -1,7 +1,6 @@
 package musk
 
 import (
-	"math/rand"
 )
 
 import (
@@ -21,7 +20,7 @@ func MakeMaxUniformWalk(next Transition, ctx interface{}) walker.Walk {
 		terminate := make(chan bool)
 		errs := make(chan error)
 		go func() {
-			cur := w.Start[rand.Intn(len(w.Start))]
+			cur := w.Dt.Root()
 		loop:
 			for {
 				var sampled lattice.Node = nil
