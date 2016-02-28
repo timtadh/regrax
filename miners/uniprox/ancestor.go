@@ -85,10 +85,6 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	// construct the digraph from the patterns
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
-	dt, err := digraph.NewGraph(conf, false, digraph.MinImgSupported, 0, maxE, 0, maxV)
-	if err != nil {
-		return nil, err
-	}
 	offset := 0
 	for _, pat := range patterns {
 		sg := pat.(*digraph.Pattern).Sg
@@ -102,6 +98,10 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	}
 
 	// init the datatype (we are now ready to mine)
+	dt, err := digraph.NewDigraph(conf, false, digraph.MinImgSupported, 0, maxE, 0, maxV)
+	if err != nil {
+		return nil, err
+	}
 	err = dt.Init(G)
 	if err != nil {
 		return nil, err

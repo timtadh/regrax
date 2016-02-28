@@ -11,7 +11,7 @@ import (
 	"github.com/timtadh/sfp/config"
 )
 
-func graph(t *testing.T) (*Graph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *EmbListNode, *SearchNode) {
+func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *EmbListNode, *SearchNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 	n1 := G.AddVertex(1, "black")
@@ -33,8 +33,8 @@ func graph(t *testing.T) (*Graph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *Emb
 		Support: 2,
 	}
 
-	// make the *Graph
-	dt, err := NewGraph(conf, false, MinImgSupported, 0, len(G.V), 0, len(G.E))
+	// make the *Digraph
+	dt, err := NewDigraph(conf, false, MinImgSupported, 0, len(G.V), 0, len(G.E))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
-func cache(dt *Graph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
+func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
 	if has, err := count.Has(key); err != nil {
 		return err
 	} else if has {
@@ -43,7 +43,7 @@ func cache(dt *Graph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key 
 	return nil
 }
 
-func cached(dt *Graph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte) (nodes []lattice.Node, has bool, err error) {
+func cached(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte) (nodes []lattice.Node, has bool, err error) {
 	if has, err := count.Has(key); err != nil {
 		return nil, false, err
 	} else if !has {

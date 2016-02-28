@@ -32,7 +32,7 @@ var EmptyPattern = &Pattern{
 
 type EmbListNode struct {
 	pat     Pattern
-	dt      *Graph
+	dt      *Digraph
 	sgs     SubGraphs
 }
 
@@ -96,11 +96,11 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 	return parts
 }
 
-func NewEmbListNode(dt *Graph, label []byte, sgs SubGraphs) *EmbListNode {
+func NewEmbListNode(dt *Digraph, label []byte, sgs SubGraphs) *EmbListNode {
 	return &EmbListNode{Pattern{label: label}, dt, sgs}
 }
 
-func LoadEmbListNode(dt *Graph, label []byte) (*EmbListNode, error) {
+func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
 	sgs := make(SubGraphs, 0, 10)
 	err := dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
 		sgs = append(sgs, sg)
@@ -178,7 +178,7 @@ func (n *EmbListNode) Parents() ([]lattice.Node, error) {
 	return parents, cache(n.dt, n.dt.ParentCount, n.dt.Parents, n.pat.label, parents)
 }
 
-func FindEmbListNode(dt *Graph, target *goiso.SubGraph) (*EmbListNode, error) {
+func FindEmbListNode(dt *Digraph, target *goiso.SubGraph) (*EmbListNode, error) {
 	label := target.ShortLabel()
 	if has, err := dt.Embeddings.Has(label); err != nil {
 		return nil, err
@@ -211,7 +211,7 @@ func FindEmbListNode(dt *Graph, target *goiso.SubGraph) (*EmbListNode, error) {
 	return cur, cur.Save()
 }
 
-func edgeChain(dt *Graph, target *goiso.SubGraph) (start *EmbListNode, graphs []*goiso.SubGraph, err error) {
+func edgeChain(dt *Digraph, target *goiso.SubGraph) (start *EmbListNode, graphs []*goiso.SubGraph, err error) {
 	cur := target
 	// errors.Logf("DEBUG", "doing edgeChain\n    of %v", target.Label())
 	graphs = make([]*goiso.SubGraph, len(cur.E))

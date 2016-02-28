@@ -359,7 +359,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		log.Panic(err)
 	}
 	fmtr := func(dt lattice.DataType, prfmt lattice.PrFormatter) lattice.Formatter {
-		g := dt.(*digraph.Graph)
+		g := dt.(*digraph.Digraph)
 		return digraph.NewFormatter(g, prfmt)
 	}
 	return loader, fmtr, args

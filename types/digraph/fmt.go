@@ -16,11 +16,11 @@ import (
 )
 
 type Formatter struct {
-	g *Graph
+	g *Digraph
 	prfmt lattice.PrFormatter
 }
 
-func NewFormatter(g *Graph, prfmt lattice.PrFormatter) *Formatter {
+func NewFormatter(g *Digraph, prfmt lattice.PrFormatter) *Formatter {
 	return &Formatter{
 		g: g,
 		prfmt: prfmt,

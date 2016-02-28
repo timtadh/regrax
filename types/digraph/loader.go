@@ -37,11 +37,11 @@ func (self ErrorList) Error() string {
 
 
 /// Tim you are here: You removed the FrequentVertices list of lattice.Node in order to 
-/// make Graph able to support both SearchNode and EmbListNode at the same time. The .search
+/// make Digraph able to support both SearchNode and EmbListNode at the same time. The .search
 /// value would simply be a hint of which type of vertice to use for .Root(). However, the
 /// first extension is special cased to just give the FrequentVertices. How to handle this?
 
-type Graph struct {
+type Digraph struct {
 	MinEdges, MaxEdges, MinVertices, MaxVertices int
 	G                                            *goiso.Graph
 	FrequentVertices                             [][]byte
@@ -59,7 +59,7 @@ type Graph struct {
 	search                                       bool
 }
 
-func NewGraph(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (g *Graph, err error) {
+func NewDigraph(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (g *Digraph, err error) {
 	nodeAttrs, err := config.IntJsonMultiMap("digraph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func NewGraph(config *config.Config, search bool, sup Supported, minE, maxE, min
 	if err != nil {
 		return nil, err
 	}
-	g = &Graph{
+	g = &Digraph{
 		Supported:     sup,
 		MinEdges:      minE,
 		MaxEdges:      maxE,
@@ -112,15 +112,15 @@ func NewGraph(config *config.Config, search bool, sup Supported, minE, maxE, min
 	return g, nil
 }
 
-func (g *Graph) Support() int {
+func (g *Digraph) Support() int {
 	return g.config.Support
 }
 
-func (g *Graph) LargestLevel() int {
+func (g *Digraph) LargestLevel() int {
 	return g.MaxEdges
 }
 
-func (g *Graph) MinimumLevel() int {
+func (g *Digraph) MinimumLevel() int {
 	if g.MinEdges > 0 {
 		return g.MinEdges
 	} else if g.MinVertices > 0 {
@@ -129,15 +129,15 @@ func (g *Graph) MinimumLevel() int {
 	return 0
 }
 
-func RootSearchNode(g *Graph) *SearchNode {
+func RootSearchNode(g *Digraph) *SearchNode {
 	return NewSearchNode(g, nil)
 }
 
-func RootEmbListNode(g *Graph) *EmbListNode {
+func RootEmbListNode(g *Digraph) *EmbListNode {
 	return NewEmbListNode(g, nil, nil)
 }
 
-func (g *Graph) Root() lattice.Node {
+func (g *Digraph) Root() lattice.Node {
 	if g.search {
 		return RootSearchNode(g)
 	} else {
@@ -163,17 +163,17 @@ func VE(node lattice.Node) (V, E int) {
 	return V, E
 }
 
-func (g *Graph) Acceptable(node lattice.Node) bool {
+func (g *Digraph) Acceptable(node lattice.Node) bool {
 	V, E := VE(node)
 	return g.MinEdges <= E && E <= g.MaxEdges && g.MinVertices <= V && V <= g.MaxVertices
 }
 
-func (g *Graph) TooLarge(node lattice.Node) bool {
+func (g *Digraph) TooLarge(node lattice.Node) bool {
 	V, E := VE(node)
 	return E > g.MaxEdges || V > g.MaxVertices
 }
 
-func (g *Graph) Close() error {
+func (g *Digraph) Close() error {
 	g.config.AsyncTasks.Wait()
 	g.Parents.Close()
 	g.ParentCount.Close()
@@ -188,11 +188,11 @@ func (g *Graph) Close() error {
 }
 
 type VegLoader struct {
-	dt *Graph
+	dt *Digraph
 }
 
 func NewVegLoader(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
-	g, err := NewGraph(config, search, sup, minE, maxE, minV, maxV)
+	g, err := NewDigraph(config, search, sup, minE, maxE, minV, maxV)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func NewVegLoader(config *config.Config, search bool, sup Supported, minE, maxE,
 }
 
 func (v *VegLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
-	G, err := v.loadGraph(input)
+	G, err := v.loadDigraph(input)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func (v *VegLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
 	return v.dt, nil
 }
 
-func (dt *Graph) Init(G *goiso.Graph) (err error) {
+func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 	dt.G = G
 	dt.Embeddings, err = dt.config.BytesSubgraphMultiMap("digraph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
 	if err != nil {
@@ -244,7 +244,7 @@ func (dt *Graph) Init(G *goiso.Graph) (err error) {
 	return nil
 }
 
-func (v *VegLoader) loadGraph(input lattice.Input) (graph *goiso.Graph, err error) {
+func (v *VegLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err error) {
 	var errs ErrorList
 	V, E, err := graphSize(input)
 	if err != nil {

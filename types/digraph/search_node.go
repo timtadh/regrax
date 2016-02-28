@@ -19,11 +19,11 @@ import (
 
 
 type SearchNode struct {
-	dt    *Graph
+	dt    *Digraph
 	pat   *SubGraph
 }
 
-func NewSearchNode(dt *Graph, sg *goiso.SubGraph) *SearchNode {
+func NewSearchNode(dt *Digraph, sg *goiso.SubGraph) *SearchNode {
 	return &SearchNode{
 		dt: dt,
 		pat: NewSubGraph(sg),

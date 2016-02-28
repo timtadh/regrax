@@ -62,7 +62,7 @@ func NewSubGraph(sg *goiso.SubGraph) *SubGraph {
 	return pat
 }
 
-func (sg *SubGraph) Embeddings(dt *Graph) ([]*goiso.SubGraph, error) {
+func (sg *SubGraph) Embeddings(dt *Digraph) ([]*goiso.SubGraph, error) {
 	// errors.Logf("DEBUG", "Embeddings of %v", sg)
 	if len(sg.V) == 0 {
 		return nil, nil
@@ -120,7 +120,7 @@ func (sg *SubGraph) Matches(emb *goiso.SubGraph) bool {
 	return true
 }
 
-func (sg *SubGraph) LeastCommonVertex(dt *Graph) int {
+func (sg *SubGraph) LeastCommonVertex(dt *Digraph) int {
 	minFreq := -1
 	minIdx := -1
 	for i := range sg.V {
@@ -133,7 +133,7 @@ func (sg *SubGraph) LeastCommonVertex(dt *Graph) int {
 	return minIdx
 }
 
-func (sg *SubGraph) VertexEmbeddings(dt *Graph, idx int) ([]*goiso.SubGraph, error) {
+func (sg *SubGraph) VertexEmbeddings(dt *Digraph, idx int) ([]*goiso.SubGraph, error) {
 	embs := make([]*goiso.SubGraph, 0, dt.G.ColorFrequency(sg.V[idx].Color))
 	err := dt.ColorMap.DoFind(int32(sg.V[idx].Color), func(color, dtIdx int32) error {
 		sg, _ := dt.G.VertexSubGraph(int(dtIdx))
@@ -178,7 +178,7 @@ func (sg *SubGraph) EdgeChainFrom(idx int) []*Edge {
 	return edges
 }
 
-func (sg *SubGraph) ExtendEmbedding(dt *Graph, cur *goiso.SubGraph, e *Edge) []*goiso.SubGraph {
+func (sg *SubGraph) ExtendEmbedding(dt *Digraph, cur *goiso.SubGraph, e *Edge) []*goiso.SubGraph {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	exts := make([]*goiso.SubGraph, 0, 10)
 	srcs := sg.findSrcs(cur, e)
@@ -231,7 +231,7 @@ func (sg *SubGraph) findTargs(cur *goiso.SubGraph, e *Edge) []int {
 	return targs
 }
 
-func (sg *SubGraph) findEdgesFromSrc(dt *Graph, cur *goiso.SubGraph, src int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesFromSrc(dt *Digraph, cur *goiso.SubGraph, src int, e *Edge) []*goiso.Edge {
 	srcDtIdx := cur.V[src].Id
 	tcolor := sg.V[e.Targ].Color
 	ecolor := e.Color
@@ -249,7 +249,7 @@ func (sg *SubGraph) findEdgesFromSrc(dt *Graph, cur *goiso.SubGraph, src int, e 
 	return edges
 }
 
-func (sg *SubGraph) findEdgesFromTarg(dt *Graph, cur *goiso.SubGraph, targ int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesFromTarg(dt *Digraph, cur *goiso.SubGraph, targ int, e *Edge) []*goiso.Edge {
 	targDtIdx := cur.V[targ].Id
 	scolor := sg.V[e.Src].Color
 	ecolor := e.Color
