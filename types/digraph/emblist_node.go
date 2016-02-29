@@ -275,51 +275,11 @@ func (n *EmbListNode) AdjacentCount() (int, error) {
 }
 
 func (n *EmbListNode) ParentCount() (int, error) {
-	if len(n.sgs) == 0 {
-		return 0, nil
-	}
-	if has, err := n.Dt.ParentCount.Has(n.Label()); err != nil {
-		return 0, err
-	} else if !has {
-		nodes, err := n.Parents()
-		if err != nil {
-			return 0, err
-		}
-		return len(nodes), nil
-	}
-	var count int32
-	err := n.Dt.ParentCount.DoFind(n.Label(), func(_ []byte, c int32) error {
-		count = c
-		return nil
-	})
-	if err != nil {
-		return 0, err
-	}
-	return int(count), nil
+	return count(n, n.Parents, n.Dt.ParentCount)
 }
 
 func (n *EmbListNode) ChildCount() (int, error) {
-	if len(n.sgs) == 0 {
-		return len(n.Dt.FrequentVertices), nil
-	}
-	if has, err := n.Dt.ChildCount.Has(n.Label()); err != nil {
-		return 0, err
-	} else if !has {
-		nodes, err := n.Children()
-		if err != nil {
-			return 0, err
-		}
-		return len(nodes), nil
-	}
-	var count int32
-	err := n.Dt.ChildCount.DoFind(n.Label(), func(_ []byte, c int32) error {
-		count = c
-		return nil
-	})
-	if err != nil {
-		return 0, err
-	}
-	return int(count), nil
+	return count(n, n.Children, n.Dt.ChildCount)
 }
 
 func (n *EmbListNode) Maximal() (bool, error) {
