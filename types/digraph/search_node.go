@@ -124,7 +124,7 @@ func (n *SearchNode) Parents() ([]lattice.Node, error) {
 }
 
 func (n *SearchNode) ParentCount() (int, error) {
-	return 0, errors.Errorf("unimplemented")
+	return count(n, n.Parents, n.Dt.ParentCount)
 }
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
@@ -133,7 +133,7 @@ func (n *SearchNode) Children() ([]lattice.Node, error) {
 }
 
 func (n *SearchNode) ChildCount() (int, error) {
-	return 0, errors.Errorf("unimplemented")
+	return count(n, n.Children, n.Dt.ChildCount)
 }
 
 func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
@@ -142,12 +142,11 @@ func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
 }
 
 func (n *SearchNode) Maximal() (bool, error) {
-	// errors.Logf("DEBUG", "Maximal of %v", n)
-	kids, err := n.Children()
+	count, err := n.ChildCount()
 	if err != nil {
 		return false, err
 	}
-	return len(kids) == 0, nil
+	return count == 0, nil
 }
 
 func (n *SearchNode) Lattice() (*lattice.Lattice, error) {
