@@ -340,7 +340,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	case "max-indep":
 		supported = digraph.MaxIndepSupported
 	case "dedup":
-		supported = digraph.DedupSupported
+		supported = digraph.Dedup
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown support function '%v'\n", supportedFunc)
 		fmt.Fprintf(os.Stderr, "funcs: min-image, max-indep, dedup\n")

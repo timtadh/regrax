@@ -13,8 +13,6 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/bytes_bytes"
-	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
 
@@ -35,12 +33,23 @@ func NewSearchNode(Dt *Digraph, sg *goiso.SubGraph) *SearchNode {
 	return &n
 }
 
+func (n *SearchNode) New(sgs []*goiso.SubGraph) Node {
+	if len(sgs) > 0 {
+		return NewSearchNode(n.Dt, sgs[0])
+	}
+	return NewSearchNode(n.Dt, nil)
+}
+
 func LoadSearchNode(Dt *Digraph, label []byte) (*SearchNode, error) {
 	pat, err := LoadSubgraphFromLabel(label)
 	if err != nil {
 		return nil, err
 	}
 	return &SearchNode{Dt: Dt, Pat: pat}, nil
+}
+
+func (n *SearchNode) dt() *Digraph {
+	return n.Dt
 }
 
 func (n *SearchNode) Save() error {
@@ -120,7 +129,7 @@ func (n *SearchNode) ParentCount() (int, error) {
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "Children of %v", n)
-	return n.children(false, n.Dt.Children, n.Dt.ChildCount)
+	return children(n, false, n.Dt.Children, n.Dt.ChildCount)
 }
 
 func (n *SearchNode) ChildCount() (int, error) {
@@ -129,7 +138,7 @@ func (n *SearchNode) ChildCount() (int, error) {
 
 func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "CanonKids of %v", n)
-	return n.children(true, n.Dt.CanonKids, n.Dt.CanonKidCount)
+	return children(n, true, n.Dt.CanonKids, n.Dt.CanonKidCount)
 }
 
 func (n *SearchNode) Maximal() (bool, error) {
@@ -141,95 +150,20 @@ func (n *SearchNode) Maximal() (bool, error) {
 	return len(kids) == 0, nil
 }
 
-func (n *SearchNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
-	if len(n.Pat.V) == 0 {
-		return n.loadFrequentVertices()
-	}
-	if len(n.Pat.E) >= n.Dt.MaxEdges {
-		return []lattice.Node{}, nil
-	}
-	if nodes, has, err := cached(n.Dt, childCount, children, n.Label()); err != nil {
-		return nil, err
-	} else if has {
-		return nodes, nil
-	}
-	// errors.Logf("DEBUG", "Children of %v", n)
-	exts := make(SubGraphs, 0, 10)
-	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
-		if n.Dt.G.ColorFrequency(e.Color) < n.Dt.Support() {
-			return exts, nil
-		} else if n.Dt.G.ColorFrequency(n.Dt.G.V[e.Src].Color) < n.Dt.Support() {
-			return exts, nil
-		} else if n.Dt.G.ColorFrequency(n.Dt.G.V[e.Targ].Color) < n.Dt.Support() {
-			return exts, nil
-		}
-		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
-			ext, _ := sg.EdgeExtend(e)
-			if len(ext.V) > n.Dt.MaxVertices {
-				return exts, nil
-			}
-			exts = append(exts, ext)
-		}
-		return exts, nil
-	}
-	embs, err := n.Embeddings()
-	if err != nil {
-		return nil, err
-	}
-	for _, sg := range embs {
-		for _, u := range sg.V {
-			for _, e := range n.Dt.G.Kids[u.Id] {
-				exts, err = add(exts, sg, e)
-				if err != nil {
-					return nil, err
-				}
-			}
-			for _, e := range n.Dt.G.Parents[u.Id] {
-				exts, err = add(exts, sg, e)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-	// errors.Logf("DEBUG", "len(exts) %v", len(exts))
-	partitioned := exts.Partition()
-	sum := 0
-	for _, sgs := range partitioned {
-		sum += len(sgs)
-		sn := NewSearchNode(n.Dt, sgs[0])
-		snembs, err := sn.Embeddings()
-		if err != nil {
-			return nil, err
-		}
-		if len(snembs) < n.Dt.Support() {
-			continue
-		}
-		if len(n.Dt.Supported(snembs)) >= n.Dt.Support() {
-			if checkCanon {
-				if canonized, err := isCanonicalExtension(embs[0], sgs[0]); err != nil {
-					return nil, err
-				} else if !canonized {
-					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
-				} else {
-					// errors.Logf("DEBUG", "len(embs) %v len(partition) %v len(supported) %v %v", len(embs), len(sgs), len(n.Dt.Supported(embs)), sgs[0].Label())
-					nodes = append(nodes, sn)
-				}
-			} else {
-				nodes = append(nodes, sn)
-			}
-		}
-	}
-	// errors.Logf("DEBUG", "nodes %v", nodes)
-	return nodes, cache(n.Dt, childCount, children, n.Label(), nodes)
-}
-
 func (n *SearchNode) Lattice() (*lattice.Lattice, error) {
 	return nil, &lattice.NoLattice{}
 }
 
+func (n *SearchNode) edges() int {
+	return len(n.Pat.E)
+}
+
+func (n *SearchNode) isRoot() bool {
+	return len(n.Pat.E) == 0 && len(n.Pat.V) == 0
+}
+
 func (n *SearchNode) Level() int {
-	return len(n.Pat.E) + 1
+	return n.edges() + 1
 }
 
 func (n *SearchNode) Label() []byte {

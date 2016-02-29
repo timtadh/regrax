@@ -92,7 +92,7 @@ func (sg *SubGraph) Embeddings(dt *Digraph) ([]*goiso.SubGraph, error) {
 				next = append(next, ext)
 			}
 		}
-		cur = DedupSupported(next)
+		cur = Dedup(next)
 	}
 	final := make([]*goiso.SubGraph, 0, len(cur))
 	for _, emb := range cur {

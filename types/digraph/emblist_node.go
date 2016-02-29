@@ -13,8 +13,6 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/bytes_bytes"
-	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
 type EmbListNode struct {
@@ -89,6 +87,10 @@ func NewEmbListNode(Dt *Digraph, sgs SubGraphs) *EmbListNode {
 	return &EmbListNode{newSearchNode(Dt, nil), nil}
 }
 
+func (n *EmbListNode) New(sgs []*goiso.SubGraph) Node {
+	return NewEmbListNode(n.Dt, sgs)
+}
+
 func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
 	sgs := make(SubGraphs, 0, 10)
 	err := Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
@@ -103,6 +105,10 @@ func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
 
 func (n *EmbListNode) Pattern() lattice.Pattern {
 	return &n.SearchNode
+}
+
+func (n *EmbListNode) Embeddings() ([]*goiso.SubGraph, error) {
+	return n.sgs, nil
 }
 
 func (n *EmbListNode) Save() error {
@@ -126,13 +132,6 @@ func (n *EmbListNode) String() string {
 	} else {
 		return fmt.Sprintf("<EmbListNode {}>")
 	}
-}
-
-func (n *EmbListNode) Level() int {
-	if len(n.sgs) > 0 {
-		return len(n.sgs[0].E) + 1
-	}
-	return 0
 }
 
 func (n *EmbListNode) Parents() ([]lattice.Node, error) {
@@ -243,12 +242,12 @@ func (n *EmbListNode) extendTo(sg *goiso.SubGraph) (exts *EmbListNode, err error
 }
 
 func (n *EmbListNode) Children() (nodes []lattice.Node, err error) {
-	return n.children(false, n.Dt.Children, n.Dt.ChildCount)
+	return children(n, false, n.Dt.Children, n.Dt.ChildCount)
 }
 
 func (n *EmbListNode) CanonKids() (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "CanonKids of %v", n)
-	return n.children(true, n.Dt.CanonKids, n.Dt.CanonKidCount)
+	return children(n, true, n.Dt.CanonKids, n.Dt.CanonKidCount)
 }
 
 func (n *EmbListNode) loadFrequentVertices() ([]lattice.Node, error) {
@@ -261,84 +260,6 @@ func (n *EmbListNode) loadFrequentVertices() ([]lattice.Node, error) {
 		nodes = append(nodes, node)
 	}
 	return nodes, nil
-}
-
-func (n *EmbListNode) children(checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
-	if len(n.sgs) == 0 {
-		return n.loadFrequentVertices()
-	}
-	if len(n.sgs[0].E) >= n.Dt.MaxEdges {
-		return []lattice.Node{}, nil
-	}
-	if nodes, has, err := cached(n.Dt, childCount, children, n.Label()); err != nil {
-		return nil, err
-	} else if has {
-		return nodes, nil
-	}
-	// errors.Logf("DEBUG", "Children of %v", n)
-	exts := make(SubGraphs, 0, 10)
-	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
-		if n.Dt.G.ColorFrequency(e.Color) < n.Dt.Support() {
-			return exts, nil
-		} else if n.Dt.G.ColorFrequency(n.Dt.G.V[e.Src].Color) < n.Dt.Support() {
-			return exts, nil
-		} else if n.Dt.G.ColorFrequency(n.Dt.G.V[e.Targ].Color) < n.Dt.Support() {
-			return exts, nil
-		}
-		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
-			ext, _ := sg.EdgeExtend(e)
-			if len(ext.V) > n.Dt.MaxVertices {
-				return exts, nil
-			}
-			exts = append(exts, ext)
-		}
-		return exts, nil
-	}
-	for _, sg := range n.sgs {
-		for _, u := range sg.V {
-			for _, e := range n.Dt.G.Kids[u.Id] {
-				exts, err = add(exts, sg, e)
-				if err != nil {
-					return nil, err
-				}
-			}
-			for _, e := range n.Dt.G.Parents[u.Id] {
-				exts, err = add(exts, sg, e)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-	// errors.Logf("DEBUG", "len(exts) %v", len(exts))
-	partitioned := exts.Partition()
-	sum := 0
-	for _, sgs := range partitioned {
-		sum += len(sgs)
-		sgs = DedupSupported(sgs)
-		// errors.Logf("DEBUG", "len(partition) %v %v", len(sgs), sgs[0].Label())
-		if len(sgs) < n.Dt.Support() {
-			continue
-		}
-		supported := n.Dt.Supported(sgs)
-		// errors.Logf("DEBUG", "len(supported) %v %v", len(sgs), sgs[0].Label())
-		if len(supported) >= n.Dt.Support() {
-			if checkCanon {
-				if canonized, err := isCanonicalExtension(n.sgs[0], sgs[0]); err != nil {
-					return nil, err
-				} else if !canonized {
-					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
-				} else {
-					nodes = append(nodes, NewEmbListNode(n.Dt, sgs))
-				}
-			} else {
-				nodes = append(nodes, NewEmbListNode(n.Dt, sgs))
-			}
-		}
-	}
-	// errors.Logf("DEBUG", "sum(len(partition)) %v", sum)
-	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
-	return nodes, cache(n.Dt, childCount, children, n.Label(), nodes)
 }
 
 func (n *EmbListNode) AdjacentCount() (int, error) {

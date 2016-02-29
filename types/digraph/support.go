@@ -67,7 +67,7 @@ func MinImgSupported(sgs SubGraphs) SubGraphs {
 	return supported
 }
 
-func DedupSupported(sgs SubGraphs) SubGraphs {
+func Dedup(sgs SubGraphs) SubGraphs {
 	labels := set.NewSortedSet(len(sgs))
 	graphs := make(SubGraphs, 0, len(sgs))
 	for _, sg := range sgs {
