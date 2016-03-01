@@ -6,7 +6,6 @@ import (
 )
 
 import (
-	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
@@ -120,7 +119,15 @@ func (n *SearchNode) Pattern() lattice.Pattern {
 }
 
 func (n *SearchNode) AdjacentCount() (int, error) {
-	return 0, errors.Errorf("unimplemented")
+	pc, err := n.ParentCount()
+	if err != nil {
+		return 0, err
+	}
+	cc, err := n.ChildCount()
+	if err != nil {
+		return 0, err
+	}
+	return pc + cc, nil
 }
 
 func (n *SearchNode) Parents() ([]lattice.Node, error) {

@@ -55,7 +55,17 @@ func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount
 			if len(ext.V) > dt.MaxVertices {
 				return exts, nil
 			}
-			exts = append(exts, ext)
+			if checkCanon {
+				if canonized, err := isCanonicalExtension(sg, ext); err != nil {
+					return nil, err
+				} else if !canonized {
+					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
+				} else {
+					exts = append(exts, ext)
+				}
+			} else {
+				exts = append(exts, ext)
+			}
 		}
 		return exts, nil
 	}
@@ -94,17 +104,7 @@ func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount
 		}
 		supported := dt.Supported(new_embeddings)
 		if len(supported) >= dt.Support() {
-			if checkCanon {
-				if canonized, err := isCanonicalExtension(embeddings[0], sgs[0]); err != nil {
-					return nil, err
-				} else if !canonized {
-					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
-				} else {
-					nodes = append(nodes, new_node)
-				}
-			} else {
-				nodes = append(nodes, new_node)
-			}
+			nodes = append(nodes, new_node)
 		}
 	}
 	// errors.Logf("DEBUG", "sum(len(partition)) %v", sum)
