@@ -57,6 +57,10 @@ func (n *SearchNode) Save() error {
 	return err
 }
 
+func (n *SearchNode) SubGraph() *SubGraph {
+	return n.Pat
+}
+
 func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {
 	if has, err := n.Dt.Embeddings.Has(n.Label()); err != nil {
 		return nil, err
@@ -120,7 +124,7 @@ func (n *SearchNode) AdjacentCount() (int, error) {
 }
 
 func (n *SearchNode) Parents() ([]lattice.Node, error) {
-	return nil, errors.Errorf("unimplemented")
+	return parents(n, n.Dt.Parents, n.Dt.ParentCount)
 }
 
 func (n *SearchNode) ParentCount() (int, error) {

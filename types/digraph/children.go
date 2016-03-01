@@ -19,6 +19,7 @@ type Node interface {
 	New([]*goiso.SubGraph) Node
 	Label() []byte
 	Embeddings() ([]*goiso.SubGraph, error)
+	SubGraph() *SubGraph
 	loadFrequentVertices() ([]lattice.Node, error)
 	isRoot() bool
 	edges() int
@@ -34,7 +35,7 @@ func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount
 	if n.edges() >= dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
-	if nodes, has, err := cached(dt, childCount, children, n.Label()); err != nil {
+	if nodes, has, err := cached(n, dt, childCount, children); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil

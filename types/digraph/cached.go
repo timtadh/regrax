@@ -45,7 +45,8 @@ func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, ke
 	return nil
 }
 
-func cached(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte) (nodes []lattice.Node, has bool, err error) {
+func cached(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap) (nodes []lattice.Node, has bool, err error) {
+	key := n.Label()
 	if has, err := count.Has(key); err != nil {
 		return nil, false, err
 	} else if !has {
@@ -53,10 +54,13 @@ func cached(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, k
 	}
 	err = cache.DoFind(key, func(_, adj []byte) (err error) {
 		var node lattice.Node
-		if dt.search {
+		switch n.(type) {
+		case *SearchNode:
 			node, err = LoadSearchNode(dt, adj)
-		} else {
+		case *EmbListNode:
 			node, err = LoadEmbListNode(dt, adj)
+		default:
+			return errors.Errorf("unexpected lattice.Node type %T %v", n, n)
 		}
 		if err != nil {
 			return err

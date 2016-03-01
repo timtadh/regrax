@@ -129,6 +129,7 @@ func TestSearchCount(t *testing.T) {
 	}
 	cur := next
 	next = nil
+	t.Logf("%T %v", cur, cur)
 	count, err = cur.ChildCount()
 	x.Nil(err)
 	x.Equal(count, 1, "should have 1 kids")
