@@ -113,12 +113,12 @@ def main(argv):
             log("unexpected option", opt, arg)
             usage(1)
 
-    stats_to_load = ['stderr', 'stdev', 'min', 'max', 'median', 'mean', 'sum']
+    stats_to_load = ['stderr', 'stdev', 'min', 'max', 'median', 'mean', 'sum', 'count']
     stat_names = stats_to_load + [
         "log(%s)" % name
         for name in stats_to_load
     ]
-    stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max', 'sum']
+    stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max', 'sum', 'count']
 
     records = list()
     for dataset in datasets:
