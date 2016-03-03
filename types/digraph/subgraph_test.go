@@ -49,6 +49,7 @@ func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *E
 
 func TestEmebeddings(t *testing.T) {
 	x := assert.New(t)
+	t.Logf("%T %v", x,x)
 	dt, _, _, sg, _, _ := graph(t)
 	t.Log(sg)
 	t.Log(sg.Adj)
