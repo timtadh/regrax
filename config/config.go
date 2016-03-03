@@ -6,6 +6,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
 )
 
@@ -103,8 +104,10 @@ func (c *Config) IntIntMultiMap(name string) (int_int.MultiMap, error) {
 
 func (c *Config) IntJsonMultiMap(name string) (int_json.MultiMap, error) {
 	if c.Cache == "" {
+		errors.Logf("INFO", "constructing int_json.MultiMap %v as anon mmap", name)
 		return int_json.AnonBpTree()
 	} else {
+		errors.Logf("INFO", "constructing int_json.MultiMap %v in cache file", name)
 		return int_json.NewBpTree(c.CacheFile(name + ".bptree"))
 	}
 }

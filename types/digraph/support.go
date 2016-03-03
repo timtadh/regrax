@@ -1,9 +1,11 @@
 package digraph
 
-import ()
+import (
+	"encoding/json"
+)
 
 import (
-	// "github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 )
@@ -12,7 +14,63 @@ import (
 	"github.com/timtadh/sfp/stats"
 )
 
-type Supported func(sgs SubGraphs) SubGraphs
+type Supported func(dt *Digraph, sgs SubGraphs) (SubGraphs, error)
+
+func MakeTxSupported(attrName string) Supported {
+	return func(dt *Digraph, sgs SubGraphs) (SubGraphs, error) {
+		sgs, err := MinImgSupported(dt, sgs)
+		if err != nil {
+			return nil, err
+		}
+		supported := make(SubGraphs, 0, len(sgs))
+		seen := set.NewSortedSet(len(sgs))
+		for _, sg := range sgs {
+			if len(sg.V) > 0 {
+				vid := int32(sg.V[0].Id)
+				err := dt.NodeAttrs.DoFind(vid, func(_ int32, attrs map[string]interface{}) error {
+					if attr, has := attrs[attrName]; !has {
+						return errors.Errorf("subgraph %v vertex %v did not have attr %v in attrs %v", sg, sg.V[0], attrName, attrs)
+					} else {
+						switch a := attr.(type) {
+						case json.Number:
+							if n, err := a.Int64(); err != nil {
+								return errors.Errorf("type float is not support as an attr value for tx id %v %v for %v", attrName, attr, sg)
+							} else {
+								if !seen.Has(types.Int64(n)) {
+									seen.Add(types.Int64(n))
+									supported = append(supported, sg)
+								}
+							}
+						case map[string]interface{}:
+							return errors.Errorf("type map[string]interface{} is not support as an attr value for tx id")
+						case []interface{}:
+							return errors.Errorf("type []interface{} is not support as an attr value for tx id")
+						case bool:
+							return errors.Errorf("type bool is not support as an attr value for tx id")
+						case nil:
+							return errors.Errorf("type nil is not support as an attr value for tx id")
+						case string:
+							if !seen.Has(types.String(a)) {
+								seen.Add(types.String(a))
+								supported = append(supported, sg)
+							}
+						default:
+							return errors.Errorf("unexpected type %T for %v in %v", attr, attr, sg)
+						}
+					}
+					return nil
+				})
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				// for empty sg all are supported
+				supported = append(supported, sg)
+			}
+		}
+		return supported, nil
+	}
+}
 
 func vertexMapSets(sgs SubGraphs) []*set.MapSet {
 	if len(sgs) == 0 {
@@ -47,9 +105,9 @@ func subgraphVertexSets(sgs SubGraphs) []*set.SortedSet {
 	return sets
 }
 
-func MinImgSupported(sgs SubGraphs) SubGraphs {
+func MinImgSupported(dt *Digraph, sgs SubGraphs) (SubGraphs, error) {
 	if len(sgs) <= 1 {
-		return sgs
+		return sgs, nil
 	}
 	sets := vertexMapSets(sgs)
 	// errors.Logf("MIN-IMAGE", "sets: %v", sets)
@@ -57,14 +115,14 @@ func MinImgSupported(sgs SubGraphs) SubGraphs {
 		return float64(sets[i].Size())
 	})
 	if int(size) == len(sgs) {
-		return sgs
+		return sgs, nil
 	}
 	supported := make(SubGraphs, 0, int(size)+1)
 	for sgIdx, next := sets[arg].Values()(); next != nil; sgIdx, next = next() {
 		idx := sgIdx.(int)
 		supported = append(supported, sgs[idx])
 	}
-	return supported
+	return supported, nil
 }
 
 func Dedup(sgs SubGraphs) SubGraphs {
@@ -80,10 +138,13 @@ func Dedup(sgs SubGraphs) SubGraphs {
 	return graphs
 }
 
-func MaxIndepSupported(sgs SubGraphs) SubGraphs {
-	sgs = MinImgSupported(sgs)
+func MaxIndepSupported(dt *Digraph, sgs SubGraphs) (SubGraphs, error) {
+	sgs, err := MinImgSupported(dt, sgs)
+	if err != nil {
+		return nil, err
+	}
 	if len(sgs) <= 1 {
-		return sgs
+		return sgs, nil
 	}
 	sets := subgraphVertexSets(sgs)
 	// errors.Logf("MAX-INDEP", "sets: %v", sets)
@@ -108,7 +169,7 @@ func MaxIndepSupported(sgs SubGraphs) SubGraphs {
 	for _, idx := range maxNonOverlap {
 		nonOverlapping = append(nonOverlapping, sgs[idx])
 	}
-	return nonOverlapping
+	return nonOverlapping, nil
 }
 
 func nonOverlapping(perm []int, sets []*set.SortedSet) []int {

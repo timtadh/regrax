@@ -295,6 +295,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"max-edges=",
 			"min-vertices=",
 			"max-vertices=",
+			"tx-attr=",
 		},
 	)
 	if err != nil {
@@ -309,6 +310,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	maxE := int(math.MaxInt32)
 	minV := 0
 	maxV := int(math.MaxInt32)
+	txAttr := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -327,6 +329,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			minV = ParseInt(oa.Arg())
 		case "--max-vertices":
 			maxV = ParseInt(oa.Arg())
+		case "--tx-attr":
+			txAttr = oa.Arg()
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -339,8 +343,12 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		supported = digraph.MinImgSupported
 	case "max-indep":
 		supported = digraph.MaxIndepSupported
-	case "dedup":
-		supported = digraph.Dedup
+	case "tx":
+		if txAttr == "" {
+			fmt.Fprintf(os.Stderr, "For support function tx you must additionally supply --tx-attr=<attr>\n")
+			Usage(ErrorCodes["opts"])
+		}
+		supported = digraph.MakeTxSupported(txAttr)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown support function '%v'\n", supportedFunc)
 		fmt.Fprintf(os.Stderr, "funcs: min-image, max-indep, dedup\n")

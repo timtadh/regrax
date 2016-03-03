@@ -55,6 +55,8 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 
 	// construct a in memory configuration for finding common subdigraphs of all patterns
 	conf := &config.Config{
+		Cache: "",
+		Output: "",
 		Support: len(patterns),
 		Samples: 5,
 		Unique: false,
@@ -82,28 +84,34 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 		}
 	}
 
+
+	// init the datatype (we are now ready to mine)
+	dt, err := digraph.NewDigraph(conf, false, digraph.MakeTxSupported("gid"), 0, maxE, 0, maxV)
+	if err != nil {
+		return nil, err
+	}
+
 	// construct the digraph from the patterns
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 	offset := 0
-	for _, pat := range patterns {
+	for gid, pat := range patterns {
 		sn := pat.(*digraph.SearchNode)
-		sg := sn.Pat
-		dt := sn.Dt
-		for i := range sg.V {
-			G.AddVertex(offset + i, dt.G.Colors[sg.V[i].Color])
+		for i := range sn.Pat.V {
+			vid := offset + i
+			G.AddVertex(vid, sn.Dt.G.Colors[sn.Pat.V[i].Color])
+			err := dt.NodeAttrs.Add(int32(vid), map[string]interface{}{"gid":gid})
+			if err != nil {
+				return nil, err
+			}
 		}
-		for i := range sg.E {
-			G.AddEdge(&G.V[offset + sg.E[i].Src], &G.V[offset + sg.E[i].Targ], dt.G.Colors[sg.E[i].Color])
+		for i := range sn.Pat.E {
+			G.AddEdge(&G.V[offset + sn.Pat.E[i].Src], &G.V[offset + sn.Pat.E[i].Targ], sn.Dt.G.Colors[sn.Pat.E[i].Color])
 		}
-		offset += len(sg.V)
+		offset += len(sn.Pat.V)
 	}
 
-	// init the datatype (we are now ready to mine)
-	dt, err := digraph.NewDigraph(conf, false, digraph.MinImgSupported, 0, maxE, 0, maxV)
-	if err != nil {
-		return nil, err
-	}
+	// Initialize the *Digraph with the graph G being used.
 	err = dt.Init(G)
 	if err != nil {
 		return nil, err

@@ -76,9 +76,11 @@ func (m *Miner) mine() error {
 	for len(stack) > 0 {
 		var n lattice.Node
 		stack, n = pop(stack)
-		err := m.Rptr.Report(n)
-		if err != nil {
-			return err
+		if m.Dt.Acceptable(n) {
+			err := m.Rptr.Report(n)
+			if err != nil {
+				return err
+			}
 		}
 		kids, err := n.CanonKids()
 		if err != nil {

@@ -105,7 +105,10 @@ func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount
 		if err != nil {
 			return nil, err
 		}
-		supported := dt.Supported(new_embeddings)
+		supported, err := dt.Supported(dt, new_embeddings)
+		if err != nil {
+			return nil, err
+		}
 		if len(supported) >= dt.Support() {
 			nodes = append(nodes, new_node)
 		}

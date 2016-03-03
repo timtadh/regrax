@@ -114,11 +114,13 @@ def main(argv):
             usage(1)
 
     stats_to_load = ['stderr', 'stdev', 'min', 'max', 'median', 'mean', 'sum', 'count']
+    #stats_to_load = ['stderr', 'stdev', 'min', 'max', 'median', 'mean', 'sum']
     stat_names = stats_to_load + [
         "log(%s)" % name
         for name in stats_to_load
     ]
     stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max', 'sum', 'count']
+    #stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max', 'sum']
 
     records = list()
     for dataset in datasets:
