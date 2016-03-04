@@ -298,6 +298,7 @@ func uniproxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 		[]string{
 			"help",
 			"walks=",
+			"max",
 		},
 	)
 	if err != nil {
@@ -305,18 +306,21 @@ func uniproxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
 	walks := 15
+	max := false
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			cmd.Usage(0)
 		case "-w", "--walks":
 			walks = cmd.ParseInt(oa.Arg())
+		case "--max":
+			max = true
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			cmd.Usage(cmd.ErrorCodes["opts"])
 		}
 	}
-	miner, err := uniprox.NewWalker(conf, walks)
+	miner, err := uniprox.NewWalker(conf, walks, max)
 	if err != nil {
 		log.Fatal(err)
 	}

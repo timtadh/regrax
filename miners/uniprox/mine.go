@@ -23,9 +23,10 @@ type Walker struct {
 	EstimatingWalks int
 	Ests bytes_float.MultiMap
 	Prs bytes_float.MultiMap
+	Max bool
 }
 
-func NewWalker(conf *config.Config, estimatingWalks int) (*Walker, error) {
+func NewWalker(conf *config.Config, estimatingWalks int, max bool) (*Walker, error) {
 	ests, err := conf.BytesFloatMultiMap("uniprox-weight-ests")
 	if err != nil {
 		return nil, err
@@ -38,12 +39,16 @@ func NewWalker(conf *config.Config, estimatingWalks int) (*Walker, error) {
 		EstimatingWalks: estimatingWalks,
 		Ests: ests,
 		Prs: prs,
+		Max: max,
 	}
 	miner.Walker = *walker.NewWalker(conf, graple.MakeAbsorbingWalk(graple.MakeSample(miner), make(chan error)))
 	return miner, nil
 }
 
 func (w *Walker) PrFormatter() lattice.PrFormatter {
+	if w.Max {
+		return nil
+	}
 	return NewPrFormatter(w)
 }
 
@@ -60,6 +65,13 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 	pr, next, err := walker.Transition(cur, kids, w.weight)
 	if err != nil {
 		return nil, err
+	}
+	if next == nil && w.Max {
+		if ismax, err := cur.Maximal(); err != nil {
+			return nil, err
+		} else if !ismax {
+			return w.Dt.Root(), nil
+		}
 	}
 	return next, w.transitionProbability(cur, next, pr)
 }

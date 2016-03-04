@@ -44,13 +44,15 @@ func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilen
 	var prfmt lattice.PrFormatter
 	if showPr {
 		prfmt = fmt.PrFormatter()
-		prs, err = os.Create(c.OutputFile(prsFilename))
-		if err != nil {
-			return nil, err
-		}
-		matrices, err = os.Create(c.OutputFile(matricesFilename))
-		if err != nil {
-			return nil, err
+		if prfmt != nil {
+			prs, err = os.Create(c.OutputFile(prsFilename))
+			if err != nil {
+				return nil, err
+			}
+			matrices, err = os.Create(c.OutputFile(matricesFilename))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	r := &File{
