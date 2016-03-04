@@ -90,8 +90,7 @@ func dfs(t *testing.T, x *assert.Assertions, root Node) {
 func visit(t *testing.T, x *assert.Assertions, visited *set.SortedSet, node Node) {
 	errors.Logf("DEBUG", "visiting %v", node)
 	visited.Add(node.Pattern())
-	checkKids(t, x, node)
-	checkParents(t, x, node)
+	checkNode(t, x, node)
 	kids, err := node.Children()
 	x.Nil(err)
 	for _, kid := range kids {
@@ -101,30 +100,37 @@ func visit(t *testing.T, x *assert.Assertions, visited *set.SortedSet, node Node
 	}
 }
 
-func checkKids(t *testing.T, x *assert.Assertions, node Node) {
+func checkNode(t *testing.T, x *assert.Assertions, node Node) {
+	acount, err := node.AdjacentCount()
+	x.Nil(err)
+	kcount, err := node.ChildCount()
+	x.Nil(err)
 	kids, err := node.Children()
 	x.Nil(err)
+	pcount, err := node.ParentCount()
+	x.Nil(err)
+	parents, err := node.Parents()
+	x.Nil(err)
+	if kcount != len(kids) {
+		x.Fail("kcount != len(kids)")
+	}
+	if pcount != len(parents) {
+		x.Fail("count != len(parents)")
+	}
+	if kcount + pcount != acount {
+		x.Fail("kcount + pcount != acount")
+	}
 	for _, kid := range kids {
 		checkKid(t, x, node, kid.(Node))
 	}
-}
-
-func checkParents(t *testing.T, x *assert.Assertions, node Node) {
-	parents, err := node.Parents()
-	x.Nil(err)
 	for _, parent := range parents {
 		checkKid(t, x, parent.(Node), node)
 	}
 }
 
 func checkKid(t *testing.T, x *assert.Assertions, parent, kid Node) {
-	pkcount, err := parent.ChildCount()
-	x.Nil(err)
 	pkids, err := parent.Children()
 	x.Nil(err)
-	if pkcount != len(pkids) {
-		x.Fail("pkcount != len(pkids)")
-	}
 	found := false
 	for _, pkid := range pkids {
 		if bytes.Equal(pkid.Pattern().Label(), kid.Label()) {
@@ -134,13 +140,8 @@ func checkKid(t *testing.T, x *assert.Assertions, parent, kid Node) {
 	if !found {
 		x.Fail(errors.Errorf("parent %v kids %v did not have %v", parent, pkids, kid).Error())
 	}
-	kpcount, err := kid.ParentCount()
-	x.Nil(err)
 	kparents, err := kid.Parents()
 	x.Nil(err)
-	if kpcount != len(kparents) {
-		x.Fail("pkcount != len(pkids)")
-	}
 	found = false
 	for _, kparent := range kparents {
 		if bytes.Equal(kparent.Pattern().Label(), parent.Label()) {
@@ -149,5 +150,32 @@ func checkKid(t *testing.T, x *assert.Assertions, parent, kid Node) {
 	}
 	if !found {
 		x.Fail(errors.Errorf("kid %v parents %v did not have %v", kid, kparents, parent).Error())
+	}
+	pkids, err = parent.CanonKids()
+	x.Nil(err)
+	found = false
+	for _, pkid := range pkids {
+		if bytes.Equal(pkid.Pattern().Label(), kid.Label()) {
+			found = true
+		}
+	}
+	if found {
+		// kid is a canon kid
+		// kid should have no other canon parents
+		kparents, err := kid.Parents()
+		x.Nil(err)
+		found = false
+		for _, kparent := range kparents {
+			if bytes.Equal(kparent.Pattern().Label(), parent.Label()) {
+				continue
+			}
+			kparent_ckids, err := kparent.CanonKids()
+			x.Nil(err)
+			for _, kparent_ckid := range kparent_ckids {
+				if bytes.Equal(kparent_ckid.Pattern().Label(), kid.Label()) {
+					x.Fail(errors.Errorf("kid %v had multiple canon parents %v %v", kid, parent, kparent).Error())
+				}
+			}
+		}
 	}
 }
