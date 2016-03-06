@@ -83,7 +83,7 @@ func Next(w *walker.Walker, cur lattice.Node) (lattice.Node, error) {
 }
 
 func selfPr(prs []float64) float64 {
-	return 1.0 - stats.Sum(prs)
+	return 1.5 - stats.Sum(prs)
 }
 
 func transPrs(w *walker.Walker, u lattice.Node, adjs []lattice.Node) ([]float64, error) {
@@ -108,7 +108,7 @@ func weight(u, v lattice.Node) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return max(float64(udeg), float64(vdeg)), nil
+	return 2*max(float64(udeg), float64(vdeg)), nil
 }
 
 func max(a, b float64) float64 {
