@@ -385,6 +385,45 @@ def Graph(level=25, only_absorb_at_max=False):
                 return 0.0
         return uniprox
 
+    def make_dprox(P):
+        dprox_ests = dict()
+        def dprox(i, j):
+            K = tkids
+            M = float(max_level)
+            #def backup(v):
+                #return 1.0/float(len(parents[v]))
+                #if v not in A:
+                    #return float(len(kids[v]))/(float(len(parents[v])))
+                #else:
+                    #return float(level[v])/(M*float(len(parents[v])))
+            def weight(v):
+                if v in dprox_ests:
+                    return dprox_ests[v]
+                if v not in A:
+                    walks = 25
+                    #walks = int(max(M/4.5, 25))
+                    #w = max(M-level[v], 2.0)
+                    #walks = int(np.log(w)*(w**2))
+                    depth, diameter = estimate_depth_diameter(v, K, P, walks=walks)
+                    est = depth
+                    dprox_ests[v] = est
+                    return est
+                else:
+                    return 1.0
+                    #return float(level[v])/(M*float(len(parents[v])))
+                    #return float(level[v])/M
+            if j in K[i] and weight(j) > 0:
+                return (weight(j) / sum(weight(kid) for kid in K[i]))
+            elif i == j and len(kids[i]) == 0:
+                return 1.0
+            elif j == i and sum(weight(x) for x in K[i]) <= 0 and i not in A:
+                return 1.0
+            #elif j in kids[i] and sum(weight(x) for x in K[i]) <= 0 and i not in A:
+                #return (backup(j) / sum(backup(kid) for kid in kids[i]))
+            else:
+                return 0.0
+        return dprox
+
     #C = np.mean([len(x) for x in kids])
     def musk(i, j):
         def weight(u, v):
@@ -414,6 +453,7 @@ def Graph(level=25, only_absorb_at_max=False):
         'fastmax': fastmax,
         'fastmax2': fastmax2,
         'uniprox': make_uniprox(parents),
+        'dprox': make_dprox(parents),
         'uniprox_tparents': make_uniprox(tparents),
         'musk': musk,
     }
@@ -491,6 +531,7 @@ def compare():
             'urw': stats(T, A, prs['urw']),
             'fastmax': stats(T, A, prs['fastmax']),
             'uniprox': stats(T, A, prs['uniprox']),
+            'dprox': stats(T, A, prs['dprox']),
             #'uniprox_tparents': stats(T, A, prs['uniprox_tparents']),
             #'fastmax2': stats(T, A, prs['fastmax2']),
             'unisorb': stats(T, A, prs['unisorb']),

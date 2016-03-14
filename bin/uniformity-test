@@ -45,6 +45,16 @@ def assert_file_exists(path):
         usage(2)
     return path
 
+def if_file_exists(path):
+    '''checks if the file exists. If it doesn't causes the program to exit.
+    @param path : path to file
+    @returns : the abs path to the file (an echo) [only on success]
+    '''
+    path = os.path.abspath(os.path.expanduser(path))
+    if not os.path.exists(path):
+        return None
+    return path
+
 def load_csv_into(table, f, cols):
     for line in f:
         line = line.strip()
@@ -130,7 +140,7 @@ def main(argv):
         elif opt in ('-e', '--empirical',):
             empirical = assert_file_exists(arg)
         elif opt in ('-p', '--predicted',):
-            predicted = assert_file_exists(arg)
+            predicted = if_file_exists(arg)
         elif opt in ('-o', '--output',):
             path = os.path.abspath(arg)
             expath = path + '.ex'
@@ -151,8 +161,9 @@ def main(argv):
     with open(empirical, 'r') as f:
         load_csv_into(data_table, f, ['count', 'observed probability', 'name'])
 
-    with open(predicted, 'r') as f:
-        load_csv_into(data_table, f, ['theoretical probability', 'name'])
+    if predicted is not None:
+        with open(predicted, 'r') as f:
+            load_csv_into(data_table, f, ['theoretical probability', 'name'])
 
     add_uniform(data_table)
 
