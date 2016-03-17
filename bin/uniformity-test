@@ -232,7 +232,7 @@ def main(argv):
     theoretical = stats(df, 'theoretical probability')
 
     outdata = {
-        #'data': data_table,
+        'data': data_table,
         'observed probabiliy': observed,
         'theoretical probabiliy': theoretical,
         'tests': [
