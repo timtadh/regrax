@@ -2,10 +2,11 @@
 
 CPUS=$1
 DATAFILE=$2
-ALGORITHM=$3
-DATASET=$4
-SUPPORT=$5
-SAMPLES=$6
+NAMES=$3
+ALGORITHM=$4
+DATASET=$5
+SUPPORT=$6
+SAMPLES=$7
 
 TRIALS=$(dc -e "$CPUS 1 - p")
 TRIAL_GROUPS=$(dc -e "50 $CPUS / p")
@@ -39,7 +40,7 @@ do
 	do
 		>&2 echo
 		>&2 echo staring group: $group trial: $trial into: $file
-		line=(uniformity-trial "$file" "$ALGORITHM" "$DATASET" "$SUPPORT" "$SAMPLES")
+		line=(uniformity-trial "$file" "$NAMES" "$ALGORITHM" "$DATASET" "$SUPPORT" "$SAMPLES")
 		>&2 echo $ "${line[@]}" \&
 		"${line[@]}" &
 		let trial=trial+1

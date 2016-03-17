@@ -4,10 +4,11 @@
 >&2 echo $ $0 "$@"
 
 DATAFILE=$1
-ALGORITHM=$2
-DATASET=$3
-SUPPORT=$4
-SAMPLES=$5
+NAMES=$2
+ALGORITHM=$3
+DATASET=$4
+SUPPORT=$5
+SAMPLES=$6
 
 CACHE=$(mktemp --tmpdir -d sfp-cache-XXXXXXX)
 OUTPUT=$(mktemp --tmpdir -d sfp-output-XXXXXXX)
@@ -40,7 +41,7 @@ then
 fi
 
 >&2 echo
-line=(uniformity-test -e "$OUTPUT"/histogram.csv -p "$OUTPUT"/probabilities.prs)
+line=(uniformity-test -n $NAMES -e "$OUTPUT"/histogram.csv -p "$OUTPUT"/probabilities.prs)
 >&2 echo $ "${line[@]}" \>\> "$DATAFILE"
 "${line[@]}" >> "$DATAFILE"
 

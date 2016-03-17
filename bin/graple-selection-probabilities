@@ -64,6 +64,7 @@ def load_matrix(shape, entries):
     rows = [float(e['Row']) for e in entries]
     cols = [float(e['Col']) for e in entries]
     M = sparse.coo_matrix((data, (rows, cols)), shape).tocsc()
+    #print >>sys.stderr, len(data), M.nnz
     assert len(data) == M.nnz
     return M
 

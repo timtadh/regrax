@@ -55,6 +55,11 @@ def if_file_exists(path):
         return None
     return path
 
+def load_names_into(table, f, cols):
+    for line in f:
+        name = line.strip()
+        table[name] = {col:zero for col, zero in cols}
+
 def load_csv_into(table, f, cols):
     for line in f:
         line = line.strip()
@@ -93,7 +98,7 @@ def stats(df, col_name):
     stderr = round(np.sqrt(sum((p - expected)**2 for p in col)), 10)
     return {
         'expected uniform pr': expected,
-        'count': len(col),
+        'count': len([v for v in col if v != 0]),
         'sum': np.sum(col),
         'mean': np.mean(col),
         'stdev': np.std(col),
@@ -121,14 +126,32 @@ def ttest_ind(df, a, b):
         'pval': pval
     }
 
+def x2test(df, a, b=None):
+    from scipy import stats
+    if b is not None:
+        counts = np.sum(df['count'])
+        _, pval = stats.chisquare(df[a], df[b]*counts)
+    else:
+        _, pval = stats.chisquare(df[a])
+    if np.isnan(pval):
+        return None
+    return {
+        'type': 'X2',
+        'between': [a, b],
+        'pval': pval
+    }
+
+
+
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv, "he:p:o:",
-            ["help","empirical=",'predicted=',"output=", "retry"])
+        opts, args = getopt.getopt(argv, "hn:e:p:o:",
+            ["help","names=","empirical=",'predicted=',"output=", "retry"])
     except getopt.GetoptError, err:
         log(err)
         usage(1)
 
+    names = None
     empirical = None
     predicted = None
     output = sys.stdout
@@ -137,6 +160,8 @@ def main(argv):
     for opt, arg in opts:
         if opt in ('-h', '--help',):
             usage(0)
+        elif opt in ('-n', '--name-list',):
+            names = assert_file_exists(arg)
         elif opt in ('-e', '--empirical',):
             empirical = assert_file_exists(arg)
         elif opt in ('-p', '--predicted',):
@@ -158,6 +183,10 @@ def main(argv):
 
     data_table = dict()
 
+    if names is not None:
+        with open(names, 'r') as f:
+            load_names_into(data_table, f, [('count', 0), ('observed probability', 0)])
+
     with open(empirical, 'r') as f:
         load_csv_into(data_table, f, ['count', 'observed probability', 'name'])
 
@@ -174,7 +203,7 @@ def main(argv):
         records.append(record)
 
     df = pd.DataFrame(records, columns=(['name', 'count', 'observed probability', 'theoretical probability', 'uniform']))
-    #print df
+    #print >>sys.stderr, df
     #print df['observed probability'].tolist()
 
     ## g = sns.PairGrid(
@@ -203,13 +232,12 @@ def main(argv):
     theoretical = stats(df, 'theoretical probability')
 
     outdata = {
-        'data': data_table,
+        #'data': data_table,
         'observed probabiliy': observed,
         'theoretical probabiliy': theoretical,
         'tests': [
-            ttest_rel(df, 'uniform', 'theoretical probability'),
-            ttest_rel(df, 'uniform', 'observed probability'),
-            ttest_rel(df, 'observed probability', 'theoretical probability'),
+            x2test(df, 'count'),
+            x2test(df, 'count', 'theoretical probability'),
         ],
     }
     with output as f:

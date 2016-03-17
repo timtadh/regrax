@@ -61,7 +61,7 @@ def ttest_ind(df, a, b):
         'pval': pval
     }
 
-def load(records, inf, name, stat_names):
+def load(records, tests, inf, name, stat_names, test_names):
     for i, line in enumerate(inf):
         if not line: continue
         line = json.loads(line)
@@ -80,8 +80,32 @@ def load(records, inf, name, stat_names):
             for sn in stat_names:
                 row.append(stats[sn])
             for sn in stat_names:
-                row.append(math.log(stats[sn]))
+                if stats[sn] > 0:
+                    row.append(math.log(stats[sn]))
+                elif stats[sn] == 0:
+                    row.append(math.log(1e-25))
+                else:
+                    row.append(float('nan'))
             records.append(row)
+        row = list()
+        row.append(i+1)
+        row.append(name)
+        pvals = dict()
+        for test in line['tests']:
+            if test is None: continue
+            between = '/'.join([n for n in test['between'] if n is not None])
+            test_type = test['type']
+            tname = '%s %s' % (test_type, between)
+            pval = test['pval']
+            pvals[tname] = pval
+        for tname in test_names:
+            if tname in pvals:
+                row.append(pvals[tname])
+            else:
+                row.append(float('nan'))
+        print row
+        tests.append(row)
+
 
 def main(argv):
     try:
@@ -122,17 +146,27 @@ def main(argv):
     stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max', 'sum', 'count']
     #stats_to_show = ['stderr', 'log(stdev)', 'log(min)', 'max', 'sum']
 
+    test_names = ['X2 count', 'X2 count/theoretical probability']
+
     records = list()
+    tests = list()
     for dataset in datasets:
         with open(dataset, 'r') as f:
             name = os.path.splitext(os.path.basename(dataset))[0]
-            load(records, f, name, stats_to_load)
+            load(records, tests, f, name, stats_to_load, test_names)
     df = pd.DataFrame(records, columns=(['graph', 'chain', 'probability'] + stat_names))
     print df
+    tests = pd.DataFrame(tests, columns=(['graph', 'chain'] + test_names))
+    print tests
 
     g = sns.pairplot(df[df.probability == 'observed'], aspect=3.5,
         hue="chain", x_vars='graph', y_vars=stats_to_show)
     g.savefig("/tmp/observed.png")
+    plt.close()
+
+    g = sns.pairplot(tests, aspect=3.5,
+        hue='chain', x_vars='graph', y_vars=test_names)
+    g.savefig("/tmp/tests.png")
     plt.close()
 
     if len(df[df.probability == 'predicted']) > 0:
