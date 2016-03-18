@@ -686,6 +686,46 @@ func canonMaxReporter(reports map[string]Reporter, argv []string, fmtr lattice.F
 	return m, args
 }
 
+func heapProfileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hp:",
+		[]string{
+			"help",
+			"profile=",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		Usage(ErrorCodes["opts"])
+	}
+	profile := ""
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		case "-p", "--patterns":
+			profile = oa.Arg()
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	if profile == "" {
+		fmt.Fprintf(os.Stderr, "You must supply a location to write the profile (-p) in heap-profile.\n")
+		os.Exit(1)
+	}
+	r, err := reporters.NewHeapProfile(profile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+    return r, args
+}
+
+
+
 var Types map[string]Type = map[string]Type{
 	"itemset": itemsetType,
 	"digraph": digraphType,
@@ -699,6 +739,7 @@ var Reporters  map[string]Reporter = map[string]Reporter{
 	"unique": uniqueReporter,
 	"max": maxReporter,
 	"canon-max": canonMaxReporter,
+	"heap-profile": heapProfileReporter,
 }
 
 type Mode func(argv []string, conf *config.Config) (miners.Miner, []string)
