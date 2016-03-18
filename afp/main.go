@@ -25,7 +25,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"runtime/pprof"
 	"strings"
 )
 
@@ -72,6 +74,9 @@ Global Options
     -c, --cache=<path>        path to cache directory (optional)
                               NB: will overwrite contents of dir
     --skip-log=<level>        don't output the given log level.
+
+Developer Options
+    --cpu-profile=<path>      write a cpu-profile to this location
 
 
 Types
@@ -267,7 +272,10 @@ func dfsMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 }
 
 func main() {
+	os.Exit(run())
+}
 
+func run() int {
 	modes := map[string]cmd.Mode {
 		"dfs": dfsMode,
 		"vsigram": vsigramMode,
@@ -282,6 +290,7 @@ func main() {
 			"support=",
 			"modes", "types", "reporters",
 			"skip-log=",
+			"cpu-profile=",
 		},
 	)
 	if err != nil {
@@ -294,6 +303,7 @@ func main() {
 	output := ""
 	cache := ""
 	support := 0
+	cpuProfile := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -326,6 +336,8 @@ func main() {
 			level := oa.Arg()
 			errors.Logf("INFO", "not logging level %v", level)
 			errors.SkipLogging[level] = true
+		case "--cpu-profile":
+			cpuProfile = cmd.AssertFile(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			cmd.Usage(cmd.ErrorCodes["opts"])
@@ -342,12 +354,30 @@ func main() {
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
 
+	if cpuProfile != "" {
+		errors.Logf("DEBUG", "starting cpu profile: %v", cpuProfile)
+		f, err := os.Create(cpuProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = pprof.StartCPUProfile(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer func() {
+			errors.Logf("DEBUG", "closing cpu profile")
+			pprof.StopCPUProfile()
+			err := f.Close()
+			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
+		}()
+	}
+
 	conf := &config.Config{
 		Cache:   cache,
 		Output:  output,
 		Support: support,
 	}
 
-	cmd.Main(args, conf, modes)
+	return cmd.Main(args, conf, modes)
 }
 

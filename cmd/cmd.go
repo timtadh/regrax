@@ -703,7 +703,7 @@ var Reporters  map[string]Reporter = map[string]Reporter{
 
 type Mode func(argv []string, conf *config.Config) (miners.Miner, []string)
 
-func Main(args []string, conf *config.Config, modes map[string]Mode) {
+func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a type and a mode\n")
 		Usage(ErrorCodes["opts"])
@@ -785,6 +785,6 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) {
 	} else {
 		errors.Logf("INFO", "Done!")
 	}
-	os.Exit(code)
+	return code
 }
 

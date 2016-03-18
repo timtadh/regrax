@@ -152,7 +152,11 @@ func checkKid(t *testing.T, x *assert.Assertions, parent, kid Node) {
 		x.Fail(errors.Errorf("kid %v parents %v did not have %v", kid, kparents, parent).Error())
 	}
 	pkids, err = parent.CanonKids()
-	x.Nil(err)
+	if err != nil {
+		errors.Logf("ERROR", "err = %v", err)
+		x.Fail("err != nil")
+		os.Exit(2)
+	}
 	found = false
 	for _, pkid := range pkids {
 		if bytes.Equal(pkid.Pattern().Label(), kid.Label()) {

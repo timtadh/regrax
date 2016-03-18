@@ -4,7 +4,6 @@ import (
 )
 
 import (
-	"github.com/timtadh/data-structures/errors"
 )
 
 import (
@@ -29,7 +28,7 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
+	// errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
 	_, next, err := walker.Transition(cur, kids, w.weight)
 	return next, err
 }

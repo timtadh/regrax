@@ -15,7 +15,6 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/fastmax"
 	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/types/digraph"
@@ -117,7 +116,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 		return nil, err
 	}
 
-	errors.Logf("DEBUG", "patterns %v %v", len(patterns), G)
+	// errors.Logf("DEBUG", "patterns %v %v", len(patterns), G)
 
 	// create the reporter
 	fmtr := digraph.NewFormatter(dt, nil)
@@ -126,7 +125,8 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	if err != nil {
 		return nil, err
 	}
-	rptr := &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "common-ancestor"), uniq}}
+	// rptr := &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "common-ancestor"), uniq}}
+	rptr := uniq
 
 	// mine
 	err = wlkr.Mine(dt, rptr, fmtr)
