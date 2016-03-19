@@ -5,6 +5,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
@@ -125,12 +126,12 @@ func MinImgSupported(dt *Digraph, sgs SubGraphs) (SubGraphs, error) {
 }
 
 func Dedup(sgs SubGraphs) SubGraphs {
-	labels := set.NewSortedSet(len(sgs))
+	labels := hashtable.NewLinearHash()
 	graphs := make(SubGraphs, 0, len(sgs))
 	for _, sg := range sgs {
 		label := types.ByteSlice(sg.Serialize())
 		if !labels.Has(label) {
-			labels.Add(label)
+			labels.Put(label, nil)
 			graphs = append(graphs, sg)
 		}
 	}

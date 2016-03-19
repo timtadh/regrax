@@ -42,7 +42,7 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 		return nil, err
 	}
 	if bytes.Equal(n.Label(), dt.Root().Pattern().Label()) {
-		return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), kids)
+		return kids, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), kids)
 	}
 	nEmb, err := n.Embedding()
 	if err != nil {
