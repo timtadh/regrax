@@ -22,6 +22,8 @@ import (
 )
 
 
+
+
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if urandom, err := os.Open("/dev/urandom"); err != nil {
@@ -37,19 +39,19 @@ func init() {
 
 
 
-func randomGraph(t *testing.T, V, E int, labels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *EmbListNode, *SearchNode) {
+func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *EmbListNode, *SearchNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 
 	vidxs := make([]int, 0, V)
 	vertices := make([]*goiso.Vertex, 0, V)
 	for i := 0; i < V; i++ {
-		v := G.AddVertex(i, labels[rand.Intn(len(labels))])
+		v := G.AddVertex(i, vlabels[rand.Intn(len(vlabels))])
 		vertices = append(vertices, v)
 		vidxs = append(vidxs, v.Idx)
 	}
 	for i := 0; i < E; i++ {
-		G.AddEdge(vertices[rand.Intn(len(vertices))], vertices[rand.Intn(len(vertices))], "")
+		G.AddEdge(vertices[rand.Intn(len(vertices))], vertices[rand.Intn(len(vertices))], elabels[rand.Intn(len(elabels))])
 	}
 
 	sg, _ := G.SubGraph(vidxs, nil)
@@ -74,21 +76,38 @@ func randomGraph(t *testing.T, V, E int, labels []string) (*Digraph, *goiso.Grap
 	return dt, G, sg, NewSubGraph(sg), RootEmbListNode(dt), RootSearchNode(dt)
 }
 
+func BenchmarkEmbList(b *testing.B) {
+	b.StopTimer()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		x := assert.New(b)
+		vlabels := []string{"a", "b", "c", "d", "e", "f"}
+		elabels := []string{"g", "h", "i"}
+		V := 100
+		_, _, _, _, eroot, _ := randomGraph(
+		b, V, int(float64(V)*2.25), vlabels, elabels)
+		b.StartTimer()
+		dfs(b, x, eroot)
+		b.StopTimer()
+	}
+}
+
 func TestVerifyChildrenParents(t *testing.T) {
 	x := assert.New(t)
-	labels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
+	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
+	elabels := []string{""}
 	V := 150
-	_, _, _, _, eroot, sroot := randomGraph(t, V, int(float64(V)*1.5), labels)
+	_, _, _, _, eroot, sroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
 	dfs(t, x, eroot)
 	dfs(t, x, sroot)
 }
 
-func dfs(t *testing.T, x *assert.Assertions, root Node) {
+func dfs(t testing.TB, x *assert.Assertions, root Node) {
 	visit(t, x, set.NewSortedSet(250), root)
 }
 
-func visit(t *testing.T, x *assert.Assertions, visited *set.SortedSet, node Node) {
-	errors.Logf("DEBUG", "visiting %v", node)
+func visit(t testing.TB, x *assert.Assertions, visited *set.SortedSet, node Node) {
+	// errors.Logf("DEBUG", "visiting %v", node)
 	visited.Add(node.Pattern())
 	checkNode(t, x, node)
 	kids, err := node.Children()
@@ -100,7 +119,7 @@ func visit(t *testing.T, x *assert.Assertions, visited *set.SortedSet, node Node
 	}
 }
 
-func checkNode(t *testing.T, x *assert.Assertions, node Node) {
+func checkNode(t testing.TB, x *assert.Assertions, node Node) {
 	acount, err := node.AdjacentCount()
 	x.Nil(err)
 	kcount, err := node.ChildCount()
@@ -128,7 +147,7 @@ func checkNode(t *testing.T, x *assert.Assertions, node Node) {
 	}
 }
 
-func checkKid(t *testing.T, x *assert.Assertions, parent, kid Node) {
+func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 	pkids, err := parent.Children()
 	x.Nil(err)
 	found := false
