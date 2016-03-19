@@ -64,6 +64,7 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
+
 func children(n Node) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if n.isRoot() {
@@ -101,7 +102,8 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		return nil, err
 	}
 	for _, sg := range embeddings {
-		for _, u := range sg.V {
+		for i := range sg.V {
+			u := &sg.V[i]
 			for _, e := range dt.G.Kids[u.Id] {
 				exts, err = add(exts, sg, e)
 				if err != nil {
@@ -141,7 +143,6 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
 	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
-
 
 type SubGraphs []*goiso.SubGraph
 
