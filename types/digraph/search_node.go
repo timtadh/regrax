@@ -7,7 +7,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/types"
-	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
 )
 
@@ -62,7 +61,13 @@ func (n *SearchNode) SubGraph() *SubGraph {
 }
 
 func (n *SearchNode) Embedding() (*goiso.SubGraph, error) {
-	return nil, errors.Errorf("unimplemented")
+	embs, err := n.Embeddings()
+	if err != nil {
+		return nil, err
+	} else if len(embs) == 0 {
+		return nil, nil
+	}
+	return embs[0], nil
 }
 
 func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {

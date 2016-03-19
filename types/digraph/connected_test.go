@@ -92,15 +92,25 @@ func BenchmarkEmbList(b *testing.B) {
 	}
 }
 
-func TestVerifyChildrenParents(t *testing.T) {
+func TestVerifyEmbList(t *testing.T) {
 	x := assert.New(t)
 	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
 	elabels := []string{""}
-	V := 300
+	V := 150
 	_, _, _, _, eroot, _ := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
 	dfs(t, x, eroot)
-	// dfs(t, x, sroot)
 }
+
+func TestVerifySearch(t *testing.T) {
+	x := assert.New(t)
+	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
+	elabels := []string{""}
+	V := 150
+	_, _, _, _, _, sroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
+	dfs(t, x, sroot)
+}
+
+
 
 func dfs(t testing.TB, x *assert.Assertions, root Node) {
 	visit(t, x, set.NewSortedSet(250), root)
