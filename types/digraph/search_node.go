@@ -7,6 +7,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/types"
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
 )
 
@@ -58,6 +59,10 @@ func (n *SearchNode) Save() error {
 
 func (n *SearchNode) SubGraph() *SubGraph {
 	return n.Pat
+}
+
+func (n *SearchNode) Embedding() (*goiso.SubGraph, error) {
+	return nil, errors.Errorf("unimplemented")
 }
 
 func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {
@@ -140,7 +145,7 @@ func (n *SearchNode) ParentCount() (int, error) {
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "Children of %v", n)
-	return children(n, false, n.Dt.Children, n.Dt.ChildCount)
+	return children(n)
 }
 
 func (n *SearchNode) ChildCount() (int, error) {
@@ -149,7 +154,7 @@ func (n *SearchNode) ChildCount() (int, error) {
 
 func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "CanonKids of %v", n)
-	return children(n, true, n.Dt.CanonKids, n.Dt.CanonKidCount)
+	return canonChildren(n)
 }
 
 func (n *SearchNode) Maximal() (bool, error) {

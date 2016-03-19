@@ -96,10 +96,10 @@ func TestVerifyChildrenParents(t *testing.T) {
 	x := assert.New(t)
 	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
 	elabels := []string{""}
-	V := 150
-	_, _, _, _, eroot, sroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
+	V := 300
+	_, _, _, _, eroot, _ := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
 	dfs(t, x, eroot)
-	dfs(t, x, sroot)
+	// dfs(t, x, sroot)
 }
 
 func dfs(t testing.TB, x *assert.Assertions, root Node) {
