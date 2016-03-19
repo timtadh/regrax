@@ -60,6 +60,16 @@ func (n *SearchNode) SubGraph() *SubGraph {
 	return n.Pat
 }
 
+func (n *SearchNode) Embedding() (*goiso.SubGraph, error) {
+	embs, err := n.Embeddings()
+	if err != nil {
+		return nil, err
+	} else if len(embs) == 0 {
+		return nil, nil
+	}
+	return embs[0], nil
+}
+
 func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {
 	if has, err := n.Dt.Embeddings.Has(n.Label()); err != nil {
 		return nil, err
@@ -140,7 +150,7 @@ func (n *SearchNode) ParentCount() (int, error) {
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "Children of %v", n)
-	return children(n, false, n.Dt.Children, n.Dt.ChildCount)
+	return children(n)
 }
 
 func (n *SearchNode) ChildCount() (int, error) {
@@ -149,7 +159,7 @@ func (n *SearchNode) ChildCount() (int, error) {
 
 func (n *SearchNode) CanonKids() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "CanonKids of %v", n)
-	return children(n, true, n.Dt.CanonKids, n.Dt.CanonKidCount)
+	return canonChildren(n)
 }
 
 func (n *SearchNode) Maximal() (bool, error) {

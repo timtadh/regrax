@@ -12,8 +12,8 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/bytes_bytes"
-	"github.com/timtadh/sfp/stores/bytes_int"
+	// "github.com/timtadh/sfp/stores/bytes_bytes"
+	// "github.com/timtadh/sfp/stores/bytes_int"
 )
 
 
@@ -22,6 +22,7 @@ type Node interface {
 	New([]*goiso.SubGraph) Node
 	Label() []byte
 	Embeddings() ([]*goiso.SubGraph, error)
+	Embedding() (*goiso.SubGraph, error)
 	SubGraph() *SubGraph
 	loadFrequentVertices() ([]lattice.Node, error)
 	isRoot() bool
@@ -29,8 +30,41 @@ type Node interface {
 	dt() *Digraph
 }
 
+func canonChildren(n Node) (nodes []lattice.Node, err error) {
+	dt := n.dt()
+	if nodes, has, err := cached(n, dt, dt.CanonKidCount, dt.CanonKids); err != nil {
+		return nil, err
+	} else if has {
+		return nodes, nil
+	}
+	kids, err := children(n)
+	if err != nil {
+		return nil, err
+	}
+	if bytes.Equal(n.Label(), dt.Root().Pattern().Label()) {
+		return kids, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), kids)
+	}
+	nEmb, err := n.Embedding()
+	if err != nil {
+		return nil, err
+	}
+	for _, k := range kids {
+		kEmb, err := k.(Node).Embedding()
+		if err != nil {
+			return nil, err
+		}
+		if canonized, err := isCanonicalExtension(nEmb, kEmb); err != nil {
+			return nil, err
+		} else if !canonized {
+			// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
+		} else {
+			nodes = append(nodes, k)
+		}
+	}
+	return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
+}
 
-func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
+func children(n Node) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if n.isRoot() {
 		return n.loadFrequentVertices()
@@ -38,7 +72,7 @@ func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount
 	if n.edges() >= dt.MaxEdges {
 		return []lattice.Node{}, nil
 	}
-	if nodes, has, err := cached(n, dt, childCount, children); err != nil {
+	if nodes, has, err := cached(n, dt, dt.ChildCount, dt.Children); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -58,17 +92,7 @@ func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount
 			if len(ext.V) > dt.MaxVertices {
 				return exts, nil
 			}
-			if checkCanon {
-				if canonized, err := isCanonicalExtension(sg, ext); err != nil {
-					return nil, err
-				} else if !canonized {
-					// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
-				} else {
-					exts = append(exts, ext)
-				}
-			} else {
-				exts = append(exts, ext)
-			}
+			exts = append(exts, ext)
 		}
 		return exts, nil
 	}
@@ -115,7 +139,7 @@ func children(n Node, checkCanon bool, children bytes_bytes.MultiMap, childCount
 	}
 	// errors.Logf("DEBUG", "sum(len(partition)) %v", sum)
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
-	return nodes, cache(dt, childCount, children, n.Label(), nodes)
+	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
 
 

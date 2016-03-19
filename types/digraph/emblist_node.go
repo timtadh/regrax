@@ -47,6 +47,15 @@ func (n *EmbListNode) Pattern() lattice.Pattern {
 	return &n.SearchNode
 }
 
+func (n *EmbListNode) Embedding() (*goiso.SubGraph, error) {
+	// errors.Logf("DEBUG", "Embedding() %v", n)
+	if len(n.sgs) == 0 {
+		return nil, nil
+	} else {
+		return n.sgs[0], nil
+	}
+}
+
 func (n *EmbListNode) Embeddings() ([]*goiso.SubGraph, error) {
 	return n.sgs, nil
 }
@@ -79,12 +88,12 @@ func (n *EmbListNode) Parents() ([]lattice.Node, error) {
 }
 
 func (n *EmbListNode) Children() (nodes []lattice.Node, err error) {
-	return children(n, false, n.Dt.Children, n.Dt.ChildCount)
+	return children(n)
 }
 
 func (n *EmbListNode) CanonKids() (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "CanonKids of %v", n)
-	return children(n, true, n.Dt.CanonKids, n.Dt.CanonKidCount)
+	return canonChildren(n)
 }
 
 func (n *EmbListNode) loadFrequentVertices() ([]lattice.Node, error) {
