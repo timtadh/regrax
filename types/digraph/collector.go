@@ -44,13 +44,20 @@ func (c *Collector) Ch() chan *goiso.SubGraph {
 	return c.requests
 }
 
-func (c *Collector) Wait(till int) []SubGraphs {
+func (c *Collector) Wait(till int) {
 	c.done.L.Lock()
 	defer c.done.L.Unlock()
 	for c.processed < till {
 		c.done.Wait()
 	}
 	close(c.requests)
+}
+
+func (c *Collector) Partition() []SubGraphs {
 	return c.collection.Partition()
+}
+
+func (c *Collector) Collection() []*goiso.SubGraph {
+	return c.collection
 }
 

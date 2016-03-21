@@ -189,17 +189,18 @@ func (sg *SubGraph) EdgeChainFrom(idx int) []*Edge {
 
 func (sg *SubGraph) ExtendEmbedding(dt *Digraph, cur *goiso.SubGraph, e *Edge) []*goiso.SubGraph {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
-	exts := make([]*goiso.SubGraph, 0, 10)
+	exts := NewCollector(dt.MaxVertices)
 	srcs := sg.findSrcs(cur, e)
 	// errors.Logf("DEBUG", "  srcs %v", srcs)
 	seen := make(map[int]bool)
+	added := 0
 	for _, src := range srcs {
 		for _, ke := range sg.findEdgesFromSrc(dt, cur, src, e) {
 			// errors.Logf("DEBUG", "    ke %v %v", ke.Idx, ke)
 			if !seen[ke.Idx] {
 				seen[ke.Idx] = true
-				ext, _ := cur.EdgeExtend(ke)
-				exts = append(exts, ext)
+				dt.Extender.Extend(cur, ke, exts.Ch())
+				added += 1
 			}
 		}
 	}
@@ -210,12 +211,13 @@ func (sg *SubGraph) ExtendEmbedding(dt *Digraph, cur *goiso.SubGraph, e *Edge) [
 			// errors.Logf("DEBUG", "    pe %v %v", pe.Idx, pe)
 			if !seen[pe.Idx] {
 				seen[pe.Idx] = true
-				ext, _ := cur.EdgeExtend(pe)
-				exts = append(exts, ext)
+				dt.Extender.Extend(cur, pe, exts.Ch())
+				added += 1
 			}
 		}
 	}
-	return exts
+	exts.Wait(added)
+	return exts.Collection()
 }
 
 func (sg *SubGraph) findSrcs(cur *goiso.SubGraph, e *Edge) []int {

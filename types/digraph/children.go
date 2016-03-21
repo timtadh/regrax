@@ -99,6 +99,11 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		return nil, err
 	}
 	added := 0
+	sup, err := dt.Supported(dt, embeddings)
+	if err != nil {
+		return nil, err
+	}
+	errors.Logf("EMBEDDINGS", "len(embeddings) %v supported %v", len(embeddings), len(sup))
 	for _, sg := range embeddings {
 		for i := range sg.V {
 			u := &sg.V[i]
@@ -110,8 +115,8 @@ func children(n Node) (nodes []lattice.Node, err error) {
 			}
 		}
 	}
-	// errors.Logf("DEBUG", "len(exts) %v", len(exts))
-	partitioned := exts.Wait(added)
+	exts.Wait(added)
+	partitioned := exts.Partition()
 	sum := 0
 	for _, sgs := range partitioned {
 		sum += len(sgs)
