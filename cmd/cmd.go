@@ -689,16 +689,20 @@ func canonMaxReporter(reports map[string]Reporter, argv []string, fmtr lattice.F
 func heapProfileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hp:",
+		"hp:a:e:",
 		[]string{
 			"help",
 			"profile=",
+			"after=",
+			"every=",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		Usage(ErrorCodes["opts"])
 	}
+	after := 0
+	every := 1
 	profile := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
@@ -706,6 +710,10 @@ func heapProfileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.
 			Usage(0)
 		case "-p", "--patterns":
 			profile = oa.Arg()
+		case "-a", "--after":
+			after = ParseInt(oa.Arg())
+		case "-e", "--every":
+			every = ParseInt(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -715,7 +723,7 @@ func heapProfileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.
 		fmt.Fprintf(os.Stderr, "You must supply a location to write the profile (-p) in heap-profile.\n")
 		os.Exit(1)
 	}
-	r, err := reporters.NewHeapProfile(profile)
+	r, err := reporters.NewHeapProfile(profile, after, every)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
