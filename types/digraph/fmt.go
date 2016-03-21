@@ -78,8 +78,12 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		dot := embs[0].String()
-		return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
+		if len(embs) > 0 {
+			dot := embs[0].String()
+			return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
+		} else {
+			return fmt.Sprintf("// 0:0\n\ndigraph{}\n", ), nil
+		}
 	default:
 		return "", errors.Errorf("unknown node type %v", node)
 	}
