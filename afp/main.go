@@ -78,6 +78,14 @@ Global Options
 Developer Options
     --cpu-profile=<path>      write a cpu-profile to this location
 
+    heap-profile Reporter
+
+        $ afp ... <type> ... <mode> ... chain ... heap-profile [options]
+
+        -p, profile=<path>    where you want the heap-profile written
+        -e, every=<int>       collect every n samples collected (default 1)
+        -a, after=<int>       collect after n samples collected (default 0)
+
 
 Types
     itemset                   sets of items, treated as sets of integers
