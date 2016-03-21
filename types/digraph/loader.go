@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"runtime"
 	"strings"
 )
 
@@ -35,17 +36,12 @@ func (self ErrorList) Error() string {
 	return "Errors [" + strings.Join(s, ", ") + "]"
 }
 
-
-/// Tim you are here: You removed the FrequentVertices list of lattice.Node in order to 
-/// make Digraph able to support both SearchNode and EmbListNode at the same time. The .search
-/// value would simply be a hint of which type of vertice to use for .Root(). However, the
-/// first extension is special cased to just give the FrequentVertices. How to handle this?
-
 type Digraph struct {
 	MinEdges, MaxEdges, MinVertices, MaxVertices int
 	G                                            *goiso.Graph
 	FrequentVertices                             [][]byte
 	Supported                                    Supported
+	Extender                                     *Extender
 	NodeAttrs                                    int_json.MultiMap
 	Embeddings                                   bytes_subgraph.MultiMap
 	Parents                                      bytes_bytes.MultiMap
@@ -94,6 +90,7 @@ func NewDigraph(config *config.Config, search bool, sup Supported, minE, maxE, m
 	}
 	g = &Digraph{
 		Supported:     sup,
+		Extender:      NewExtender(runtime.NumCPU()),
 		MinEdges:      minE,
 		MaxEdges:      maxE,
 		MinVertices:   minV,
@@ -175,6 +172,7 @@ func (g *Digraph) TooLarge(node lattice.Node) bool {
 
 func (g *Digraph) Close() error {
 	g.config.AsyncTasks.Wait()
+	g.Extender.Stop()
 	g.Parents.Close()
 	g.ParentCount.Close()
 	g.Children.Close()

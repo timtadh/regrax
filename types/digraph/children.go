@@ -79,47 +79,39 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		return nodes, nil
 	}
 	// errors.Logf("DEBUG", "Children of %v", n)
-	exts := make(SubGraphs, 0, 10)
-	add := func(exts SubGraphs, sg *goiso.SubGraph, e *goiso.Edge) (SubGraphs, error) {
+	exts := NewCollector(dt.MaxVertices)
+	add := func(sg *goiso.SubGraph, e *goiso.Edge) (int) {
 		if dt.G.ColorFrequency(e.Color) < dt.Support() {
-			return exts, nil
+			return 0
 		} else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {
-			return exts, nil
+			return 0
 		} else if dt.G.ColorFrequency(dt.G.V[e.Targ].Color) < dt.Support() {
-			return exts, nil
+			return 0
 		}
 		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
-			ext, _ := sg.EdgeExtend(e)
-			if len(ext.V) > dt.MaxVertices {
-				return exts, nil
-			}
-			exts = append(exts, ext)
+			dt.Extender.Extend(sg, e, exts.Ch())
+			return 1
 		}
-		return exts, nil
+		return 0
 	}
 	embeddings, err := n.Embeddings()
 	if err != nil {
 		return nil, err
 	}
+	added := 0
 	for _, sg := range embeddings {
 		for i := range sg.V {
 			u := &sg.V[i]
 			for _, e := range dt.G.Kids[u.Id] {
-				exts, err = add(exts, sg, e)
-				if err != nil {
-					return nil, err
-				}
+				added += add(sg, e)
 			}
 			for _, e := range dt.G.Parents[u.Id] {
-				exts, err = add(exts, sg, e)
-				if err != nil {
-					return nil, err
-				}
+				added += add(sg, e)
 			}
 		}
 	}
 	// errors.Logf("DEBUG", "len(exts) %v", len(exts))
-	partitioned := exts.Partition()
+	partitioned := exts.Wait(added)
 	sum := 0
 	for _, sgs := range partitioned {
 		sum += len(sgs)
