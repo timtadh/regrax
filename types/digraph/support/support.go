@@ -16,7 +16,7 @@ import (
 
 
 
-func vertexMapSets(sgs []*goiso.SubGraph) []*set.MapSet {
+func VertexMapSets(sgs []*goiso.SubGraph) []*set.MapSet {
 	if len(sgs) == 0 {
 		return make([]*set.MapSet, 0)
 	}
@@ -53,7 +53,7 @@ func MinImgSupported(sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error) {
 	if len(sgs) <= 1 {
 		return sgs, nil
 	}
-	sets := vertexMapSets(sgs)
+	sets := VertexMapSets(sgs)
 	// errors.Logf("MIN-IMAGE", "sets: %v", sets)
 	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
 		return float64(sets[i].Size())

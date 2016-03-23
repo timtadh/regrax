@@ -6,6 +6,8 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
 
@@ -103,7 +105,11 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	errors.Logf("EMBEDDINGS", "len(V) %v len(embeddings) %v supported %v", len(embeddings[0].V), len(embeddings), len(sup))
+	sizes := set.NewSortedSet(len(embeddings[0].V))
+	for _, set := range support.VertexMapSets(embeddings) {
+		sizes.Add(types.Int(set.Size()))
+	}
+	errors.Logf("EMBEDDINGS", "len(V) %v len(embeddings) %v supported %v unique-vertex-embeddings %v", len(embeddings[0].V), len(embeddings), len(sup), sizes)
 	for _, sg := range embeddings {
 		for i := range sg.V {
 			u := &sg.V[i]
