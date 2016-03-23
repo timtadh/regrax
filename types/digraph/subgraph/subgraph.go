@@ -8,12 +8,13 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/hashtable"
+	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/types/digraph/ext"
-	"github.com/timtadh/sfp/types/digraph/support"
 	"github.com/timtadh/sfp/stores/int_int"
 )
 
@@ -32,6 +33,8 @@ type Vertex struct {
 type Edge struct {
 	Src, Targ, Color int
 }
+
+type EmbIterator func()(*goiso.SubGraph, EmbIterator)
 
 func EmptySubGraph() *SubGraph {
 	return &SubGraph{}
@@ -78,35 +81,84 @@ func LoadSubgraphFromLabel(label []byte) (*SubGraph, error) {
 }
 
 func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender) ([]*goiso.SubGraph, error) {
-	// errors.Logf("DEBUG", "Embeddings of %v", sg)
+	embeddings := make([]*goiso.SubGraph, 0, 10)
+	err := sg.DoEmbeddings(G, ColorMap, extender, func(emb *goiso.SubGraph) error {
+		embeddings = append(embeddings, emb)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return embeddings, nil
+
+}
+
+func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, do func(*goiso.SubGraph) error) error {
+	ei, err := sg.IterEmbeddings(G, ColorMap, extender)
+	if err != nil {
+		return err
+	}
+	for emb, next := ei(); next != nil; emb, next = next() {
+		err := do(emb)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
+func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender) (ei EmbIterator, err error) {
+	type entry struct {
+		emb *goiso.SubGraph
+		eid int
+	}
+	pop := func(stack []entry) (entry, []entry) {
+		return stack[len(stack)-1], stack[0:len(stack)-1]
+	}
+
 	if len(sg.V) == 0 {
 		return nil, nil
 	}
 	startIdx := sg.LeastCommonVertex(G)
 	chain := sg.EdgeChainFrom(startIdx)
-	cur, err := sg.VertexEmbeddings(G, ColorMap, startIdx)
+	vembs, err := sg.VertexEmbeddings(G, ColorMap, startIdx)
 	if err != nil {
 		return nil, err
 	}
-	// errors.Logf("DEBUG", "startIdx %v", startIdx)
-	// errors.Logf("DEBUG", "chain %v", chain)
-	for _, e := range chain {
-		// errors.Logf("DEBUG", "cur %v e %v", len(cur), e)
-		next := make([]*goiso.SubGraph, 0, len(cur))
-		for _, emb := range cur {
-			for _, ext := range sg.ExtendEmbedding(G, extender, emb, e) {
-				next = append(next, ext)
+
+	seen := hashtable.NewLinearHash()
+	stack := make([]entry, 0, len(vembs)*2)
+	for _, vemb := range vembs {
+		stack = append(stack, entry{vemb, 0})
+	}
+
+	ei = func() (*goiso.SubGraph, EmbIterator) {
+		for len(stack) > 0 {
+			var i entry
+			i, stack = pop(stack)
+			label := types.ByteSlice(i.emb.Serialize())
+			if seen.Has(label) {
+				continue
+			}
+			seen.Put(label, nil)
+			// otherwise success we have an embedding we haven't seen
+			if i.eid >= len(chain) {
+				if sg.Matches(i.emb) {
+					// sweet we can yield this embedding!
+					return i.emb, ei
+				}
+				// nope wasn't an embedding drop it
+			} else {
+				// ok extend the embedding
+				for _, ext := range sg.ExtendEmbedding(G, extender, i.emb, chain[i.eid]) {
+					stack = append(stack, entry{ext, i.eid + 1})
+				}
 			}
 		}
-		cur = support.Dedup(next)
+		return nil, nil
 	}
-	final := make([]*goiso.SubGraph, 0, len(cur))
-	for _, emb := range cur {
-		if sg.Matches(emb) {
-			final = append(final, emb)
-		}
-	}
-	return final, nil
+	return ei, nil
 }
 
 func (sg *SubGraph) Matches(emb *goiso.SubGraph) bool {
