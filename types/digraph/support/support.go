@@ -5,7 +5,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/hashtable"
-	"github.com/timtadh/data-structures/list"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
@@ -71,18 +70,10 @@ func MinImgSupported(sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error) {
 }
 
 func Dedup(sgs []*goiso.SubGraph) []*goiso.SubGraph {
-	vertices := func(sg *goiso.SubGraph) *list.List {
-		l := list.New(len(sg.V))
-		for i := range sg.V {
-			l.Append(types.Int(sg.V[i].Id))
-		}
-		return l
-	}
 	labels := hashtable.NewLinearHash()
 	graphs := make([]*goiso.SubGraph, 0, len(sgs))
 	for _, sg := range sgs {
-		// label := types.ByteSlice(sg.Serialize())
-		label := vertices(sg)
+		label := types.ByteSlice(sg.Serialize())
 		if !labels.Has(label) {
 			labels.Put(label, nil)
 			graphs = append(graphs, sg)
