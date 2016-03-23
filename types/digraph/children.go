@@ -103,7 +103,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	errors.Logf("EMBEDDINGS", "len(embeddings) %v supported %v", len(embeddings), len(sup))
+	errors.Logf("EMBEDDINGS", "len(V) %v len(embeddings) %v supported %v", len(embeddings[0].V), len(embeddings), len(sup))
 	for _, sg := range embeddings {
 		for i := range sg.V {
 			u := &sg.V[i]
