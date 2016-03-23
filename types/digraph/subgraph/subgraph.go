@@ -35,6 +35,7 @@ type Edge struct {
 }
 
 type EmbIterator func()(*goiso.SubGraph, EmbIterator)
+type Pruner func(leastCommonVertex int, chain []*Edge) func(emb *goiso.SubGraph) bool
 
 func EmptySubGraph() *SubGraph {
 	return &SubGraph{}
@@ -82,7 +83,7 @@ func LoadSubgraphFromLabel(label []byte) (*SubGraph, error) {
 
 func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender) ([]*goiso.SubGraph, error) {
 	embeddings := make([]*goiso.SubGraph, 0, 10)
-	err := sg.DoEmbeddings(G, ColorMap, extender, func(emb *goiso.SubGraph) error {
+	err := sg.DoEmbeddings(G, ColorMap, extender, nil, func(emb *goiso.SubGraph) error {
 		embeddings = append(embeddings, emb)
 		return nil
 	})
@@ -93,8 +94,8 @@ func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extend
 
 }
 
-func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, do func(*goiso.SubGraph) error) error {
-	ei, err := sg.IterEmbeddings(G, ColorMap, extender)
+func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, pruner Pruner, do func(*goiso.SubGraph) error) error {
+	ei, err := sg.IterEmbeddings(G, ColorMap, extender, pruner)
 	if err != nil {
 		return err
 	}
@@ -107,8 +108,7 @@ func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, exte
 	return nil
 }
 
-
-func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender) (ei EmbIterator, err error) {
+func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, pruner Pruner) (ei EmbIterator, err error) {
 	type entry struct {
 		emb *goiso.SubGraph
 		eid int
@@ -127,6 +127,11 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 		return nil, err
 	}
 
+	var prune func(*goiso.SubGraph) bool = nil
+	if pruner != nil {
+		prune = pruner(startIdx, chain)
+	}
+
 	seen := hashtable.NewLinearHash()
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
@@ -142,6 +147,9 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 				continue
 			}
 			seen.Put(label, nil)
+			if prune != nil && prune(i.emb) {
+				continue
+			}
 			// otherwise success we have an embedding we haven't seen
 			if i.eid >= len(chain) {
 				if sg.Matches(i.emb) {
