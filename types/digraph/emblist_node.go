@@ -14,13 +14,13 @@ import (
 
 type EmbListNode struct {
 	SearchNode
-	sgs     SubGraphs
+	sgs     []*goiso.SubGraph
 }
 
 type Embedding struct {
 	sg *goiso.SubGraph
 }
-func NewEmbListNode(Dt *Digraph, sgs SubGraphs) *EmbListNode {
+func NewEmbListNode(Dt *Digraph, sgs []*goiso.SubGraph) *EmbListNode {
 	if len(sgs) > 0 {
 		return &EmbListNode{newSearchNode(Dt, sgs[0]), sgs}
 	}
@@ -32,7 +32,7 @@ func (n *EmbListNode) New(sgs []*goiso.SubGraph) Node {
 }
 
 func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
-	sgs := make(SubGraphs, 0, 10)
+	sgs := make([]*goiso.SubGraph, 0, 10)
 	err := Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
 		sgs = append(sgs, sg)
 		return nil

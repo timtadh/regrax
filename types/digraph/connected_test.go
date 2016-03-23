@@ -19,6 +19,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/config"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 
@@ -39,7 +40,7 @@ func init() {
 
 
 
-func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *SubGraph, *EmbListNode, *SearchNode) {
+func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode, *SearchNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 
@@ -73,7 +74,7 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 		t.Fatal(err)
 	}
 
-	return dt, G, sg, NewSubGraph(sg), RootEmbListNode(dt), RootSearchNode(dt)
+	return dt, G, sg, subgraph.NewSubGraph(sg), RootEmbListNode(dt), RootSearchNode(dt)
 }
 
 func BenchmarkEmbList(b *testing.B) {

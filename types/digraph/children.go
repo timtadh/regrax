@@ -2,7 +2,6 @@ package digraph
 
 import (
 	"bytes"
-	"sort"
 )
 
 import (
@@ -12,8 +11,9 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
-	// "github.com/timtadh/sfp/stores/bytes_bytes"
-	// "github.com/timtadh/sfp/stores/bytes_int"
+	"github.com/timtadh/sfp/types/digraph/ext"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/sfp/types/digraph/support"
 )
 
 
@@ -23,7 +23,7 @@ type Node interface {
 	Label() []byte
 	Embeddings() ([]*goiso.SubGraph, error)
 	Embedding() (*goiso.SubGraph, error)
-	SubGraph() *SubGraph
+	SubGraph() *subgraph.SubGraph
 	loadFrequentVertices() ([]lattice.Node, error)
 	isRoot() bool
 	edges() int
@@ -79,7 +79,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		return nodes, nil
 	}
 	// errors.Logf("DEBUG", "Children of %v", n)
-	exts := NewCollector(dt.MaxVertices)
+	exts := ext.NewCollector(dt.MaxVertices)
 	add := func(sg *goiso.SubGraph, e *goiso.Edge) (int) {
 		if dt.G.ColorFrequency(e.Color) < dt.Support() {
 			return 0
@@ -120,7 +120,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	sum := 0
 	for _, sgs := range partitioned {
 		sum += len(sgs)
-		new_node := n.New(Dedup(sgs))
+		new_node := n.New(support.Dedup(sgs))
 		if len(sgs) < dt.Support() {
 			continue
 		}
@@ -140,60 +140,3 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
 	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
-
-type SubGraphs []*goiso.SubGraph
-
-func (sgs SubGraphs) Len() int {
-	return len(sgs)
-}
-
-func (sgs SubGraphs) Less(i, j int) bool {
-	return bytes.Compare(sgs[i].ShortLabel(), sgs[j].ShortLabel()) < 0
-}
-
-func (sgs SubGraphs) Swap(i, j int) {
-	sgs[i], sgs[j] = sgs[j], sgs[i]
-}
-
-func (sgs SubGraphs) Verify() error {
-	if len(sgs) <= 0 {
-		return errors.Errorf("empty partition")
-	}
-	label := sgs[0].ShortLabel()
-	for _, sg := range sgs {
-		if !bytes.Equal(label, sg.ShortLabel()) {
-			return errors.Errorf("bad partition %v %v", sgs[0].Label(), sg.Label())
-		}
-	}
-	return nil
-}
-
-func (sgs SubGraphs) Partition() []SubGraphs {
-	sort.Sort(sgs)
-	parts := make([]SubGraphs, 0, 10)
-	add := func(parts []SubGraphs, buf SubGraphs) []SubGraphs {
-		err := buf.Verify()
-		if err != nil {
-			errors.Logf("ERROR", "%v", err)
-		} else {
-			parts = append(parts, buf)
-		}
-		return parts
-	}
-	buf := make(SubGraphs, 0, 10)
-	var ckey []byte = nil
-	for _, sg := range sgs {
-		label := sg.ShortLabel()
-		if ckey != nil && !bytes.Equal(ckey, label) {
-			parts = add(parts, buf)
-			buf = make(SubGraphs, 0, 10)
-		}
-		ckey = label
-		buf = append(buf, sg)
-	}
-	if len(buf) > 0 {
-		parts = add(parts, buf)
-	}
-	return parts
-}
-

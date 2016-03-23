@@ -1,4 +1,4 @@
-package digraph
+package ext
 
 import (
 	"sync"

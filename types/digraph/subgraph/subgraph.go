@@ -1,4 +1,4 @@
-package digraph
+package subgraph
 
 import (
 	"fmt"
@@ -9,6 +9,12 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
+)
+
+import (
+	"github.com/timtadh/sfp/types/digraph/ext"
+	"github.com/timtadh/sfp/types/digraph/support"
+	"github.com/timtadh/sfp/stores/int_int"
 )
 
 
@@ -71,14 +77,14 @@ func LoadSubgraphFromLabel(label []byte) (*SubGraph, error) {
 	return sg, nil
 }
 
-func (sg *SubGraph) Embeddings(dt *Digraph) ([]*goiso.SubGraph, error) {
+func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender) ([]*goiso.SubGraph, error) {
 	// errors.Logf("DEBUG", "Embeddings of %v", sg)
 	if len(sg.V) == 0 {
 		return nil, nil
 	}
-	startIdx := sg.LeastCommonVertex(dt)
+	startIdx := sg.LeastCommonVertex(G)
 	chain := sg.EdgeChainFrom(startIdx)
-	cur, err := sg.VertexEmbeddings(dt, startIdx)
+	cur, err := sg.VertexEmbeddings(G, ColorMap, startIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +94,11 @@ func (sg *SubGraph) Embeddings(dt *Digraph) ([]*goiso.SubGraph, error) {
 		// errors.Logf("DEBUG", "cur %v e %v", len(cur), e)
 		next := make([]*goiso.SubGraph, 0, len(cur))
 		for _, emb := range cur {
-			for _, ext := range sg.ExtendEmbedding(dt, emb, e) {
+			for _, ext := range sg.ExtendEmbedding(G, extender, emb, e) {
 				next = append(next, ext)
 			}
 		}
-		cur = Dedup(next)
+		cur = support.Dedup(next)
 	}
 	final := make([]*goiso.SubGraph, 0, len(cur))
 	for _, emb := range cur {
@@ -129,11 +135,11 @@ func (sg *SubGraph) Matches(emb *goiso.SubGraph) bool {
 	return true
 }
 
-func (sg *SubGraph) LeastCommonVertex(dt *Digraph) int {
+func (sg *SubGraph) LeastCommonVertex(G *goiso.Graph) int {
 	minFreq := -1
 	minIdx := -1
 	for i := range sg.V {
-		f := dt.G.ColorFrequency(sg.V[i].Color)
+		f := G.ColorFrequency(sg.V[i].Color)
 		if f < minFreq || minIdx == -1 {
 			minFreq = f
 			minIdx = i
@@ -142,10 +148,10 @@ func (sg *SubGraph) LeastCommonVertex(dt *Digraph) int {
 	return minIdx
 }
 
-func (sg *SubGraph) VertexEmbeddings(dt *Digraph, idx int) ([]*goiso.SubGraph, error) {
-	embs := make([]*goiso.SubGraph, 0, dt.G.ColorFrequency(sg.V[idx].Color))
-	err := dt.ColorMap.DoFind(int32(sg.V[idx].Color), func(color, dtIdx int32) error {
-		sg, _ := dt.G.VertexSubGraph(int(dtIdx))
+func (sg *SubGraph) VertexEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, idx int) ([]*goiso.SubGraph, error) {
+	embs := make([]*goiso.SubGraph, 0, G.ColorFrequency(sg.V[idx].Color))
+	err := ColorMap.DoFind(int32(sg.V[idx].Color), func(color, gIdx int32) error {
+		sg, _ := G.VertexSubGraph(int(gIdx))
 		embs = append(embs, sg)
 		return nil
 	})
@@ -187,19 +193,19 @@ func (sg *SubGraph) EdgeChainFrom(idx int) []*Edge {
 	return edges
 }
 
-func (sg *SubGraph) ExtendEmbedding(dt *Digraph, cur *goiso.SubGraph, e *Edge) []*goiso.SubGraph {
+func (sg *SubGraph) ExtendEmbedding(G *goiso.Graph, extender *ext.Extender, cur *goiso.SubGraph, e *Edge) []*goiso.SubGraph {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
-	exts := NewCollector(dt.MaxVertices)
+	exts := ext.NewCollector(-1)
 	srcs := sg.findSrcs(cur, e)
 	// errors.Logf("DEBUG", "  srcs %v", srcs)
 	seen := make(map[int]bool)
 	added := 0
 	for _, src := range srcs {
-		for _, ke := range sg.findEdgesFromSrc(dt, cur, src, e) {
+		for _, ke := range sg.findEdgesFromSrc(G, cur, src, e) {
 			// errors.Logf("DEBUG", "    ke %v %v", ke.Idx, ke)
 			if !seen[ke.Idx] {
 				seen[ke.Idx] = true
-				dt.Extender.Extend(cur, ke, exts.Ch())
+				extender.Extend(cur, ke, exts.Ch())
 				added += 1
 			}
 		}
@@ -207,11 +213,11 @@ func (sg *SubGraph) ExtendEmbedding(dt *Digraph, cur *goiso.SubGraph, e *Edge) [
 	targs := sg.findTargs(cur, e)
 	// errors.Logf("DEBUG", "  targs %v", targs)
 	for _, targ := range targs {
-		for _, pe := range sg.findEdgesFromTarg(dt, cur, targ, e) {
+		for _, pe := range sg.findEdgesFromTarg(G, cur, targ, e) {
 			// errors.Logf("DEBUG", "    pe %v %v", pe.Idx, pe)
 			if !seen[pe.Idx] {
 				seen[pe.Idx] = true
-				dt.Extender.Extend(cur, pe, exts.Ch())
+				extender.Extend(cur, pe, exts.Ch())
 				added += 1
 			}
 		}
@@ -242,15 +248,15 @@ func (sg *SubGraph) findTargs(cur *goiso.SubGraph, e *Edge) []int {
 	return targs
 }
 
-func (sg *SubGraph) findEdgesFromSrc(dt *Digraph, cur *goiso.SubGraph, src int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *goiso.SubGraph, src int, e *Edge) []*goiso.Edge {
 	srcDtIdx := cur.V[src].Id
 	tcolor := sg.V[e.Targ].Color
 	ecolor := e.Color
 	edges := make([]*goiso.Edge, 0, 10)
-	for _, ke := range dt.G.Kids[srcDtIdx] {
+	for _, ke := range G.Kids[srcDtIdx] {
 		if ke.Color != ecolor {
 			continue
-		} else if dt.G.V[ke.Targ].Color != tcolor {
+		} else if G.V[ke.Targ].Color != tcolor {
 			continue
 		}
 		if !cur.HasEdge(goiso.ColoredArc{ke.Arc, ke.Color}) {
@@ -260,15 +266,15 @@ func (sg *SubGraph) findEdgesFromSrc(dt *Digraph, cur *goiso.SubGraph, src int, 
 	return edges
 }
 
-func (sg *SubGraph) findEdgesFromTarg(dt *Digraph, cur *goiso.SubGraph, targ int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesFromTarg(G *goiso.Graph, cur *goiso.SubGraph, targ int, e *Edge) []*goiso.Edge {
 	targDtIdx := cur.V[targ].Id
 	scolor := sg.V[e.Src].Color
 	ecolor := e.Color
 	edges := make([]*goiso.Edge, 0, 10)
-	for _, pe := range dt.G.Parents[targDtIdx] {
+	for _, pe := range G.Parents[targDtIdx] {
 		if pe.Color != ecolor {
 			continue
-		} else if dt.G.V[pe.Src].Color != scolor {
+		} else if G.V[pe.Src].Color != scolor {
 			continue
 		}
 		if !cur.HasEdge(goiso.ColoredArc{pe.Arc, pe.Color}) {

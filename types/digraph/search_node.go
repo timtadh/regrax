@@ -12,18 +12,19 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 
 type SearchNode struct {
 	Dt    *Digraph
-	Pat   *SubGraph
+	Pat   *subgraph.SubGraph
 }
 
 func newSearchNode(Dt *Digraph, sg *goiso.SubGraph) SearchNode {
 	return SearchNode{
 		Dt: Dt,
-		Pat: NewSubGraph(sg),
+		Pat: subgraph.NewSubGraph(sg),
 	}
 }
 
@@ -40,7 +41,7 @@ func (n *SearchNode) New(sgs []*goiso.SubGraph) Node {
 }
 
 func LoadSearchNode(Dt *Digraph, label []byte) (*SearchNode, error) {
-	pat, err := LoadSubgraphFromLabel(label)
+	pat, err := subgraph.LoadSubgraphFromLabel(label)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (n *SearchNode) Save() error {
 	return err
 }
 
-func (n *SearchNode) SubGraph() *SubGraph {
+func (n *SearchNode) SubGraph() *subgraph.SubGraph {
 	return n.Pat
 }
 
@@ -76,7 +77,7 @@ func (n *SearchNode) Embeddings() ([]*goiso.SubGraph, error) {
 	} else if has {
 		return n.loadEmbeddings()
 	} else {
-		embs, err := n.Pat.Embeddings(n.Dt)
+		embs, err := n.Pat.Embeddings(n.Dt.G, n.Dt.ColorMap, n.Dt.Extender)
 		if err != nil {
 			return nil, err
 		}

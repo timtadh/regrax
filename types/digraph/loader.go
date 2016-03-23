@@ -19,6 +19,7 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/ext"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
@@ -41,7 +42,7 @@ type Digraph struct {
 	G                                            *goiso.Graph
 	FrequentVertices                             [][]byte
 	Supported                                    Supported
-	Extender                                     *Extender
+	Extender                                     *ext.Extender
 	NodeAttrs                                    int_json.MultiMap
 	Embeddings                                   bytes_subgraph.MultiMap
 	Parents                                      bytes_bytes.MultiMap
@@ -90,7 +91,7 @@ func NewDigraph(config *config.Config, search bool, sup Supported, minE, maxE, m
 	}
 	g = &Digraph{
 		Supported:     sup,
-		Extender:      NewExtender(runtime.NumCPU()),
+		Extender:      ext.NewExtender(runtime.NumCPU()),
 		MinEdges:      minE,
 		MaxEdges:      maxE,
 		MinVertices:   minV,

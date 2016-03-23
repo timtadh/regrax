@@ -1,4 +1,4 @@
-package digraph
+package ext
 
 import (
 	"sync"
@@ -31,7 +31,7 @@ func NewCollector(maxVertices int) *Collector {
 func (c *Collector) work() {
 	for sg := range c.requests {
 		c.done.L.Lock()
-		if len(sg.V) <= c.MaxVertices {
+		if len(sg.V) <= c.MaxVertices || c.MaxVertices < 0 {
 			c.collection = append(c.collection, sg)
 		}
 		c.processed++
