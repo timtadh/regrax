@@ -76,7 +76,7 @@ func (E Edges) Iterate() (ei bliss.EdgeIterator) {
 // Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
 // canonical ordering. This is a necessary assumption for Embeddings() to 
 // work properly.
-func FromCanonized(sg *goiso.SubGraph) *SubGraph {
+func FromEmbedding(sg *goiso.SubGraph) *SubGraph {
 	if sg == nil {
 		return &SubGraph{
 			V: make([]Vertex, 0),
@@ -130,8 +130,6 @@ func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, exte
 	ei, err := sg.IterEmbeddings(G, ColorMap, extender, pruner)
 	if err != nil {
 		return err
-	} else if ei == nil {
-		return nil
 	}
 	for emb, next := ei(); next != nil; emb, next = next() {
 		err := do(emb)
@@ -152,7 +150,10 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 	}
 
 	if len(sg.V) == 0 {
-		return nil, nil
+		ei = func() (*goiso.SubGraph, EmbIterator) {
+			return nil, nil
+		}
+		return ei, nil
 	}
 	startIdx := sg.LeastCommonVertex(G)
 	chain := sg.EdgeChainFrom(startIdx)

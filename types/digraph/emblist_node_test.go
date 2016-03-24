@@ -47,7 +47,7 @@ func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.Sub
 		t.Fatal(err)
 	}
 
-	return dt, G, sg, subgraph.FromCanonized(sg), RootEmbListNode(dt), RootSearchNode(dt)
+	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt), RootSearchNode(dt)
 }
 
 

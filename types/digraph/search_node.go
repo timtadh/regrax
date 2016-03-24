@@ -24,7 +24,7 @@ type SearchNode struct {
 func newSearchNode(Dt *Digraph, sg *goiso.SubGraph) SearchNode {
 	return SearchNode{
 		Dt: Dt,
-		Pat: subgraph.FromCanonized(sg),
+		Pat: subgraph.FromEmbedding(sg),
 	}
 }
 

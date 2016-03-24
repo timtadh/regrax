@@ -50,7 +50,7 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.Mult
 		}
 	}
 
-	return G, sg, FromCanonized(sg), ColorMap, ext.NewExtender(runtime.NumCPU())
+	return G, sg, FromEmbedding(sg), ColorMap, ext.NewExtender(runtime.NumCPU())
 }
 
 func TestEmbeddings(t *testing.T) {
@@ -75,7 +75,7 @@ func TestNewBuilder(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x,x)
 	G, _, _, colors, extender := graph(t)
-	b := New()
+	b := BuildNew()
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
 	n3 := b.AddVertex(1)
@@ -107,7 +107,7 @@ func TestFromBuilder(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x,x)
 	G, _, expected, colors, extender := graph(t)
-	b := New()
+	b := BuildNew()
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
 	n3 := b.AddVertex(1)
@@ -122,9 +122,9 @@ func TestFromBuilder(t *testing.T) {
 	sg1 := b.Build()
 	t.Log(sg1)
 	t.Log(sg1.Adj)
-	b2 := From(sg1)
-	b2.AddEdge(&b2.V[3], &b2.V[5], 2)
-	sg := b2.Build()
+	b2 := BuildFrom(sg1)
+	sg := b2.Mutation(func(b *Builder){ b.AddEdge(&b.V[3], &b.V[5], 2) }).Build()
+	t.Log(b2.Build())
 	t.Log(sg)
 	t.Log(expected)
 	t.Log(sg.Adj)

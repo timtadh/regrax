@@ -10,14 +10,14 @@ type Builder struct {
 	E Edges
 }
 
-func New() *Builder {
+func BuildNew() *Builder {
 	return &Builder{
 		V: make([]Vertex, 0, 10),
 		E: make([]Edge, 0, 10),
 	}
 }
 
-func From(sg *SubGraph) *Builder {
+func BuildFrom(sg *SubGraph) *Builder {
 	V := make([]Vertex, len(sg.V))
 	E := make([]Edge, len(sg.E))
 	copy(V, sg.V)
@@ -26,6 +26,23 @@ func From(sg *SubGraph) *Builder {
 		V: V,
 		E: E,
 	}
+}
+
+func (b *Builder) Copy() *Builder {
+	V := make([]Vertex, len(b.V))
+	E := make([]Edge, len(b.E))
+	copy(V, b.V)
+	copy(E, b.E)
+	return &Builder{
+		V: V,
+		E: E,
+	}
+}
+
+func (b *Builder) Mutation(do func(*Builder)) *Builder {
+	nb := b.Copy()
+	do(nb)
+	return nb
 }
 
 func (b *Builder) AddVertex(color int) *Vertex {
