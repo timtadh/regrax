@@ -74,7 +74,7 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 		t.Fatal(err)
 	}
 
-	return dt, G, sg, subgraph.NewSubGraph(sg), RootEmbListNode(dt), RootSearchNode(dt)
+	return dt, G, sg, subgraph.FromCanonized(sg), RootEmbListNode(dt), RootSearchNode(dt)
 }
 
 func BenchmarkEmbList(b *testing.B) {

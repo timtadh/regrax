@@ -50,15 +50,85 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.Mult
 		}
 	}
 
-	return G, sg, NewSubGraph(sg), ColorMap, ext.NewExtender(runtime.NumCPU())
+	return G, sg, FromCanonized(sg), ColorMap, ext.NewExtender(runtime.NumCPU())
 }
 
-func TestEmebeddings(t *testing.T) {
+func TestEmbeddings(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x,x)
 	G, _, sg, colors, extender := graph(t)
 	t.Log(sg)
 	t.Log(sg.Adj)
+
+	embs, err := sg.Embeddings(G, colors, extender)
+	x.Nil(err)
+	for _, emb := range embs {
+		t.Log(emb.Label())
+	}
+	for _, emb := range embs {
+		t.Log(emb)
+	}
+	x.Equal(len(embs), 2, "embs should have 2 embeddings")
+}
+
+func TestNewBuilder(t *testing.T) {
+	x := assert.New(t)
+	t.Logf("%T %v", x,x)
+	G, _, _, colors, extender := graph(t)
+	b := New()
+	n1 := b.AddVertex(0)
+	n2 := b.AddVertex(0)
+	n3 := b.AddVertex(1)
+	n4 := b.AddVertex(1)
+	n5 := b.AddVertex(1)
+	n6 := b.AddVertex(1)
+	b.AddEdge(n1, n3, 2)
+	b.AddEdge(n1, n4, 2)
+	b.AddEdge(n2, n5, 2)
+	b.AddEdge(n2, n6, 2)
+	b.AddEdge(n4, n6, 2)
+	b.AddEdge(n5, n3, 2)
+	sg := b.Build()
+	t.Log(sg)
+	t.Log(sg.Adj)
+
+	embs, err := sg.Embeddings(G, colors, extender)
+	x.Nil(err)
+	for _, emb := range embs {
+		t.Log(emb.Label())
+	}
+	for _, emb := range embs {
+		t.Log(emb)
+	}
+	x.Equal(len(embs), 2, "embs should have 2 embeddings")
+}
+
+func TestFromBuilder(t *testing.T) {
+	x := assert.New(t)
+	t.Logf("%T %v", x,x)
+	G, _, expected, colors, extender := graph(t)
+	b := New()
+	n1 := b.AddVertex(0)
+	n2 := b.AddVertex(0)
+	n3 := b.AddVertex(1)
+	n4 := b.AddVertex(1)
+	n5 := b.AddVertex(1)
+	n6 := b.AddVertex(1)
+	b.AddEdge(n1, n3, 2)
+	b.AddEdge(n1, n4, 2)
+	b.AddEdge(n2, n5, 2)
+	b.AddEdge(n2, n6, 2)
+	b.AddEdge(n4, n6, 2)
+	sg1 := b.Build()
+	t.Log(sg1)
+	t.Log(sg1.Adj)
+	b2 := From(sg1)
+	b2.AddEdge(&b2.V[3], &b2.V[5], 2)
+	sg := b2.Build()
+	t.Log(sg)
+	t.Log(expected)
+	t.Log(sg.Adj)
+	t.Log(expected.Adj)
 
 	embs, err := sg.Embeddings(G, colors, extender)
 	x.Nil(err)

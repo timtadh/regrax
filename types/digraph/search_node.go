@@ -24,7 +24,7 @@ type SearchNode struct {
 func newSearchNode(Dt *Digraph, sg *goiso.SubGraph) SearchNode {
 	return SearchNode{
 		Dt: Dt,
-		Pat: subgraph.NewSubGraph(sg),
+		Pat: subgraph.FromCanonized(sg),
 	}
 }
 
@@ -41,7 +41,7 @@ func (n *SearchNode) New(sgs []*goiso.SubGraph) Node {
 }
 
 func LoadSearchNode(Dt *Digraph, label []byte) (*SearchNode, error) {
-	pat, err := subgraph.LoadSubgraphFromLabel(label)
+	pat, err := subgraph.FromLabel(label)
 	if err != nil {
 		return nil, err
 	}

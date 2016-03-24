@@ -11,6 +11,7 @@ import (
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
+	"github.com/timtadh/goiso/bliss"
 )
 
 import (
@@ -20,10 +21,13 @@ import (
 
 
 type SubGraph struct {
-	V []Vertex
-	E []Edge
+	V Vertices
+	E Edges
 	Adj [][]int
 }
+
+type Vertices []Vertex
+type Edges []Edge
 
 type Vertex struct {
 	Idx int
@@ -41,10 +45,38 @@ func EmptySubGraph() *SubGraph {
 	return &SubGraph{}
 }
 
+func (V Vertices) Iterate() (vi bliss.VertexIterator) {
+	i := 0
+	vi = func() (color int, _ bliss.VertexIterator) {
+		if i >= len(V) {
+			return 0, nil
+		}
+		color = V[i].Color
+		i++
+		return color, vi
+	}
+	return vi
+}
+
+func (E Edges) Iterate() (ei bliss.EdgeIterator) {
+	i := 0
+	ei = func() (src, targ, color int, _ bliss.EdgeIterator) {
+		if i >= len(E) {
+			return 0, 0, 0, nil
+		}
+		src = E[i].Src
+		targ = E[i].Targ
+		color = E[i].Color
+		i++
+		return src, targ, color, ei
+	}
+	return ei
+}
+
 // Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
 // canonical ordering. This is a necessary assumption for Embeddings() to 
 // work properly.
-func NewSubGraph(sg *goiso.SubGraph) *SubGraph {
+func FromCanonized(sg *goiso.SubGraph) *SubGraph {
 	if sg == nil {
 		return &SubGraph{
 			V: make([]Vertex, 0),
@@ -72,7 +104,7 @@ func NewSubGraph(sg *goiso.SubGraph) *SubGraph {
 	return pat
 }
 
-func LoadSubgraphFromLabel(label []byte) (*SubGraph, error) {
+func FromLabel(label []byte) (*SubGraph, error) {
 	sg := new(SubGraph)
 	err := sg.UnmarshalBinary(label)
 	if err != nil {
@@ -98,6 +130,8 @@ func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, exte
 	ei, err := sg.IterEmbeddings(G, ColorMap, extender, pruner)
 	if err != nil {
 		return err
+	} else if ei == nil {
+		return nil
 	}
 	for emb, next := ei(); next != nil; emb, next = next() {
 		err := do(emb)
