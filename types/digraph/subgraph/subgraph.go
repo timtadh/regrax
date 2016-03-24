@@ -316,8 +316,7 @@ func (sg *SubGraph) ExtendEmbedding(G *goiso.Graph, extender *ext.Extender, cur 
 			}
 		}
 	}
-	exts.Wait(added)
-	return exts.Collection()
+	return exts.Wait(added)
 }
 
 func (sg *SubGraph) findSrcs(cur *goiso.SubGraph, e *Edge) []int {

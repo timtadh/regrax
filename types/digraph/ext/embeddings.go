@@ -10,21 +10,21 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-type SubGraphs []*goiso.SubGraph
+type Embeddings []*goiso.SubGraph
 
-func (sgs SubGraphs) Len() int {
+func (sgs Embeddings) Len() int {
 	return len(sgs)
 }
 
-func (sgs SubGraphs) Less(i, j int) bool {
+func (sgs Embeddings) Less(i, j int) bool {
 	return bytes.Compare(sgs[i].ShortLabel(), sgs[j].ShortLabel()) < 0
 }
 
-func (sgs SubGraphs) Swap(i, j int) {
+func (sgs Embeddings) Swap(i, j int) {
 	sgs[i], sgs[j] = sgs[j], sgs[i]
 }
 
-func (sgs SubGraphs) Verify() error {
+func (sgs Embeddings) Verify() error {
 	if len(sgs) <= 0 {
 		return errors.Errorf("empty partition")
 	}
@@ -37,10 +37,10 @@ func (sgs SubGraphs) Verify() error {
 	return nil
 }
 
-func (sgs SubGraphs) Partition() []SubGraphs {
+func (sgs Embeddings) Partition() []Embeddings {
 	sort.Sort(sgs)
-	parts := make([]SubGraphs, 0, 10)
-	add := func(parts []SubGraphs, buf SubGraphs) []SubGraphs {
+	parts := make([]Embeddings, 0, 10)
+	add := func(parts []Embeddings, buf Embeddings) []Embeddings {
 		err := buf.Verify()
 		if err != nil {
 			errors.Logf("ERROR", "%v", err)
@@ -49,13 +49,13 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 		}
 		return parts
 	}
-	buf := make(SubGraphs, 0, 10)
+	buf := make(Embeddings, 0, 10)
 	var ckey []byte = nil
 	for _, sg := range sgs {
 		label := sg.ShortLabel()
 		if ckey != nil && !bytes.Equal(ckey, label) {
 			parts = add(parts, buf)
-			buf = make(SubGraphs, 0, 10)
+			buf = make(Embeddings, 0, 10)
 		}
 		ckey = label
 		buf = append(buf, sg)
