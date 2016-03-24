@@ -21,9 +21,9 @@ import (
 type Walker struct {
 	walker.Walker
 	EstimatingWalks int
-	Ests bytes_float.MultiMap
-	Prs bytes_float.MultiMap
-	Max bool
+	Ests            bytes_float.MultiMap
+	Prs             bytes_float.MultiMap
+	Max             bool
 }
 
 func NewWalker(conf *config.Config, estimatingWalks int, max bool) (*Walker, error) {
@@ -37,9 +37,9 @@ func NewWalker(conf *config.Config, estimatingWalks int, max bool) (*Walker, err
 	}
 	miner := &Walker{
 		EstimatingWalks: estimatingWalks,
-		Ests: ests,
-		Prs: prs,
-		Max: max,
+		Ests:            ests,
+		Prs:             prs,
+		Max:             max,
 	}
 	miner.Walker = *walker.NewWalker(conf, graple.MakeAbsorbingWalk(graple.MakeSample(miner), make(chan error)))
 	return miner, nil
@@ -184,7 +184,7 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 	if err != nil {
 		return 0, 0, err
 	}
-	diameter = float64(maxTail.Level() - anc.Level()) + 1
+	diameter = float64(maxTail.Level()-anc.Level()) + 1
 	depth = float64(maxDepth) + 1
 	return depth, diameter, nil
 }

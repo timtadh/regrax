@@ -1,7 +1,6 @@
 package walker
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -11,7 +10,6 @@ import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stats"
 )
-
 
 type Weight func(u, v lattice.Node) (float64, error)
 
@@ -61,4 +59,3 @@ func Transition(cur lattice.Node, adjs []lattice.Node, weight Weight) (float64, 
 	i := stats.WeightedSample(prs)
 	return prs[i], adjs[i], nil
 }
-

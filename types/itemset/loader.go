@@ -93,16 +93,16 @@ func NewItemSets(config *config.Config, min, max int) (i *ItemSets, err error) {
 		return nil, err
 	}
 	i = &ItemSets{
-		MinItems:    min,
-		MaxItems:    max,
-		Parents:     parents,
-		ParentCount: parentCount,
-		Children:    children,
-		ChildCount:  childCount,
-		CanonKids:    canonKids,
-		CanonKidCount:  canonKidCount,
-		Embeddings:  embeddings,
-		config:      config,
+		MinItems:      min,
+		MaxItems:      max,
+		Parents:       parents,
+		ParentCount:   parentCount,
+		Children:      children,
+		ChildCount:    childCount,
+		CanonKids:     canonKids,
+		CanonKidCount: canonKidCount,
+		Embeddings:    embeddings,
+		config:        config,
 	}
 	return i, nil
 }
@@ -266,9 +266,9 @@ func (l *IntLoader) startingPoints(items itemsIter) ([]lattice.Node, error) {
 		if len(txs) >= l.sets.Support() {
 			errors.Logf("INFO", "item %d len(txs) %d", item, len(txs))
 			n := &Node{
-				pat:   Pattern{set.FromSlice([]types.Hashable{types.Int32(item)})},
-				dt:    l.sets,
-				txs:   txs,
+				pat: Pattern{set.FromSlice([]types.Hashable{types.Int32(item)})},
+				dt:  l.sets,
+				txs: txs,
 			}
 			nodes = append(nodes, n)
 		}

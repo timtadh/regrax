@@ -37,16 +37,16 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/afp/miners/vsigram"
 	"github.com/timtadh/sfp/afp/miners/dfs"
+	"github.com/timtadh/sfp/afp/miners/vsigram"
 	"github.com/timtadh/sfp/cmd"
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/miners"
 )
 
 func init() {
-cmd.UsageMessage = "afp --help"
-cmd.ExtendedMessage = `
+	cmd.UsageMessage = "afp --help"
+	cmd.ExtendedMessage = `
 afp - sample frequent patterns
 
 $ afp -o <path> [Global Options] \
@@ -284,8 +284,8 @@ func main() {
 }
 
 func run() int {
-	modes := map[string]cmd.Mode {
-		"dfs": dfsMode,
+	modes := map[string]cmd.Mode{
+		"dfs":     dfsMode,
 		"vsigram": vsigramMode,
 	}
 
@@ -388,4 +388,3 @@ func run() int {
 
 	return cmd.Main(args, conf, modes)
 }
-

@@ -5,15 +5,14 @@ import (
 	"io"
 )
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/lattice"
 )
 
 type PrFormatter struct {
-	w        *Walker
+	w *Walker
 }
 
 func NewPrFormatter(w *Walker) *PrFormatter {
@@ -39,10 +38,10 @@ func (r *PrFormatter) SelectionProbability(n lattice.Node, m interface{}) (float
 	return r.w.SelectionProbability(QRu.Q, QRu.R, QRu.U)
 }
 
-func (r *PrFormatter) FormatMatrices(w io.Writer, fmtr lattice.Formatter, n lattice.Node, m interface{}) (error) {
+func (r *PrFormatter) FormatMatrices(w io.Writer, fmtr lattice.Formatter, n lattice.Node, m interface{}) error {
 	QRu := m.(*Matrices)
 	bytes, err := json.Marshal(map[string]interface{}{
-		"Name": fmtr.PatternName(n),
+		"Name":           fmtr.PatternName(n),
 		"Q":              QRu.Q,
 		"R":              QRu.R,
 		"u":              QRu.U,
@@ -61,4 +60,3 @@ func (r *PrFormatter) FormatMatrices(w io.Writer, fmtr lattice.Formatter, n latt
 	}
 	return nil
 }
-

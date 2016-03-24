@@ -39,7 +39,7 @@ package bytes_subgraph
 *   51 Franklin Street, Fifth Floor,
 *   Boston, MA  02110-1301
 *   USA
-*/
+ */
 
 import (
 	"sync"
@@ -54,7 +54,6 @@ import (
 import (
 	"github.com/timtadh/goiso"
 )
-
 
 type MultiMap interface {
 	Keys() (KeyIterator, error)
@@ -125,12 +124,12 @@ func DoValue(run func() (ValueIterator, error), do func(*goiso.SubGraph) error) 
 }
 
 type BpTree struct {
-	bf *fmap.BlockFile
-	bpt *bptree.BpTree
-	mutex sync.Mutex
-	serializeKey func([]byte) []byte
-	serializeValue func(*goiso.SubGraph) []byte
-	deserializeKey func([]byte) []byte
+	bf               *fmap.BlockFile
+	bpt              *bptree.BpTree
+	mutex            sync.Mutex
+	serializeKey     func([]byte) []byte
+	serializeValue   func(*goiso.SubGraph) []byte
+	deserializeKey   func([]byte) []byte
 	deserializeValue func([]byte) *goiso.SubGraph
 }
 
@@ -139,7 +138,7 @@ func AnonBpTree(
 	serializeValue func(*goiso.SubGraph) []byte,
 	deserializeKey func([]byte) []byte,
 	deserializeValue func([]byte) *goiso.SubGraph,
-) (*BpTree, error) { 
+) (*BpTree, error) {
 	bf, err := fmap.Anonymous(fmap.BLOCKSIZE)
 	if err != nil {
 		return nil, err
@@ -153,7 +152,7 @@ func NewBpTree(
 	serializeValue func(*goiso.SubGraph) []byte,
 	deserializeKey func([]byte) []byte,
 	deserializeValue func([]byte) *goiso.SubGraph,
-) (*BpTree, error) { 
+) (*BpTree, error) {
 	bf, err := fmap.CreateBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -167,7 +166,7 @@ func OpenBpTree(
 	serializeValue func(*goiso.SubGraph) []byte,
 	deserializeKey func([]byte) []byte,
 	deserializeValue func([]byte) *goiso.SubGraph,
-) (*BpTree, error) { 
+) (*BpTree, error) {
 	bf, err := fmap.OpenBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -177,11 +176,11 @@ func OpenBpTree(
 		return nil, err
 	}
 	b := &BpTree{
-		bf: bf,
-		bpt: bpt,
-		serializeKey: serializeKey,
-		serializeValue: serializeValue,
-		deserializeKey: deserializeKey,
+		bf:               bf,
+		bpt:              bpt,
+		serializeKey:     serializeKey,
+		serializeValue:   serializeValue,
+		deserializeKey:   deserializeKey,
 		deserializeValue: deserializeValue,
 	}
 	return b, nil
@@ -193,17 +192,17 @@ func newBpTree(
 	serializeValue func(*goiso.SubGraph) []byte,
 	deserializeKey func([]byte) []byte,
 	deserializeValue func([]byte) *goiso.SubGraph,
-) (*BpTree, error) { 
+) (*BpTree, error) {
 	bpt, err := bptree.New(bf, -1, -1)
 	if err != nil {
 		return nil, err
 	}
 	b := &BpTree{
-		bf: bf,
-		bpt: bpt,
-		serializeKey: serializeKey,
-		serializeValue: serializeValue,
-		deserializeKey: deserializeKey,
+		bf:               bf,
+		bpt:              bpt,
+		serializeKey:     serializeKey,
+		serializeValue:   serializeValue,
+		deserializeKey:   deserializeKey,
 		deserializeValue: deserializeValue,
 	}
 	return b, nil
@@ -336,7 +335,7 @@ func (b *BpTree) Find(key []byte) (it Iterator, err error) {
 }
 
 func (b *BpTree) DoFind(key []byte, do func([]byte, *goiso.SubGraph) error) error {
-	return Do(func()(Iterator, error) { return b.Find(key) }, do)
+	return Do(func() (Iterator, error) { return b.Find(key) }, do)
 }
 
 func (b *BpTree) Iterate() (it Iterator, err error) {
@@ -360,7 +359,7 @@ func (b *BpTree) Range(from, to []byte) (it Iterator, err error) {
 }
 
 func (b *BpTree) DoRange(from, to []byte, do func([]byte, *goiso.SubGraph) error) error {
-	return Do(func()(Iterator, error) { return b.Range(from, to) }, do)
+	return Do(func() (Iterator, error) { return b.Range(from, to) }, do)
 }
 
 func (b *BpTree) Backward() (it Iterator, err error) {
@@ -380,4 +379,3 @@ func (b *BpTree) Remove(key []byte, where func(*goiso.SubGraph) bool) error {
 		return where(b.deserializeValue(bytes))
 	})
 }
-

@@ -1,18 +1,15 @@
 package digraph
 
-import (
-)
+import ()
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
-
-func count(n Node, compute func()([]lattice.Node, error), counts bytes_int.MultiMap) (int, error) {
+func count(n Node, compute func() ([]lattice.Node, error), counts bytes_int.MultiMap) (int, error) {
 	if has, err := counts.Has(n.Label()); err != nil {
 		return 0, err
 	} else if !has {
@@ -32,4 +29,3 @@ func count(n Node, compute func()([]lattice.Node, error), counts bytes_int.Multi
 	}
 	return int(count), nil
 }
-

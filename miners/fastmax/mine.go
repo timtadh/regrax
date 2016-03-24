@@ -1,10 +1,8 @@
 package fastmax
 
-import (
-)
+import ()
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/config"
@@ -45,7 +43,7 @@ func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 		}
 		level := float64(v.Pattern().Level())
 		maxLevel := float64(w.Dt.LargestLevel())
-		return (level)/(float64(indeg)*maxLevel), nil
+		return (level) / (float64(indeg) * maxLevel), nil
 	} else {
 		indeg, err := v.ParentCount()
 		if err != nil {
@@ -55,6 +53,6 @@ func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 		if err != nil {
 			return 0, err
 		}
-		return float64(odeg)/float64(indeg), nil
+		return float64(odeg) / float64(indeg), nil
 	}
 }

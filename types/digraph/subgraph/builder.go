@@ -4,7 +4,6 @@ import (
 	"github.com/timtadh/goiso/bliss"
 )
 
-
 type Builder struct {
 	V Vertices
 	E Edges
@@ -47,7 +46,7 @@ func (b *Builder) Mutation(do func(*Builder)) *Builder {
 
 func (b *Builder) AddVertex(color int) *Vertex {
 	b.V = append(b.V, Vertex{
-		Idx: len(b.V),
+		Idx:   len(b.V),
 		Color: color,
 	})
 	return &b.V[len(b.V)-1]
@@ -55,8 +54,8 @@ func (b *Builder) AddVertex(color int) *Vertex {
 
 func (b *Builder) AddEdge(src, targ *Vertex, color int) *Edge {
 	b.E = append(b.E, Edge{
-		Src: src.Idx,
-		Targ: targ.Idx,
+		Src:   src.Idx,
+		Targ:  targ.Idx,
 		Color: color,
 	})
 	return &b.E[len(b.E)-1]
@@ -84,4 +83,3 @@ func (b *Builder) Build() *SubGraph {
 	}
 	return pat
 }
-

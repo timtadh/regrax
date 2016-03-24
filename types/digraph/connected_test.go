@@ -22,9 +22,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-
-
-
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if urandom, err := os.Open("/dev/urandom"); err != nil {
@@ -37,8 +34,6 @@ func init() {
 		urandom.Close()
 	}
 }
-
-
 
 func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode, *SearchNode) {
 	Graph := goiso.NewGraph(10, 10)
@@ -86,7 +81,7 @@ func BenchmarkEmbList(b *testing.B) {
 		elabels := []string{"g", "h", "i"}
 		V := 100
 		_, _, _, _, eroot, _ := randomGraph(
-		b, V, int(float64(V)*2.25), vlabels, elabels)
+			b, V, int(float64(V)*2.25), vlabels, elabels)
 		b.StartTimer()
 		dfs(b, x, eroot)
 		b.StopTimer()
@@ -110,8 +105,6 @@ func TestVerifySearch(t *testing.T) {
 	_, _, _, _, _, sroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
 	dfs(t, x, sroot)
 }
-
-
 
 func dfs(t testing.TB, x *assert.Assertions, root Node) {
 	visit(t, x, set.NewSortedSet(250), root)
@@ -147,7 +140,7 @@ func checkNode(t testing.TB, x *assert.Assertions, node Node) {
 	if pcount != len(parents) {
 		x.Fail("count != len(parents)")
 	}
-	if kcount + pcount != acount {
+	if kcount+pcount != acount {
 		x.Fail("kcount + pcount != acount")
 	}
 	for _, kid := range kids {

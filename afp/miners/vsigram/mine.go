@@ -1,6 +1,5 @@
 package vsigram
 
-
 import ()
 
 import (
@@ -92,4 +91,3 @@ func (m *Miner) mine() error {
 	}
 	return nil
 }
-

@@ -38,7 +38,7 @@ package subgraph
 *   51 Franklin Street, Fifth Floor,
 *   Boston, MA  02110-1301
 *   USA
-*/
+ */
 
 import (
 	"sync"
@@ -53,7 +53,6 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-
 type List interface {
 	Append(item *goiso.SubGraph) (i uint64, err error)
 	Get(i uint64) (item *goiso.SubGraph, err error)
@@ -67,17 +66,17 @@ type List interface {
 }
 
 type MMList struct {
-	bf *fmap.BlockFile
-	list *mmlist.List
-	mutex sync.Mutex
-	serializeItem func(*goiso.SubGraph) []byte
+	bf              *fmap.BlockFile
+	list            *mmlist.List
+	mutex           sync.Mutex
+	serializeItem   func(*goiso.SubGraph) []byte
 	deserializeItem func([]byte) *goiso.SubGraph
 }
 
 func AnonList(
 	serializeItem func(*goiso.SubGraph) []byte,
 	deserializeItem func([]byte) *goiso.SubGraph,
-) (*MMList, error) { 
+) (*MMList, error) {
 	bf, err := fmap.Anonymous(fmap.BLOCKSIZE)
 	if err != nil {
 		return nil, err
@@ -89,7 +88,7 @@ func NewList(
 	path string,
 	serializeItem func(*goiso.SubGraph) []byte,
 	deserializeItem func([]byte) *goiso.SubGraph,
-) (*MMList, error) { 
+) (*MMList, error) {
 	bf, err := fmap.CreateBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -101,7 +100,7 @@ func OpenList(
 	path string,
 	serializeItem func(*goiso.SubGraph) []byte,
 	deserializeItem func([]byte) *goiso.SubGraph,
-) (*MMList, error) { 
+) (*MMList, error) {
 	bf, err := fmap.OpenBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -111,9 +110,9 @@ func OpenList(
 		return nil, err
 	}
 	b := &MMList{
-		bf: bf,
-		list: list,
-		serializeItem: serializeItem,
+		bf:              bf,
+		list:            list,
+		serializeItem:   serializeItem,
 		deserializeItem: deserializeItem,
 	}
 	return b, nil
@@ -123,15 +122,15 @@ func newMMList(
 	bf *fmap.BlockFile,
 	serializeItem func(*goiso.SubGraph) []byte,
 	deserializeItem func([]byte) *goiso.SubGraph,
-) (*MMList, error) { 
+) (*MMList, error) {
 	list, err := mmlist.New(bf)
 	if err != nil {
 		return nil, err
 	}
 	b := &MMList{
-		bf: bf,
-		list: list,
-		serializeItem: serializeItem,
+		bf:              bf,
+		list:            list,
+		serializeItem:   serializeItem,
 		deserializeItem: deserializeItem,
 	}
 	return b, nil

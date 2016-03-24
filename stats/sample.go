@@ -6,7 +6,6 @@ import (
 	"math/rand"
 )
 
-
 func Srange(size int) []int {
 	sample := make([]int, 0, size)
 	for i := 0; i < size; i++ {
@@ -90,7 +89,7 @@ func Sum(list []float64) float64 {
 	return sum
 }
 
-func Round(val float64, places int ) (newVal float64) {
+func Round(val float64, places int) (newVal float64) {
 	var round float64
 	roundOn := .5
 	pow := math.Pow(10, float64(places))

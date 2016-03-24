@@ -1,14 +1,13 @@
 package reporters
 
 import (
-	"os"
 	"io"
+	"os"
 	"runtime"
 	"runtime/pprof"
 )
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/lattice"
@@ -16,7 +15,7 @@ import (
 
 type HeapProfile struct {
 	after, every, count int
-	f io.WriteCloser
+	f                   io.WriteCloser
 }
 
 func NewHeapProfile(path string, after, every int) (*HeapProfile, error) {
@@ -30,7 +29,7 @@ func NewHeapProfile(path string, after, every int) (*HeapProfile, error) {
 
 func (hp *HeapProfile) Report(n lattice.Node) error {
 	hp.count++
-	if hp.count > hp.after && hp.count % hp.every == 0 {
+	if hp.count > hp.after && hp.count%hp.every == 0 {
 		runtime.GC()
 		runtime.GC()
 		runtime.GC()
@@ -43,4 +42,3 @@ func (hp *HeapProfile) Report(n lattice.Node) error {
 func (hp *HeapProfile) Close() error {
 	return hp.f.Close()
 }
-

@@ -15,7 +15,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/support"
 )
 
-
 type Supported func(dt *Digraph, sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error)
 
 func MinImgSupported(dt *Digraph, sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error) {
@@ -41,7 +40,7 @@ func MakeTxSupported(attrName string) Supported {
 			}
 			vid := int32(sg.V[0].Id)
 			err := dt.NodeAttrs.DoFind(vid, func(_ int32, attrs map[string]interface{}) error {
-				attr, has := attrs[attrName];
+				attr, has := attrs[attrName]
 				if !has {
 					return errors.Errorf("subgraph %v vertex %v did not have attr %v in attrs %v", sg, sg.V[0], attrName, attrs)
 				}
@@ -80,4 +79,3 @@ func MakeTxSupported(attrName string) Supported {
 		return supported, nil
 	}
 }
-

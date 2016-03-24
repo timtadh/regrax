@@ -1,7 +1,6 @@
 package digraph
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -73,5 +72,3 @@ func cached(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.Mul
 	}
 	return nodes, true, nil
 }
-
-

@@ -8,21 +8,20 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-
 type Collector struct {
 	MaxVertices int
-	done *sync.Cond
-	processed int
-	collection SubGraphs
-	requests chan *goiso.SubGraph
+	done        *sync.Cond
+	processed   int
+	collection  SubGraphs
+	requests    chan *goiso.SubGraph
 }
 
 func NewCollector(maxVertices int) *Collector {
 	c := &Collector{
 		MaxVertices: maxVertices,
-		done: sync.NewCond(new(sync.Mutex)),
-		collection: make(SubGraphs, 0, 10),
-		requests: make(chan *goiso.SubGraph),
+		done:        sync.NewCond(new(sync.Mutex)),
+		collection:  make(SubGraphs, 0, 10),
+		requests:    make(chan *goiso.SubGraph),
 	}
 	go c.work()
 	return c
@@ -60,4 +59,3 @@ func (c *Collector) Partition() []SubGraphs {
 func (c *Collector) Collection() []*goiso.SubGraph {
 	return c.collection
 }
-

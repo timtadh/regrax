@@ -9,8 +9,7 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-import (
-)
+import ()
 
 func isCanonicalExtension(cur *goiso.SubGraph, ext *goiso.SubGraph) (bool, error) {
 	// errors.Logf("DEBUG", "is %v a canonical ext of %v", ext.Label(), n)
@@ -26,7 +25,7 @@ func isCanonicalExtension(cur *goiso.SubGraph, ext *goiso.SubGraph) (bool, error
 	return false, nil
 }
 
-func computeParent(sg *goiso.SubGraph, i int, parents []*goiso.SubGraph) ([]*goiso.SubGraph) {
+func computeParent(sg *goiso.SubGraph, i int, parents []*goiso.SubGraph) []*goiso.SubGraph {
 	if len(sg.V) == 2 && len(sg.E) == 1 {
 		p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
 		parents = append(parents, p)
@@ -49,7 +48,7 @@ func firstParent(sg *goiso.SubGraph) (*goiso.SubGraph, error) {
 		return nil, nil
 	}
 	parents := make([]*goiso.SubGraph, 0, 10)
-	for i := len(sg.E)-1; i >= 0; i-- {
+	for i := len(sg.E) - 1; i >= 0; i-- {
 		parents = computeParent(sg, i, parents)
 		if len(parents) > 0 {
 			return parents[0], nil
@@ -58,15 +57,13 @@ func firstParent(sg *goiso.SubGraph) (*goiso.SubGraph, error) {
 	return nil, errors.Errorf("no parents for %v", sg.Label())
 }
 
-
 func allParents(sg *goiso.SubGraph) ([]*goiso.SubGraph, error) {
 	if len(sg.E) <= 0 {
 		return nil, nil
 	}
 	parents := make([]*goiso.SubGraph, 0, 10)
-	for i := len(sg.E)-1; i >= 0; i-- {
+	for i := len(sg.E) - 1; i >= 0; i-- {
 		computeParent(sg, i, parents)
 	}
 	return parents, nil
 }
-

@@ -1,7 +1,6 @@
 package digraph
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -12,7 +11,6 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
-
 
 func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "compute Parents\n    of %v", n)
@@ -47,4 +45,3 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 	}
 	return nodes, cache(dt, dt.ParentCount, dt.Parents, n.Label(), nodes)
 }
-

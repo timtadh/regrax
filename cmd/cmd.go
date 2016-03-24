@@ -67,13 +67,13 @@ func init() {
 }
 
 var ErrorCodes map[string]int = map[string]int{
-	"usage":   0,
-	"version": 2,
-	"opts":    3,
-	"badfloat":  6,
-	"badint":  5,
-	"baddir":  6,
-	"badfile": 7,
+	"usage":    0,
+	"version":  2,
+	"opts":     3,
+	"badfloat": 6,
+	"badint":   5,
+	"baddir":   6,
+	"badfile":  7,
 }
 
 var UsageMessage string
@@ -236,7 +236,7 @@ func AssertFile(fname string) string {
 	return fname
 }
 
-type Type func([]string, *config.Config) (lattice.Loader, func(lattice.DataType,lattice.PrFormatter) lattice.Formatter, []string)
+type Type func([]string, *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string)
 
 func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
@@ -373,7 +373,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	return loader, fmtr, args
 }
 
-type Reporter func(map[string]Reporter, []string, lattice.Formatter, *config.Config)(miners.Reporter, []string)
+type Reporter func(map[string]Reporter, []string, lattice.Formatter, *config.Config) (miners.Reporter, []string)
 
 func logReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
@@ -462,7 +462,7 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-    return fr, args
+	return fr, args
 }
 
 func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
@@ -500,7 +500,7 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-    return fr, args
+	return fr, args
 }
 
 func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
@@ -525,7 +525,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 		}
 	}
 	rptrs := make([]miners.Reporter, 0, 10)
-	for len(args) >=1 {
+	for len(args) >= 1 {
 		if args[0] == "endchain" {
 			args = args[1:]
 			break
@@ -545,7 +545,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 	if len(rptrs) == 0 {
 		fmt.Fprintln(os.Stderr, "Empty chain")
 		fmt.Fprintln(os.Stderr, "try: chain log file")
-			Usage(ErrorCodes["opts"])
+		Usage(ErrorCodes["opts"])
 	}
 	return &reporters.Chain{rptrs}, args
 }
@@ -579,7 +579,7 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to unique")
 		fmt.Fprintln(os.Stderr, "try: unique file")
-        Usage(ErrorCodes["opts"])
+		Usage(ErrorCodes["opts"])
 	} else if _, has := reports[args[0]]; !has {
 		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
 		fmt.Fprintln(os.Stderr, "Reporters:")
@@ -623,7 +623,7 @@ func maxReporter(reports map[string]Reporter, argv []string, fmtr lattice.Format
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to max")
 		fmt.Fprintln(os.Stderr, "try: unique file")
-        Usage(ErrorCodes["opts"])
+		Usage(ErrorCodes["opts"])
 	} else if _, has := reports[args[0]]; !has {
 		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
 		fmt.Fprintln(os.Stderr, "Reporters:")
@@ -667,7 +667,7 @@ func canonMaxReporter(reports map[string]Reporter, argv []string, fmtr lattice.F
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to canon-max")
 		fmt.Fprintln(os.Stderr, "try: unique file")
-        Usage(ErrorCodes["opts"])
+		Usage(ErrorCodes["opts"])
 	} else if _, has := reports[args[0]]; !has {
 		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
 		fmt.Fprintln(os.Stderr, "Reporters:")
@@ -729,24 +729,22 @@ func heapProfileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-    return r, args
+	return r, args
 }
-
-
 
 var Types map[string]Type = map[string]Type{
 	"itemset": itemsetType,
 	"digraph": digraphType,
 }
 
-var Reporters  map[string]Reporter = map[string]Reporter{
-	"log": logReporter,
-	"file": fileReporter,
-	"dir": dirReporter,
-	"chain": chainReporter,
-	"unique": uniqueReporter,
-	"max": maxReporter,
-	"canon-max": canonMaxReporter,
+var Reporters map[string]Reporter = map[string]Reporter{
+	"log":          logReporter,
+	"file":         fileReporter,
+	"dir":          dirReporter,
+	"chain":        chainReporter,
+	"unique":       uniqueReporter,
+	"max":          maxReporter,
+	"canon-max":    canonMaxReporter,
 	"heap-profile": heapProfileReporter,
 }
 
@@ -836,4 +834,3 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 	}
 	return code
 }
-

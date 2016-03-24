@@ -40,18 +40,18 @@ import (
 	"github.com/timtadh/sfp/cmd"
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/miners"
+	"github.com/timtadh/sfp/miners/fastmax"
 	"github.com/timtadh/sfp/miners/graple"
 	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/ospace"
 	"github.com/timtadh/sfp/miners/premusk"
-	"github.com/timtadh/sfp/miners/fastmax"
 	"github.com/timtadh/sfp/miners/uniprox"
 	"github.com/timtadh/sfp/miners/walker"
 )
 
 func init() {
-cmd.UsageMessage = "sfp --help"
-cmd.ExtendedMessage = `
+	cmd.UsageMessage = "sfp --help"
+	cmd.ExtendedMessage = `
 sfp - sample frequent patterns
 
 $ sfp -o <path> --samples=<int> --support=<int> [Global Options] \
@@ -422,11 +422,11 @@ func main() {
 }
 
 func run() int {
-	modes := map[string]cmd.Mode {
-		"graple": grapleMode,
+	modes := map[string]cmd.Mode{
+		"graple":  grapleMode,
 		"fastmax": fastmaxMode,
-		"musk": muskMode,
-		"ospace": ospaceMode,
+		"musk":    muskMode,
+		"ospace":  ospaceMode,
 		"premusk": premuskMode,
 		"uniprox": uniproxMode,
 	}
@@ -540,8 +540,7 @@ func run() int {
 		Output:  output,
 		Support: support,
 		Samples: samples,
-		Unique: unique,
+		Unique:  unique,
 	}
 	return cmd.Main(args, conf, modes)
 }
-

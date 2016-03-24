@@ -13,7 +13,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-
 func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode, *SearchNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
@@ -50,7 +49,6 @@ func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.Sub
 	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt), RootSearchNode(dt)
 }
 
-
 func TestEmbChildren(t *testing.T) {
 	x := assert.New(t)
 	_, _, _, _, n, _ := graph(t)
@@ -66,7 +64,8 @@ func TestEmbChildren(t *testing.T) {
 		case "<EmbListNode 0:1(0:black)>":
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
 			next = kid
-		default: x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
+		default:
+			x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
 		}
 	}
 	if next == nil {
@@ -97,7 +96,8 @@ func TestEmbChildren(t *testing.T) {
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -116,7 +116,8 @@ func TestEmbChildren(t *testing.T) {
 			next = kid
 		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -129,7 +130,6 @@ func TestEmbChildren(t *testing.T) {
 	x.Equal(len(kids), 2, "should have 2 kids got %v", kids)
 	/// stopping this exercise here.
 }
-
 
 func TestEmbCount(t *testing.T) {
 	x := assert.New(t)
@@ -155,7 +155,8 @@ func TestEmbCount(t *testing.T) {
 		case "<EmbListNode 0:1(0:black)>":
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
 			next = kid
-		default: x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
+		default:
+			x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
 		}
 	}
 	if next == nil {
@@ -197,7 +198,8 @@ func TestEmbCount(t *testing.T) {
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -222,7 +224,8 @@ func TestEmbCount(t *testing.T) {
 			next = kid
 		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
 			x.Equal(len(kid.sgs), 2, "2 embeddings")
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -235,4 +238,3 @@ func TestEmbCount(t *testing.T) {
 	x.Equal(count, 2, "should have 2 parents")
 	/// stopping this exercise here.
 }
-

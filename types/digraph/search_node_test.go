@@ -7,8 +7,7 @@ import (
 	"github.com/timtadh/data-structures/errors"
 )
 
-import (
-)
+import ()
 
 func TestSearchChildren(t *testing.T) {
 	x := assert.New(t)
@@ -29,7 +28,8 @@ func TestSearchChildren(t *testing.T) {
 		case "<SearchNode 0:1(0:black)>":
 			x.Equal(len(embs), 2, "2 embeddings")
 			next = kid
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	if next == nil {
@@ -63,7 +63,8 @@ func TestSearchChildren(t *testing.T) {
 			x.Equal(len(embs), 2, "2 embeddings")
 		case "<SearchNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
 			x.Equal(len(embs), 2, "2 embeddings")
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -84,7 +85,8 @@ func TestSearchChildren(t *testing.T) {
 			next = kid
 		case "<SearchNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
 			x.Equal(len(embs), 2, "2 embeddings")
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -97,7 +99,6 @@ func TestSearchChildren(t *testing.T) {
 	x.Equal(len(kids), 2, "should have 2 kids got %v", kids)
 	/// stopping this exercise here.
 }
-
 
 func TestSearchCount(t *testing.T) {
 	x := assert.New(t)
@@ -121,7 +122,8 @@ func TestSearchCount(t *testing.T) {
 		case "<SearchNode 0:1(0:red)>":
 		case "<SearchNode 0:1(0:black)>":
 			next = kid
-		default: x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
+		default:
+			x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
 		}
 	}
 	if next == nil {
@@ -161,7 +163,8 @@ func TestSearchCount(t *testing.T) {
 			next = kid
 		case "<SearchNode 2:3(0:black)(1:red)(2:red)[0->1:][2->1:]>":
 		case "<SearchNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -184,7 +187,8 @@ func TestSearchCount(t *testing.T) {
 		case "<SearchNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->2:][3->2:]>":
 			next = kid
 		case "<SearchNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
-		default: x.Fail("unexpected kid %v", kid)
+		default:
+			x.Fail("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -197,4 +201,3 @@ func TestSearchCount(t *testing.T) {
 	x.Equal(count, 2, "should have 2 parents")
 	/// stopping this exercise here.
 }
-

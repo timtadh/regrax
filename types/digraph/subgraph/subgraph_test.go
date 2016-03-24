@@ -17,7 +17,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/ext"
 )
 
-
 func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.MultiMap, *ext.Extender) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
@@ -55,7 +54,7 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.Mult
 
 func TestEmbeddings(t *testing.T) {
 	x := assert.New(t)
-	t.Logf("%T %v", x,x)
+	t.Logf("%T %v", x, x)
 	G, _, sg, colors, extender := graph(t)
 	t.Log(sg)
 	t.Log(sg.Adj)
@@ -73,7 +72,7 @@ func TestEmbeddings(t *testing.T) {
 
 func TestNewBuilder(t *testing.T) {
 	x := assert.New(t)
-	t.Logf("%T %v", x,x)
+	t.Logf("%T %v", x, x)
 	G, _, _, colors, extender := graph(t)
 	b := BuildNew()
 	n1 := b.AddVertex(0)
@@ -105,7 +104,7 @@ func TestNewBuilder(t *testing.T) {
 
 func TestFromBuilder(t *testing.T) {
 	x := assert.New(t)
-	t.Logf("%T %v", x,x)
+	t.Logf("%T %v", x, x)
 	G, _, expected, colors, extender := graph(t)
 	b := BuildNew()
 	n1 := b.AddVertex(0)
@@ -123,7 +122,7 @@ func TestFromBuilder(t *testing.T) {
 	t.Log(sg1)
 	t.Log(sg1.Adj)
 	b2 := BuildFrom(sg1)
-	sg := b2.Mutation(func(b *Builder){ b.AddEdge(&b.V[3], &b.V[5], 2) }).Build()
+	sg := b2.Mutation(func(b *Builder) { b.AddEdge(&b.V[3], &b.V[5], 2) }).Build()
 	t.Log(b2.Build())
 	t.Log(sg)
 	t.Log(expected)

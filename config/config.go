@@ -31,11 +31,11 @@ type Config struct {
 
 func (c *Config) Copy() *Config {
 	return &Config{
-		Cache: c.Cache,
-		Output: c.Output,
+		Cache:   c.Cache,
+		Output:  c.Output,
 		Support: c.Support,
 		Samples: c.Samples,
-		Unique: c.Unique,
+		Unique:  c.Unique,
 	}
 }
 

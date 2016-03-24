@@ -1,7 +1,6 @@
 package digraph
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -15,7 +14,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/ext"
 	"github.com/timtadh/sfp/types/digraph/support"
 )
-
 
 func searchChildren(n *SearchNode) (nodes []lattice.Node, err error) {
 	dt := n.dt()
@@ -32,7 +30,7 @@ func searchChildren(n *SearchNode) (nodes []lattice.Node, err error) {
 	}
 	// errors.Logf("DEBUG", "Children of %v", n)
 	exts := ext.NewCollector(dt.MaxVertices)
-	add := func(sg *goiso.SubGraph, e *goiso.Edge) (int) {
+	add := func(sg *goiso.SubGraph, e *goiso.Edge) int {
 		if dt.G.ColorFrequency(e.Color) < dt.Support() {
 			return 0
 		} else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {

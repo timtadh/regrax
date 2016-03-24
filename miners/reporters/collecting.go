@@ -2,8 +2,7 @@ package reporters
 
 import ()
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/lattice"

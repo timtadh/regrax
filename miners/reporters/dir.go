@@ -55,7 +55,7 @@ func (r *Dir) Report(n lattice.Node) error {
 	}
 	defer name.Close()
 	fmt.Fprintf(name, "%s\n", r.fmt.PatternName(n))
-	pattern, err := os.Create(filepath.Join(dir, "pattern" + r.fmt.FileExt()))
+	pattern, err := os.Create(filepath.Join(dir, "pattern"+r.fmt.FileExt()))
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (r *Dir) Report(n lattice.Node) error {
 		if err != nil {
 			return err
 		}
-		embedding, err := os.Create(filepath.Join(edir, "embedding" + r.fmt.FileExt()))
+		embedding, err := os.Create(filepath.Join(edir, "embedding"+r.fmt.FileExt()))
 		if err != nil {
 			return err
 		}

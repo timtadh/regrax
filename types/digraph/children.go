@@ -18,7 +18,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/support"
 )
 
-
 type Node interface {
 	lattice.Node
 	New([]*goiso.SubGraph) Node
@@ -66,7 +65,6 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
-
 func children(n Node) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if n.isRoot() {
@@ -82,7 +80,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	}
 	// errors.Logf("DEBUG", "Children of %v", n)
 	exts := ext.NewCollector(dt.MaxVertices)
-	add := func(sg *goiso.SubGraph, e *goiso.Edge) (int) {
+	add := func(sg *goiso.SubGraph, e *goiso.Edge) int {
 		if dt.G.ColorFrequency(e.Color) < dt.Support() {
 			return 0
 		} else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {

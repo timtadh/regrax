@@ -10,7 +10,6 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-
 type SubGraphs []*goiso.SubGraph
 
 func (sgs SubGraphs) Len() int {
@@ -66,4 +65,3 @@ func (sgs SubGraphs) Partition() []SubGraphs {
 	}
 	return parts
 }
-

@@ -1,10 +1,8 @@
 package reporters
 
-import (
-)
+import ()
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/lattice"
@@ -58,4 +56,3 @@ func (r *CanonMax) Report(n lattice.Node) error {
 func (r *CanonMax) Close() error {
 	return r.Reporter.Close()
 }
-

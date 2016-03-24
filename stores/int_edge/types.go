@@ -10,7 +10,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-
 func SerializeEdge(e subgraph.Edge) []byte {
 	bytes := make([]byte, 12)
 	binary.BigEndian.PutUint32(bytes[0:4], uint32(e.Src))
@@ -23,5 +22,5 @@ func DeserializeEdge(bytes []byte) subgraph.Edge {
 	src := int(binary.BigEndian.Uint32(bytes[0:4]))
 	color := int(binary.BigEndian.Uint32(bytes[4:8]))
 	targ := int(binary.BigEndian.Uint32(bytes[8:12]))
-	return subgraph.Edge{Src:src, Targ:targ, Color:color}
+	return subgraph.Edge{Src: src, Targ: targ, Color: color}
 }

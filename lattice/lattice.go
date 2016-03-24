@@ -95,4 +95,3 @@ func (lat *Lattice) Children(i int) []Node {
 	}
 	return kids
 }
-

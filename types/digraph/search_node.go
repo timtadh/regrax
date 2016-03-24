@@ -15,15 +15,14 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-
 type SearchNode struct {
-	Dt    *Digraph
-	Pat   *subgraph.SubGraph
+	Dt  *Digraph
+	Pat *subgraph.SubGraph
 }
 
 func newSearchNode(Dt *Digraph, sg *goiso.SubGraph) SearchNode {
 	return SearchNode{
-		Dt: Dt,
+		Dt:  Dt,
 		Pat: subgraph.FromEmbedding(sg),
 	}
 }
@@ -102,7 +101,7 @@ func (n *SearchNode) loadEmbeddings() ([]*goiso.SubGraph, error) {
 	return embs, nil
 }
 
-func (n *SearchNode) saveEmbeddings(embs []*goiso.SubGraph) (error) {
+func (n *SearchNode) saveEmbeddings(embs []*goiso.SubGraph) error {
 	label := n.Label()
 	for _, emb := range embs {
 		err := n.Dt.Embeddings.Add(label, emb)
@@ -220,20 +219,23 @@ type Labeled interface {
 func (n *SearchNode) Equals(o types.Equatable) bool {
 	a := types.ByteSlice(n.Label())
 	switch b := o.(type) {
-	case Labeled: return a.Equals(types.ByteSlice(b.Label()))
-	default: return false
+	case Labeled:
+		return a.Equals(types.ByteSlice(b.Label()))
+	default:
+		return false
 	}
 }
 
 func (n *SearchNode) Less(o types.Sortable) bool {
 	a := types.ByteSlice(n.Label())
 	switch b := o.(type) {
-	case Labeled: return a.Less(types.ByteSlice(b.Label()))
-	default: return false
+	case Labeled:
+		return a.Less(types.ByteSlice(b.Label()))
+	default:
+		return false
 	}
 }
 
 func (n *SearchNode) Hash() int {
 	return types.ByteSlice(n.Label()).Hash()
 }
-

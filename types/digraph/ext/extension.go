@@ -8,16 +8,15 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-
 type Extender struct {
-	lock sync.Mutex
-	stopped bool
+	lock     sync.Mutex
+	stopped  bool
 	requests chan extRequest
 }
 
 type extRequest struct {
-	sg *goiso.SubGraph
-	e *goiso.Edge
+	sg   *goiso.SubGraph
+	e    *goiso.Edge
 	resp chan *goiso.SubGraph
 }
 
@@ -42,12 +41,12 @@ func (x *Extender) Stop() {
 }
 
 func (x *Extender) Extend(sg *goiso.SubGraph, e *goiso.Edge, resp chan *goiso.SubGraph) {
-	x.requests<-extRequest{sg, e, resp}
+	x.requests <- extRequest{sg, e, resp}
 }
 
 func (x *Extender) work() {
 	for req := range x.requests {
-		req.resp<-x.extend(req.sg, req.e)
+		req.resp <- x.extend(req.sg, req.e)
 	}
 }
 

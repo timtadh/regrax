@@ -42,7 +42,7 @@ package ints_ints
 *   51 Franklin Street, Fifth Floor,
 *   Boston, MA  02110-1301
 *   USA
-*/
+ */
 
 import (
 	"sync"
@@ -53,7 +53,6 @@ import (
 	"github.com/timtadh/fs2/bptree"
 	"github.com/timtadh/fs2/fmap"
 )
-
 
 type MultiMap interface {
 	Keys() (KeyIterator, error)
@@ -124,12 +123,12 @@ func DoValue(run func() (ValueIterator, error), do func([]int32) error) error {
 }
 
 type BpTree struct {
-	bf *fmap.BlockFile
-	bpt *bptree.BpTree
+	bf    *fmap.BlockFile
+	bpt   *bptree.BpTree
 	mutex sync.Mutex
 }
 
-func AnonBpTree() (*BpTree, error) { 
+func AnonBpTree() (*BpTree, error) {
 	bf, err := fmap.Anonymous(fmap.BLOCKSIZE)
 	if err != nil {
 		return nil, err
@@ -137,7 +136,7 @@ func AnonBpTree() (*BpTree, error) {
 	return newBpTree(bf)
 }
 
-func NewBpTree(path string) (*BpTree, error) { 
+func NewBpTree(path string) (*BpTree, error) {
 	bf, err := fmap.CreateBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -145,7 +144,7 @@ func NewBpTree(path string) (*BpTree, error) {
 	return newBpTree(bf)
 }
 
-func OpenBpTree(path string) (*BpTree, error) { 
+func OpenBpTree(path string) (*BpTree, error) {
 	bf, err := fmap.OpenBlockFile(path)
 	if err != nil {
 		return nil, err
@@ -155,19 +154,19 @@ func OpenBpTree(path string) (*BpTree, error) {
 		return nil, err
 	}
 	b := &BpTree{
-		bf: bf,
+		bf:  bf,
 		bpt: bpt,
 	}
 	return b, nil
 }
 
-func newBpTree(bf *fmap.BlockFile) (*BpTree, error) { 
+func newBpTree(bf *fmap.BlockFile) (*BpTree, error) {
 	bpt, err := bptree.New(bf, -1, -1)
 	if err != nil {
 		return nil, err
 	}
 	b := &BpTree{
-		bf: bf,
+		bf:  bf,
 		bpt: bpt,
 	}
 	return b, nil
@@ -300,7 +299,7 @@ func (b *BpTree) Find(key []int32) (it Iterator, err error) {
 }
 
 func (b *BpTree) DoFind(key []int32, do func([]int32, []int32) error) error {
-	return Do(func()(Iterator, error) { return b.Find(key) }, do)
+	return Do(func() (Iterator, error) { return b.Find(key) }, do)
 }
 
 func (b *BpTree) Iterate() (it Iterator, err error) {
@@ -324,7 +323,7 @@ func (b *BpTree) Range(from, to []int32) (it Iterator, err error) {
 }
 
 func (b *BpTree) DoRange(from, to []int32, do func([]int32, []int32) error) error {
-	return Do(func()(Iterator, error) { return b.Range(from, to) }, do)
+	return Do(func() (Iterator, error) { return b.Range(from, to) }, do)
 }
 
 func (b *BpTree) Backward() (it Iterator, err error) {
@@ -344,4 +343,3 @@ func (b *BpTree) Remove(key []int32, where func([]int32) bool) error {
 		return where(DeserializeInt32s(bytes))
 	})
 }
-

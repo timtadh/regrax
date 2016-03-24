@@ -1,7 +1,6 @@
 package support
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/hashtable"
@@ -13,8 +12,6 @@ import (
 import (
 	"github.com/timtadh/sfp/stats"
 )
-
-
 
 func VertexMapSets(sgs []*goiso.SubGraph) []*set.MapSet {
 	if len(sgs) == 0 {

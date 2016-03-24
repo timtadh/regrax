@@ -23,9 +23,9 @@ type Pattern struct {
 }
 
 type Node struct {
-	pat   Pattern
-	dt    *ItemSets
-	txs   []int32
+	pat Pattern
+	dt  *ItemSets
+	txs []int32
 }
 
 type Embedding struct {
@@ -163,7 +163,7 @@ func (n *Node) CanonKids() ([]lattice.Node, error) {
 	return n.kids(n.dt.CanonKidCount, n.dt.CanonKids, n.canonCandidateKids)
 }
 
-func (n *Node) kids(counts ints_int.MultiMap, kids ints_ints.MultiMap, candidates func()(map[int32][]int32)) ([]lattice.Node, error) {
+func (n *Node) kids(counts ints_int.MultiMap, kids ints_ints.MultiMap, candidates func() map[int32][]int32) ([]lattice.Node, error) {
 	if n.pat.Items.Size() == 0 {
 		return n.dt.FrequentItems, nil
 	}
@@ -188,9 +188,9 @@ func (n *Node) kids(counts ints_int.MultiMap, kids ints_ints.MultiMap, candidate
 	return nodes, nil
 }
 
-func (n *Node) canonCandidateKids() (map[int32][]int32) {
+func (n *Node) canonCandidateKids() map[int32][]int32 {
 	// this works because n.pat.Items is a set.SortedSet
-	l, err := n.pat.Items.Get(n.pat.Items.Size()-1)
+	l, err := n.pat.Items.Get(n.pat.Items.Size() - 1)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func (n *Node) canonCandidateKids() (map[int32][]int32) {
 	return exts
 }
 
-func (n *Node) allCandidateKids() (map[int32][]int32) {
+func (n *Node) allCandidateKids() map[int32][]int32 {
 	exts := make(map[int32][]int32)
 	for _, tx := range n.txs {
 		for _, item := range n.dt.Index[tx] {
@@ -228,9 +228,9 @@ func (n *Node) nodesFromCandidateKids(exts map[int32][]int32) ([]lattice.Node, e
 			items := n.pat.Items.Copy()
 			items.Add(types.Int32(item))
 			node := &Node{
-				pat:   Pattern{items},
-				dt:    n.dt,
-				txs:   txs,
+				pat: Pattern{items},
+				dt:  n.dt,
+				txs: txs,
 			}
 			err := node.Save()
 			if err != nil {
@@ -357,15 +357,19 @@ func (n *Node) Lattice() (*lattice.Lattice, error) {
 
 func (i *Pattern) Equals(o types.Equatable) bool {
 	switch b := o.(type) {
-	case *Pattern: return i.Items.Equals(b.Items)
-	default: return false
+	case *Pattern:
+		return i.Items.Equals(b.Items)
+	default:
+		return false
 	}
 }
 
 func (i *Pattern) Less(o types.Sortable) bool {
 	switch b := o.(type) {
-	case *Pattern: return i.Items.Less(b.Items)
-	default: return false
+	case *Pattern:
+		return i.Items.Less(b.Items)
+	default:
+		return false
 	}
 }
 

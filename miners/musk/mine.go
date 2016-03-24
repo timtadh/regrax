@@ -1,7 +1,6 @@
 package musk
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"

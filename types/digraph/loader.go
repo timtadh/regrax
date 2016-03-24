@@ -19,12 +19,12 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/types/digraph/ext"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
-	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/int_int"
+	"github.com/timtadh/sfp/stores/int_json"
+	"github.com/timtadh/sfp/types/digraph/ext"
 )
 
 type ErrorList []error
@@ -38,22 +38,23 @@ func (self ErrorList) Error() string {
 }
 
 type Digraph struct {
-	MinEdges, MaxEdges, MinVertices, MaxVertices int
-	G                                            *goiso.Graph
-	FrequentVertices                             [][]byte
-	Supported                                    Supported
-	Extender                                     *ext.Extender
-	NodeAttrs                                    int_json.MultiMap
-	Embeddings                                   bytes_subgraph.MultiMap
-	Parents                                      bytes_bytes.MultiMap
-	ParentCount                                  bytes_int.MultiMap
-	Children                                     bytes_bytes.MultiMap
-	ChildCount                                   bytes_int.MultiMap
-	CanonKids                                    bytes_bytes.MultiMap
-	CanonKidCount                                bytes_int.MultiMap
-	ColorMap                                     int_int.MultiMap
-	config                                       *config.Config
-	search                                       bool
+	MinEdges, MaxEdges       int
+	MinVertices, MaxVertices int
+	G                        *goiso.Graph
+	FrequentVertices         [][]byte
+	Supported                Supported
+	Extender                 *ext.Extender
+	NodeAttrs                int_json.MultiMap
+	Embeddings               bytes_subgraph.MultiMap
+	Parents                  bytes_bytes.MultiMap
+	ParentCount              bytes_int.MultiMap
+	Children                 bytes_bytes.MultiMap
+	ChildCount               bytes_int.MultiMap
+	CanonKids                bytes_bytes.MultiMap
+	CanonKidCount            bytes_int.MultiMap
+	ColorMap                 int_int.MultiMap
+	config                   *config.Config
+	search                   bool
 }
 
 func NewDigraph(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (g *Digraph, err error) {
@@ -122,7 +123,7 @@ func (g *Digraph) MinimumLevel() int {
 	if g.MinEdges > 0 {
 		return g.MinEdges
 	} else if g.MinVertices > 0 {
-		return  g.MinVertices - 1
+		return g.MinVertices - 1
 	}
 	return 0
 }
@@ -147,7 +148,7 @@ func VE(node lattice.Node) (V, E int) {
 	E = 0
 	V = 0
 	switch n := node.(type) {
-	case *EmbListNode: 
+	case *EmbListNode:
 		if len(n.sgs) > 0 {
 			E = len(n.sgs[0].E)
 			V = len(n.sgs[0].V)

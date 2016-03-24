@@ -18,12 +18,11 @@ import (
 	"github.com/timtadh/sfp/miners/walker"
 )
 
-
 type Walker struct {
 	walker.Walker
-	Teleports []lattice.Node
+	Teleports           []lattice.Node
 	TeleportProbability float64
-	teleportAllowed bool
+	teleportAllowed     bool
 }
 
 func NewWalker(conf *config.Config, teleportProbability float64) *Walker {
@@ -49,7 +48,7 @@ func (w *Walker) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.Fo
 		return err
 	}
 	pRptr := &reporters.Skip{
-		Skip: 10,
+		Skip:     10,
 		Reporter: &reporters.Chain{[]miners.Reporter{reporters.NewLog(fmtr, false, "DEBUG", "premining"), uniq}},
 	}
 
@@ -80,4 +79,3 @@ func Next(ctx interface{}, cur lattice.Node) (lattice.Node, error) {
 	}
 	return musk.Next(ctx, cur)
 }
-

@@ -19,17 +19,17 @@ import (
 )
 
 type Unique struct {
-	count int
-	fmtr lattice.Formatter
-	Seen bytes_int.MultiMap
-	Reporter miners.Reporter
+	count     int
+	fmtr      lattice.Formatter
+	Seen      bytes_int.MultiMap
+	Reporter  miners.Reporter
 	histogram io.WriteCloser
 }
 
 func NewUnique(conf *config.Config, fmtr lattice.Formatter, reporter miners.Reporter, histogramName string) (*Unique, error) {
 	runes := make([]rune, 0, 10)
 	for i := 0; i < 10; i++ {
-		runes = append(runes, rune(97 + rand.Intn(26)))
+		runes = append(runes, rune(97+rand.Intn(26)))
 	}
 	name := string(runes)
 	seen, err := conf.BytesIntMultiMap("unique-seen-" + name)
@@ -44,9 +44,9 @@ func NewUnique(conf *config.Config, fmtr lattice.Formatter, reporter miners.Repo
 		}
 	}
 	u := &Unique{
-		fmtr: fmtr,
-		Seen: seen,
-		Reporter: reporter,
+		fmtr:      fmtr,
+		Seen:      seen,
+		Reporter:  reporter,
 		histogram: histogram,
 	}
 	return u, nil
@@ -66,11 +66,11 @@ func (r *Unique) Report(n lattice.Node) error {
 		if err != nil {
 			return err
 		}
-		err = r.Seen.Remove(label, func(_ int32) bool { return true})
+		err = r.Seen.Remove(label, func(_ int32) bool { return true })
 		if err != nil {
 			return err
 		}
-		return r.Seen.Add(label, count + 1)
+		return r.Seen.Add(label, count+1)
 	} else {
 		err = r.Seen.Add(label, 1)
 		if err != nil {
@@ -101,4 +101,3 @@ func (r *Unique) Close() error {
 	}
 	return r.Reporter.Close()
 }
-

@@ -108,7 +108,7 @@ func weight(u, v lattice.Node) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return 2*max(float64(udeg), float64(vdeg)), nil
+	return 2 * max(float64(udeg), float64(vdeg)), nil
 }
 
 func max(a, b float64) float64 {

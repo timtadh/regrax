@@ -10,7 +10,7 @@ import (
 	"github.com/timtadh/sfp/lattice"
 )
 
-type Formatter struct{
+type Formatter struct {
 	PrFmt lattice.PrFormatter
 }
 

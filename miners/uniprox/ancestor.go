@@ -28,9 +28,12 @@ func CommonAncestor(patterns []lattice.Pattern) (_ lattice.Pattern, err error) {
 		return patterns[0], nil
 	}
 	switch patterns[0].(type) {
-	case *digraph.SearchNode: return digraphCommonAncestor(patterns)
-	case *itemset.Pattern: return itemsetCommonAncestor(patterns)
-	default: return nil, errors.Errorf("unknown pattern type %v", patterns[0])
+	case *digraph.SearchNode:
+		return digraphCommonAncestor(patterns)
+	case *itemset.Pattern:
+		return itemsetCommonAncestor(patterns)
+	default:
+		return nil, errors.Errorf("unknown pattern type %v", patterns[0])
 	}
 }
 
@@ -54,11 +57,11 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 
 	// construct a in memory configuration for finding common subdigraphs of all patterns
 	conf := &config.Config{
-		Cache: "",
-		Output: "",
+		Cache:   "",
+		Output:  "",
 		Support: len(patterns),
 		Samples: 5,
-		Unique: false,
+		Unique:  false,
 	}
 	wlkr := fastmax.NewWalker(conf)
 	wlkr.Reject = false
@@ -83,7 +86,6 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 		}
 	}
 
-
 	// init the datatype (we are now ready to mine)
 	dt, err := digraph.NewDigraph(conf, false, digraph.MakeTxSupported("gid"), 0, maxE, 0, maxV)
 	if err != nil {
@@ -99,13 +101,13 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 		for i := range sn.Pat.V {
 			vid := offset + i
 			G.AddVertex(vid, sn.Dt.G.Colors[sn.Pat.V[i].Color])
-			err := dt.NodeAttrs.Add(int32(vid), map[string]interface{}{"gid":gid})
+			err := dt.NodeAttrs.Add(int32(vid), map[string]interface{}{"gid": gid})
 			if err != nil {
 				return nil, err
 			}
 		}
 		for i := range sn.Pat.E {
-			G.AddEdge(&G.V[offset + sn.Pat.E[i].Src], &G.V[offset + sn.Pat.E[i].Targ], sn.Dt.G.Colors[sn.Pat.E[i].Color])
+			G.AddEdge(&G.V[offset+sn.Pat.E[i].Src], &G.V[offset+sn.Pat.E[i].Targ], sn.Dt.G.Colors[sn.Pat.E[i].Color])
 		}
 		offset += len(sn.Pat.V)
 	}
@@ -146,7 +148,5 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	}
 	errors.Logf("DEBUG", "ancestor %v", maxPattern)
 
-
 	return maxPattern, nil
 }
-

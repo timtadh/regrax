@@ -1,7 +1,6 @@
 package reporters
 
-import (
-)
+import ()
 
 import (
 	"github.com/timtadh/sfp/lattice"
@@ -9,14 +8,14 @@ import (
 )
 
 type Skip struct {
-	Skip int
+	Skip     int
 	Reporter miners.Reporter
-	count int
+	count    int
 }
 
 func (r *Skip) Report(n lattice.Node) error {
 	r.count++
-	if r.count % r.Skip == 0 {
+	if r.count%r.Skip == 0 {
 		return r.Reporter.Report(n)
 	}
 	return nil

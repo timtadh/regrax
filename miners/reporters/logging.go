@@ -20,7 +20,7 @@ func NewLog(fmt lattice.Formatter, prs bool, level, prefix string) *Log {
 	if level == "" {
 		level = "INFO"
 	}
-	return &Log{fmt:fmt, prs: prs, level: level, prefix: prefix}
+	return &Log{fmt: fmt, prs: prs, level: level, prefix: prefix}
 }
 
 func (lr *Log) Report(n lattice.Node) error {

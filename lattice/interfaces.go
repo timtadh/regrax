@@ -9,8 +9,8 @@ import (
 )
 
 type Lattice struct {
-	V []Node
-	E []Edge
+	V    []Node
+	E    []Edge
 	Kids [][]*Edge
 }
 
