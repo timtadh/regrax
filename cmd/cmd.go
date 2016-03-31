@@ -422,7 +422,7 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	patterns := "patterns"
@@ -448,14 +448,14 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 		case "--show-pr":
 			showPr = true
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 	fr, err := reporters.NewFile(conf, fmtr, showPr, patterns, embeddings, names, matrices, probabilities)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		errors.Logf("ERROR", "There was error creating output files\n")
+		errors.Logf("ERROR", "%v\n", err)
 		os.Exit(1)
 	}
 	return fr, args
@@ -472,7 +472,7 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	dir := "samples"
@@ -486,14 +486,14 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 		case "--show-pr":
 			showPr = true
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 	fr, err := reporters.NewDir(conf, fmtr, showPr, dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		errors.Logf("ERROR", "There was error creating output files\n")
+		errors.Logf("ERROR", "%v", err)
 		os.Exit(1)
 	}
 	return fr, args
@@ -508,7 +508,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	for _, oa := range optargs {
@@ -516,7 +516,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 		case "-h", "--help":
 			Usage(0)
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
@@ -527,7 +527,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 			break
 		}
 		if _, has := reports[args[0]]; !has {
-			fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+			errors.Logf("ERROR", "Unknown reporter '%v'\n", args[0])
 			fmt.Fprintln(os.Stderr, "Reporters:")
 			for k := range reports {
 				fmt.Fprintln(os.Stderr, "  ", k)
@@ -539,7 +539,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 		rptrs = append(rptrs, rptr)
 	}
 	if len(rptrs) == 0 {
-		fmt.Fprintln(os.Stderr, "Empty chain")
+		errors.Logf("ERROR", "Empty chain")
 		fmt.Fprintln(os.Stderr, "try: chain log file")
 		Usage(ErrorCodes["opts"])
 	}
@@ -556,7 +556,7 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	histogram := ""
@@ -567,17 +567,17 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 		case "--histogram":
 			histogram = oa.Arg()
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 	var rptr miners.Reporter
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to unique")
+		errors.Logf("ERROR", "You must supply an inner reporter to unique")
 		fmt.Fprintln(os.Stderr, "try: unique file")
 		Usage(ErrorCodes["opts"])
 	} else if _, has := reports[args[0]]; !has {
-		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+		errors.Logf("ERROR", "Unknown reporter '%v'", args[0])
 		fmt.Fprintln(os.Stderr, "Reporters:")
 		for k := range reports {
 			fmt.Fprintln(os.Stderr, "  ", k)
@@ -588,7 +588,7 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 	}
 	uniq, err := reporters.NewUnique(conf, fmtr, rptr, histogram)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating unique reporter '%v'\n", err)
+		errors.Logf("ERROR", "Error creating unique reporter '%v'\n", err)
 		Usage(ErrorCodes["opts"])
 	}
 	return uniq, args
@@ -603,7 +603,7 @@ func maxReporter(reports map[string]Reporter, argv []string, fmtr lattice.Format
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	for _, oa := range optargs {
