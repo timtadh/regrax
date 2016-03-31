@@ -12,7 +12,7 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
-func parents(n *EmbListNode, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
+func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "compute Parents\n    of %v", n)
 	if n.isRoot() {
 		return []lattice.Node{}, nil

@@ -44,7 +44,7 @@ func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, ke
 	return nil
 }
 
-func cached(n *EmbListNode, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap) (nodes []lattice.Node, has bool, err error) {
+func cached(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap) (nodes []lattice.Node, has bool, err error) {
 	key := n.Label()
 	if has, err := count.Has(key); err != nil {
 		return nil, false, err

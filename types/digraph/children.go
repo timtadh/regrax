@@ -50,7 +50,7 @@ func validExtChecker(dt *Digraph, do func(sg *goiso.SubGraph, e *goiso.Edge)) fu
 	}
 }
 
-func precheckChildren(n *EmbListNode, kidCount bytes_int.MultiMap, kids bytes_bytes.MultiMap) (nodes []lattice.Node, err error) {
+func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.MultiMap) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if n.isRoot() {
 		return n.loadFrequentVertices()
@@ -66,7 +66,7 @@ func precheckChildren(n *EmbListNode, kidCount bytes_int.MultiMap, kids bytes_by
 	return nil, nil
 }
 
-func nodesFromEmbeddings(n *EmbListNode, embs ext.Embeddings) (nodes []lattice.Node, err error) {
+func nodesFromEmbeddings(n Node, embs ext.Embeddings) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	partitioned := embs.Partition()
 	sum := 0
@@ -93,7 +93,7 @@ func nodesFromEmbeddings(n *EmbListNode, embs ext.Embeddings) (nodes []lattice.N
 	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
 
-func canonChildren(n *EmbListNode) (nodes []lattice.Node, err error) {
+func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if nodes, has, err := cached(n, dt, dt.CanonKidCount, dt.CanonKids); err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func canonChildren(n *EmbListNode) (nodes []lattice.Node, err error) {
 	return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
-func children(n *EmbListNode) (nodes []lattice.Node, err error) {
+func children(n Node) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
 		return nil, err
