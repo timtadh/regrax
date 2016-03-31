@@ -288,7 +288,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hl:s:", []string{"help",
-			"search",
 			"loader=",
 			"support=",
 			"min-edges=",
@@ -303,7 +302,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		Usage(ErrorCodes["opts"])
 	}
 
-	search := false
 	loaderType := "veg"
 	supportedFunc := "min-image"
 	minE := 0
@@ -315,8 +313,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
-		case "--search":
-			search = true
 		case "-l", "--loader":
 			loaderType = oa.Arg()
 		case "-s", "--support":
@@ -358,7 +354,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	var loader lattice.Loader
 	switch loaderType {
 	case "veg":
-		loader, err = digraph.NewVegLoader(conf, search, supported, minE, maxE, minV, maxV)
+		loader, err = digraph.NewVegLoader(conf, supported, minE, maxE, minV, maxV)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])

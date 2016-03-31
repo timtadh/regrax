@@ -13,7 +13,7 @@ import (
 )
 
 type EmbListNode struct {
-	SearchNode
+	SubgraphPattern
 	sgs []*goiso.SubGraph
 }
 
@@ -23,9 +23,9 @@ type Embedding struct {
 
 func NewEmbListNode(Dt *Digraph, sgs []*goiso.SubGraph) *EmbListNode {
 	if len(sgs) > 0 {
-		return &EmbListNode{newSearchNode(Dt, sgs[0]), sgs}
+		return &EmbListNode{newSubgraphPattern(Dt, sgs[0]), sgs}
 	}
-	return &EmbListNode{newSearchNode(Dt, nil), nil}
+	return &EmbListNode{newSubgraphPattern(Dt, nil), nil}
 }
 
 func (n *EmbListNode) New(sgs []*goiso.SubGraph) Node {
@@ -45,7 +45,7 @@ func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
 }
 
 func (n *EmbListNode) Pattern() lattice.Pattern {
-	return &n.SearchNode
+	return &n.SubgraphPattern
 }
 
 func (n *EmbListNode) Embedding() (*goiso.SubGraph, error) {
@@ -138,7 +138,7 @@ func (n *EmbListNode) Maximal() (bool, error) {
 }
 
 func (n *EmbListNode) Label() []byte {
-	return n.SearchNode.Label()
+	return n.SubgraphPattern.Label()
 }
 
 func (n *EmbListNode) Lattice() (*lattice.Lattice, error) {

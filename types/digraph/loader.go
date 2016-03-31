@@ -54,10 +54,9 @@ type Digraph struct {
 	CanonKidCount            bytes_int.MultiMap
 	ColorMap                 int_int.MultiMap
 	config                   *config.Config
-	search                   bool
 }
 
-func NewDigraph(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (g *Digraph, err error) {
+func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (g *Digraph, err error) {
 	nodeAttrs, err := config.IntJsonMultiMap("digraph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -106,7 +105,6 @@ func NewDigraph(config *config.Config, search bool, sup Supported, minE, maxE, m
 		CanonKidCount: canonKidCount,
 		ColorMap:      colorMap,
 		config:        config,
-		search:        search,
 	}
 	return g, nil
 }
@@ -128,20 +126,12 @@ func (g *Digraph) MinimumLevel() int {
 	return 0
 }
 
-func RootSearchNode(g *Digraph) *SearchNode {
-	return NewSearchNode(g, nil)
-}
-
 func RootEmbListNode(g *Digraph) *EmbListNode {
 	return NewEmbListNode(g, nil)
 }
 
 func (g *Digraph) Root() lattice.Node {
-	if g.search {
-		return RootSearchNode(g)
-	} else {
-		return RootEmbListNode(g)
-	}
+	return RootEmbListNode(g)
 }
 
 func VE(node lattice.Node) (V, E int) {
@@ -153,9 +143,6 @@ func VE(node lattice.Node) (V, E int) {
 			E = len(n.sgs[0].E)
 			V = len(n.sgs[0].V)
 		}
-	case *SearchNode:
-		E = len(n.Pat.E)
-		V = len(n.Pat.V)
 	default:
 		panic(errors.Errorf("unknown node type %T %v", node, node))
 	}
@@ -191,8 +178,8 @@ type VegLoader struct {
 	dt *Digraph
 }
 
-func NewVegLoader(config *config.Config, search bool, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
-	g, err := NewDigraph(config, search, sup, minE, maxE, minV, maxV)
+func NewVegLoader(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
+	g, err := NewDigraph(config, sup, minE, maxE, minV, maxV)
 	if err != nil {
 		return nil, err
 	}

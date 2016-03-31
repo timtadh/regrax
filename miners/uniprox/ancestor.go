@@ -28,7 +28,7 @@ func CommonAncestor(patterns []lattice.Pattern) (_ lattice.Pattern, err error) {
 		return patterns[0], nil
 	}
 	switch patterns[0].(type) {
-	case *digraph.SearchNode:
+	case *digraph.SubgraphPattern:
 		return digraphCommonAncestor(patterns)
 	case *itemset.Pattern:
 		return itemsetCommonAncestor(patterns)
@@ -77,7 +77,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	maxE := int(math.MaxInt32)
 	maxV := int(math.MaxInt32)
 	for _, pat := range patterns {
-		sg := pat.(*digraph.SearchNode).Pat
+		sg := pat.(*digraph.SubgraphPattern).Pat
 		if len(sg.E) < maxE {
 			maxE = len(sg.E)
 		}
@@ -87,7 +87,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	}
 
 	// init the datatype (we are now ready to mine)
-	dt, err := digraph.NewDigraph(conf, false, digraph.MakeTxSupported("gid"), 0, maxE, 0, maxV)
+	dt, err := digraph.NewDigraph(conf, digraph.MakeTxSupported("gid"), 0, maxE, 0, maxV)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	G := &Graph
 	offset := 0
 	for gid, pat := range patterns {
-		sn := pat.(*digraph.SearchNode)
+		sn := pat.(*digraph.SubgraphPattern)
 		for i := range sn.Pat.V {
 			vid := offset + i
 			G.AddVertex(vid, sn.Dt.G.Colors[sn.Pat.V[i].Color])

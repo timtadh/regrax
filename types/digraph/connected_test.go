@@ -35,7 +35,7 @@ func init() {
 	}
 }
 
-func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode, *SearchNode) {
+func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 
@@ -58,7 +58,7 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 	}
 
 	// make the *Digraph
-	dt, err := NewDigraph(conf, false, MinImgSupported, 0, len(G.V), 0, len(G.E))
+	dt, err := NewDigraph(conf, MinImgSupported, 0, len(G.V), 0, len(G.E))
 	if err != nil {
 		errors.Logf("ERROR", "%v", err)
 		t.Fatal(err)
@@ -69,7 +69,7 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 		t.Fatal(err)
 	}
 
-	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt), RootSearchNode(dt)
+	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt)
 }
 
 func BenchmarkEmbList(b *testing.B) {
@@ -80,7 +80,7 @@ func BenchmarkEmbList(b *testing.B) {
 		vlabels := []string{"a", "b", "c", "d", "e", "f"}
 		elabels := []string{"g", "h", "i"}
 		V := 100
-		_, _, _, _, eroot, _ := randomGraph(
+		_, _, _, _, eroot := randomGraph(
 			b, V, int(float64(V)*2.25), vlabels, elabels)
 		b.StartTimer()
 		dfs(b, x, eroot)
@@ -93,17 +93,8 @@ func TestVerifyEmbList(t *testing.T) {
 	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
 	elabels := []string{""}
 	V := 150
-	_, _, _, _, eroot, _ := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
+	_, _, _, _, eroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
 	dfs(t, x, eroot)
-}
-
-func TestVerifySearch(t *testing.T) {
-	x := assert.New(t)
-	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
-	elabels := []string{""}
-	V := 150
-	_, _, _, _, _, sroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
-	dfs(t, x, sroot)
 }
 
 func dfs(t testing.TB, x *assert.Assertions, root Node) {

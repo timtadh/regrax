@@ -13,7 +13,7 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode, *SearchNode) {
+func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 	n1 := G.AddVertex(1, "black")
@@ -36,7 +36,7 @@ func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.Sub
 	}
 
 	// make the *Digraph
-	dt, err := NewDigraph(conf, false, MinImgSupported, 0, len(G.V), 0, len(G.E))
+	dt, err := NewDigraph(conf, MinImgSupported, 0, len(G.V), 0, len(G.E))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,12 +46,12 @@ func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.Sub
 		t.Fatal(err)
 	}
 
-	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt), RootSearchNode(dt)
+	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt)
 }
 
 func TestEmbChildren(t *testing.T) {
 	x := assert.New(t)
-	_, _, _, _, n, _ := graph(t)
+	_, _, _, _, n := graph(t)
 	x.NotNil(n)
 	kids, err := n.Children()
 	x.Nil(err)
@@ -133,7 +133,7 @@ func TestEmbChildren(t *testing.T) {
 
 func TestEmbCount(t *testing.T) {
 	x := assert.New(t)
-	_, _, _, _, n, _ := graph(t)
+	_, _, _, _, n := graph(t)
 	x.NotNil(n)
 	count, err := n.ChildCount()
 	x.Nil(err)
