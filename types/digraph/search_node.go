@@ -150,7 +150,7 @@ func (n *SearchNode) ParentCount() (int, error) {
 
 func (n *SearchNode) Children() ([]lattice.Node, error) {
 	// errors.Logf("DEBUG", "Children of %v", n)
-	return searchChildren(n)
+	return children(n)
 }
 
 func (n *SearchNode) ChildCount() (int, error) {
