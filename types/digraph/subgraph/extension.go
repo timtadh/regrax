@@ -1,5 +1,11 @@
 package subgraph
 
+import (
+	"github.com/timtadh/data-structures/types"
+	"github.com/timtadh/data-structures/list"
+)
+
+
 type Extension struct {
 	Source Vertex
 	Target Vertex
@@ -12,5 +18,35 @@ func NewExt(src, targ Vertex, color int) *Extension {
 		Target: targ,
 		Color: color,
 	}
+}
+
+func (e *Extension) list() *list.List {
+	l := list.New(5)
+	l.Append(types.Int(e.Source.Idx))
+	l.Append(types.Int(e.Source.Color))
+	l.Append(types.Int(e.Target.Idx))
+	l.Append(types.Int(e.Target.Color))
+	l.Append(types.Int(e.Color))
+	return l
+}
+
+func (e *Extension) Equals(o types.Equatable) bool {
+	switch x := o.(type) {
+	case *Extension:
+		return e.list().Equals(x.list())
+	}
+	return false
+}
+
+func (e *Extension) Less(o types.Sortable) bool {
+	switch x := o.(type) {
+	case *Extension:
+		return e.list().Less(x.list())
+	}
+	return false
+}
+
+func (e *Extension) Hash() int {
+	return e.list().Hash()
 }
 

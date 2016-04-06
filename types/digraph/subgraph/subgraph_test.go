@@ -12,7 +12,6 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/stores/int_int"
 	"github.com/timtadh/sfp/types/digraph/ext"
 )
@@ -35,8 +34,7 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.Mult
 	sg, _ := G.SubGraph([]int{n1.Idx, n2.Idx, n3.Idx, n4.Idx, n5.Idx, n6.Idx}, nil)
 
 	// make config
-	conf := &config.Config{}
-	ColorMap, err := conf.IntIntMultiMap("color-map")
+	ColorMap, err := int_int.AnonBpTree()
 	if err != nil {
 		t.Fatal(err)
 	}
