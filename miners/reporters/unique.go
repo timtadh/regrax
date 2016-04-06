@@ -26,7 +26,7 @@ type Unique struct {
 }
 
 func NewUnique(conf *config.Config, fmtr lattice.Formatter, reporter miners.Reporter, histogramName string) (*Unique, error) {
-	seen, err := conf.BytesIntMultiMap("unique-seen-" + conf.Randstr())
+	seen, err := conf.BytesIntMultiMap("unique-seen")
 	if err != nil {
 		return nil, err
 	}
