@@ -73,7 +73,7 @@ func TestEmbeddings(t *testing.T) {
 func TestNewBuilder(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	G, _, _, colors, extender := graph(t)
+	G, _, expected, colors, extender := graph(t)
 	b := BuildNew()
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -84,12 +84,15 @@ func TestNewBuilder(t *testing.T) {
 	b.AddEdge(n1, n3, 2)
 	b.AddEdge(n1, n4, 2)
 	b.AddEdge(n2, n5, 2)
-	b.AddEdge(n2, n6, 2)
-	b.AddEdge(n4, n6, 2)
 	b.AddEdge(n5, n3, 2)
+	b.AddEdge(n4, n6, 2)
+	b.AddEdge(n2, n6, 2)
 	sg := b.Build()
 	t.Log(sg)
 	t.Log(sg.Adj)
+	t.Log(expected)
+	t.Log(expected.Adj)
+	x.Equal(sg.String(), expected.String())
 
 	embs, err := sg.Embeddings(G, colors, extender)
 	x.Nil(err)
@@ -128,6 +131,41 @@ func TestFromBuilder(t *testing.T) {
 	t.Log(expected)
 	t.Log(sg.Adj)
 	t.Log(expected.Adj)
+	x.Equal(sg.String(), expected.String())
+
+	embs, err := sg.Embeddings(G, colors, extender)
+	x.Nil(err)
+	for _, emb := range embs {
+		t.Log(emb.Label())
+	}
+	for _, emb := range embs {
+		t.Log(emb)
+	}
+	x.Equal(len(embs), 2, "embs should have 2 embeddings")
+}
+
+func TestFromExtension(t *testing.T) {
+	x := assert.New(t)
+	t.Logf("%T %v", x, x)
+	G, _, expected, colors, extender := graph(t)
+	b := BuildNew()
+	n1 := b.AddVertex(0)
+	n2 := b.AddVertex(0)
+	n3 := b.AddVertex(1)
+	n4 := b.AddVertex(1)
+	n5 := b.AddVertex(1)
+	b.AddEdge(n1, n3, 2)
+	b.AddEdge(n1, n4, 2)
+	b.AddEdge(n2, n5, 2)
+	_, n6, _ := b.Extend(NewExt(*n2, Vertex{Idx:5, Color:1}, 2))
+	b.Extend(NewExt(*n4, *n6, 2))
+	b.Extend(NewExt(*n5, *n3, 2))
+	sg := b.Build()
+	t.Log(sg)
+	t.Log(expected)
+	t.Log(sg.Adj)
+	t.Log(expected.Adj)
+	x.Equal(sg.String(), expected.String())
 
 	embs, err := sg.Embeddings(G, colors, extender)
 	x.Nil(err)

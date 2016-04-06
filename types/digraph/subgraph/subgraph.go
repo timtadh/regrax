@@ -457,8 +457,7 @@ func (sg *SubGraph) String() string {
 	E := make([]string, 0, len(sg.E))
 	for _, v := range sg.V {
 		V = append(V, fmt.Sprintf(
-			"(%v:%v)",
-			v.Idx,
+			"(%v)",
 			v.Color,
 		))
 	}

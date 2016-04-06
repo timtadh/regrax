@@ -1,6 +1,7 @@
 package subgraph
 
 import (
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso/bliss"
 )
 
@@ -59,6 +60,27 @@ func (b *Builder) AddEdge(src, targ *Vertex, color int) *Edge {
 		Color: color,
 	})
 	return &b.E[len(b.E)-1]
+}
+
+func (b *Builder) Extend(e *Extension) (newe *Edge, newv *Vertex, err error) {
+	if e.Source.Idx > len(b.V) {
+		return nil, nil, errors.Errorf("Source.Idx %v outside of |V| %v", e.Source.Idx, len(b.V))
+	} else if e.Target.Idx > len(b.V) {
+		return nil, nil, errors.Errorf("Target.Idx %v outside of |V| %v", e.Target.Idx, len(b.V))
+	} else if e.Source.Idx == len(b.V) && e.Target.Idx == len(b.V) {
+		return nil, nil, errors.Errorf("Only one new vertice allowed (Extension would create a disconnnected graph)")
+	}
+	var src *Vertex = &e.Source
+	var targ *Vertex = &e.Target
+	if e.Source.Idx == len(b.V) {
+		src = b.AddVertex(e.Source.Color)
+		newv = src
+	} else if e.Target.Idx == len(b.V) {
+		targ = b.AddVertex(e.Target.Color)
+		newv = targ
+	}
+	newe = b.AddEdge(src, targ, e.Color)
+	return newe, newv, nil
 }
 
 func (b *Builder) Build() *SubGraph {
