@@ -9,28 +9,25 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-
 func SerializeExtension(e *subgraph.Extension) []byte {
 	bytes := make([]byte, 20)
-	binary.BigEndian.PutUint32(bytes[0:4],   uint32(e.Source.Idx))
-	binary.BigEndian.PutUint32(bytes[4:8],   uint32(e.Source.Color))
-	binary.BigEndian.PutUint32(bytes[8:12],  uint32(e.Target.Idx))
+	binary.BigEndian.PutUint32(bytes[0:4], uint32(e.Source.Idx))
+	binary.BigEndian.PutUint32(bytes[4:8], uint32(e.Source.Color))
+	binary.BigEndian.PutUint32(bytes[8:12], uint32(e.Target.Idx))
 	binary.BigEndian.PutUint32(bytes[12:16], uint32(e.Target.Color))
 	binary.BigEndian.PutUint32(bytes[16:20], uint32(e.Color))
 	return bytes
 }
 
 func DeserializeExtension(bytes []byte) *subgraph.Extension {
-	srcIdx    := int(binary.BigEndian.Uint32(bytes[0:4]))
-	srcColor  := int(binary.BigEndian.Uint32(bytes[4:8]))
-	targIdx   := int(binary.BigEndian.Uint32(bytes[8:12]))
+	srcIdx := int(binary.BigEndian.Uint32(bytes[0:4]))
+	srcColor := int(binary.BigEndian.Uint32(bytes[4:8]))
+	targIdx := int(binary.BigEndian.Uint32(bytes[8:12]))
 	targColor := int(binary.BigEndian.Uint32(bytes[12:16]))
-	color     := int(binary.BigEndian.Uint32(bytes[16:20]))
+	color := int(binary.BigEndian.Uint32(bytes[16:20]))
 	return subgraph.NewExt(
-		subgraph.Vertex{Idx:srcIdx, Color:srcColor},
-		subgraph.Vertex{Idx:targIdx, Color:targColor},
+		subgraph.Vertex{Idx: srcIdx, Color: srcColor},
+		subgraph.Vertex{Idx: targIdx, Color: targColor},
 		color,
 	)
 }
-
-
