@@ -22,6 +22,7 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
+	"github.com/timtadh/sfp/stores/bytes_extension"
 	"github.com/timtadh/sfp/stores/int_int"
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/types/digraph/ext"
@@ -46,6 +47,7 @@ type Digraph struct {
 	Extender                 *ext.Extender
 	NodeAttrs                int_json.MultiMap
 	Embeddings               bytes_subgraph.MultiMap
+	Extensions               bytes_extension.MultiMap
 	Parents                  bytes_bytes.MultiMap
 	ParentCount              bytes_int.MultiMap
 	Children                 bytes_bytes.MultiMap
@@ -89,6 +91,10 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 	if err != nil {
 		return nil, err
 	}
+	exts, err := config.BytesExtensionMultiMap("digraph-extensions")
+	if err != nil {
+		return nil, err
+	}
 	g = &Digraph{
 		Supported:     sup,
 		Extender:      ext.NewExtender(runtime.NumCPU()),
@@ -97,6 +103,7 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		MinVertices:   minV,
 		MaxVertices:   maxV,
 		NodeAttrs:     nodeAttrs,
+		Extensions:    exts,
 		Parents:       parents,
 		ParentCount:   parentCount,
 		Children:      children,
@@ -169,6 +176,7 @@ func (g *Digraph) Close() error {
 	g.CanonKids.Close()
 	g.CanonKidCount.Close()
 	g.Embeddings.Close()
+	g.Extensions.Close()
 	g.NodeAttrs.Close()
 	g.ColorMap.Close()
 	return nil
