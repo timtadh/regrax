@@ -3,7 +3,6 @@ package reporters
 import (
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 )
 
@@ -27,12 +26,7 @@ type Unique struct {
 }
 
 func NewUnique(conf *config.Config, fmtr lattice.Formatter, reporter miners.Reporter, histogramName string) (*Unique, error) {
-	runes := make([]rune, 0, 10)
-	for i := 0; i < 10; i++ {
-		runes = append(runes, rune(97+rand.Intn(26)))
-	}
-	name := string(runes)
-	seen, err := conf.BytesIntMultiMap("unique-seen-" + name)
+	seen, err := conf.BytesIntMultiMap("unique-seen-" + conf.Randstr())
 	if err != nil {
 		return nil, err
 	}
