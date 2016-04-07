@@ -10,55 +10,75 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 type EmbListNode struct {
 	SubgraphPattern
-	sgs []*goiso.SubGraph
+	extensions []*subgraph.Extension
+	embeddings []*goiso.SubGraph
 }
 
 type Embedding struct {
 	sg *goiso.SubGraph
 }
 
-func NewEmbListNode(Dt *Digraph, sgs []*goiso.SubGraph) *EmbListNode {
+func NewEmbListNode(Dt *Digraph, exts []*subgraph.Extension, sgs []*goiso.SubGraph) *EmbListNode {
 	if len(sgs) > 0 {
-		return &EmbListNode{newSubgraphPattern(Dt, sgs[0]), sgs}
+		return &EmbListNode{newSubgraphPattern(Dt, sgs[0]), exts, sgs}
 	}
-	return &EmbListNode{newSubgraphPattern(Dt, nil), nil}
+	return &EmbListNode{newSubgraphPattern(Dt, nil), exts, nil}
 }
 
-func (n *EmbListNode) New(sgs []*goiso.SubGraph) Node {
-	return NewEmbListNode(n.Dt, sgs)
+func (n *EmbListNode) New(exts []*subgraph.Extension, sgs []*goiso.SubGraph) Node {
+	return NewEmbListNode(n.Dt, exts, sgs)
 }
 
 func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
-	sgs := make([]*goiso.SubGraph, 0, 10)
-	err := Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
-		sgs = append(sgs, sg)
+	exts := make([]*subgraph.Extension, 0, 10)
+	err := Dt.Extensions.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
+		exts = append(exts, ext)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return NewEmbListNode(Dt, sgs), nil
+	embs := make([]*goiso.SubGraph, 0, 10)
+	err = Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
+		embs = append(embs, sg)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	n := &EmbListNode{
+		SubgraphPattern: newSubgraphPattern(Dt, embs[0]),
+		extensions: exts,
+		embeddings: embs,
+	}
+	return n, nil
 }
 
 func (n *EmbListNode) Pattern() lattice.Pattern {
 	return &n.SubgraphPattern
 }
 
+func (n *EmbListNode) Extensions() ([]*subgraph.Extension, error) {
+	return n.extensions, nil
+}
+
 func (n *EmbListNode) Embedding() (*goiso.SubGraph, error) {
 	// errors.Logf("DEBUG", "Embedding() %v", n)
-	if len(n.sgs) == 0 {
+	if len(n.embeddings) == 0 {
 		return nil, nil
 	} else {
-		return n.sgs[0], nil
+		return n.embeddings[0], nil
 	}
 }
 
+
 func (n *EmbListNode) Embeddings() ([]*goiso.SubGraph, error) {
-	return n.sgs, nil
+	return n.embeddings, nil
 }
 
 func (n *EmbListNode) Save() error {
@@ -67,7 +87,13 @@ func (n *EmbListNode) Save() error {
 	} else if has {
 		return nil
 	}
-	for _, sg := range n.sgs {
+	for _, ext := range n.extensions {
+		err := n.Dt.Extensions.Add(n.Label(), ext)
+		if err != nil {
+			return err
+		}
+	}
+	for _, sg := range n.embeddings {
 		err := n.Dt.Embeddings.Add(n.Label(), sg)
 		if err != nil {
 			return err
@@ -77,8 +103,8 @@ func (n *EmbListNode) Save() error {
 }
 
 func (n *EmbListNode) String() string {
-	if len(n.sgs) > 0 {
-		return fmt.Sprintf("<EmbListNode %v>", n.sgs[0].Label())
+	if len(n.embeddings) > 0 {
+		return fmt.Sprintf("<EmbListNode %v>", n.embeddings[0].Label())
 	} else {
 		return fmt.Sprintf("<EmbListNode {}>")
 	}

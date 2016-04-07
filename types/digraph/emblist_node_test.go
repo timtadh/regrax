@@ -60,9 +60,9 @@ func TestEmbChildren(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 0:1(0:red)>":
-			x.Equal(len(kid.sgs), 4, "4 embeddings")
+			x.Equal(len(kid.embeddings), 4, "4 embeddings")
 		case "<EmbListNode 0:1(0:black)>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		default:
 			x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
@@ -90,12 +90,12 @@ func TestEmbChildren(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][0->2:]>":
-			x.Equal(len(kid.sgs), 4, "4 embeddings")
+			x.Equal(len(kid.embeddings), 4, "4 embeddings")
 			next = kid
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][2->1:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
 			x.Fail("unexpected kid %v", kid)
 		}
@@ -112,10 +112,10 @@ func TestEmbChildren(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->2:][3->2:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
 			x.Fail("unexpected kid %v", kid)
 		}
@@ -151,9 +151,9 @@ func TestEmbCount(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 0:1(0:red)>":
-			x.Equal(len(kid.sgs), 4, "4 embeddings")
+			x.Equal(len(kid.embeddings), 4, "4 embeddings")
 		case "<EmbListNode 0:1(0:black)>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		default:
 			x.Fail(errors.Errorf("unexpected kid %v", kid).Error())
@@ -192,12 +192,12 @@ func TestEmbCount(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][0->2:]>":
-			x.Equal(len(kid.sgs), 4, "4 embeddings")
+			x.Equal(len(kid.embeddings), 4, "4 embeddings")
 			next = kid
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][2->1:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
 			x.Fail("unexpected kid %v", kid)
 		}
@@ -220,10 +220,10 @@ func TestEmbCount(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->2:][3->2:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
-			x.Equal(len(kid.sgs), 2, "2 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
 			x.Fail("unexpected kid %v", kid)
 		}

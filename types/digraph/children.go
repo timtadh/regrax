@@ -22,8 +22,9 @@ import (
 
 type Node interface {
 	lattice.Node
-	New([]*goiso.SubGraph) Node
+	New([]*subgraph.Extension, []*goiso.SubGraph) Node
 	Label() []byte
+	Extensions() ([]*subgraph.Extension, error)
 	Embeddings() ([]*goiso.SubGraph, error)
 	Embedding() (*goiso.SubGraph, error)
 	SubGraph() *subgraph.SubGraph
@@ -64,33 +65,6 @@ func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.Mult
 		return nodes, nil
 	}
 	return nil, nil
-}
-
-func nodesFromEmbeddings(n Node, embs ext.Embeddings) (nodes []lattice.Node, err error) {
-	dt := n.dt()
-	partitioned := embs.Partition()
-	sum := 0
-	for _, sgs := range partitioned {
-		sum += len(sgs)
-		new_node := n.New(support.Dedup(sgs))
-		if len(sgs) < dt.Support() {
-			continue
-		}
-		new_embeddings, err := new_node.Embeddings()
-		if err != nil {
-			return nil, err
-		}
-		supported, err := dt.Supported(dt, new_embeddings)
-		if err != nil {
-			return nil, err
-		}
-		if len(supported) >= dt.Support() {
-			nodes = append(nodes, new_node)
-		}
-	}
-	// errors.Logf("DEBUG", "sum(len(partition)) %v", sum)
-	// errors.Logf("DEBUG", "kids of %v are %v", n, nodes)
-	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
 
 func canonChildren(n Node) (nodes []lattice.Node, err error) {

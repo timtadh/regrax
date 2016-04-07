@@ -134,7 +134,7 @@ func (g *Digraph) MinimumLevel() int {
 }
 
 func RootEmbListNode(g *Digraph) *EmbListNode {
-	return NewEmbListNode(g, nil)
+	return NewEmbListNode(g, nil, nil)
 }
 
 func (g *Digraph) Root() lattice.Node {
@@ -146,9 +146,9 @@ func VE(node lattice.Node) (V, E int) {
 	V = 0
 	switch n := node.(type) {
 	case *EmbListNode:
-		if len(n.sgs) > 0 {
-			E = len(n.sgs[0].E)
-			V = len(n.sgs[0].V)
+		if len(n.embeddings) > 0 {
+			E = len(n.embeddings[0].E)
+			V = len(n.embeddings[0].V)
 		}
 	default:
 		panic(errors.Errorf("unknown node type %T %v", node, node))
