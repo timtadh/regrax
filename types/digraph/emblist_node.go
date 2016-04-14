@@ -25,9 +25,12 @@ type Embedding struct {
 
 func NewEmbListNode(Dt *Digraph, exts []*subgraph.Extension, sgs []*goiso.SubGraph) *EmbListNode {
 	if len(sgs) > 0 {
+		if exts == nil {
+			panic("nil exts")
+		}
 		return &EmbListNode{newSubgraphPattern(Dt, sgs[0]), exts, sgs}
 	}
-	return &EmbListNode{newSubgraphPattern(Dt, nil), exts, nil}
+	return &EmbListNode{newSubgraphPattern(Dt, nil), nil, nil}
 }
 
 func (n *EmbListNode) New(exts []*subgraph.Extension, sgs []*goiso.SubGraph) Node {
@@ -35,26 +38,36 @@ func (n *EmbListNode) New(exts []*subgraph.Extension, sgs []*goiso.SubGraph) Nod
 }
 
 func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
-	exts := make([]*subgraph.Extension, 0, 10)
-	err := Dt.Extensions.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
-		exts = append(exts, ext)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
 	embs := make([]*goiso.SubGraph, 0, 10)
-	err = Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
+	err := Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
 		embs = append(embs, sg)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	exts := make([]*subgraph.Extension, 0, 10)
+	err = Dt.Extensions.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
+		exts = append(exts, ext)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	n := &EmbListNode{
 		SubgraphPattern: newSubgraphPattern(Dt, embs[0]),
 		extensions: exts,
 		embeddings: embs,
+	}
+
+	if len(n.extensions) == 0 {
+		exts, err := extensions(Dt, n.Pat)
+		if err != nil {
+			return nil, err
+		}
+		n.extensions = exts
 	}
 	return n, nil
 }

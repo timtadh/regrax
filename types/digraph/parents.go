@@ -8,6 +8,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
@@ -27,18 +28,18 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 	} else if has {
 		return nodes, nil
 	}
-	embs, err := n.Embeddings()
+	emb, err := n.Embedding()
 	if err != nil {
 		return nil, err
 	}
 	nodes = make([]lattice.Node, 0, 10)
-	for _, psg := range embs[0].SubGraphs() {
-		psn := NewSubgraphPattern(dt, psg)
-		psgs, err := psn.Embeddings()
+	for _, parent := range emb.SubGraphs() {
+		psg := subgraph.FromEmbedding(parent)
+		pexts, pembs, err := extsAndEmbs(dt, psg)
 		if err != nil {
 			return nil, err
 		}
-		nodes = append(nodes, n.New(nil, psgs))
+		nodes = append(nodes, n.New(pexts, pembs))
 	}
 	if len(nodes) == 0 {
 		return nil, errors.Errorf("Found no parents!!\n    node %v", n)

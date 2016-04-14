@@ -7,15 +7,12 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
-	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/types/digraph/ext"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
-	"github.com/timtadh/sfp/types/digraph/support"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
@@ -102,6 +99,53 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 }
 
 func children(n Node) (nodes []lattice.Node, err error) {
+	// errors.Logf("DEBUG", "")
+	// errors.Logf("DEBUG", "")
+	// errors.Logf("DEBUG", "")
+	// errors.Logf("DEBUG", "")
+	// errors.Logf("DEBUG", "n %v", n)
+	dt := n.dt()
+	if nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
+		return nil, err
+	} else if nodes != nil {
+		return nodes, nil
+	}
+
+	// errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
+	b := subgraph.BuildFrom(n.SubGraph())
+	extPoints, err := n.Extensions()
+	if err != nil {
+		return nil, err
+	}
+	patterns := set.NewSortedSet(len(extPoints))
+	for _, ep := range extPoints {
+		// errors.Logf("DEBUG", "  ext point %v", ep)
+		bc := b.Copy()
+		bc.Extend(ep)
+		ext := bc.Build()
+		patterns.Add(ext)
+		// errors.Logf("DEBUG", "    ext %v", ext)
+	}
+
+	for i, next := patterns.Items()(); next != nil; i, next = next() {
+		pattern := i.(*subgraph.SubGraph)
+		exts, embs, err := extsAndEmbs(dt, pattern)
+		if err != nil {
+			return nil, err
+		}
+		// errors.Logf("DEBUG", "pattern %v support %v exts %v", pattern, len(embs), len(exts))
+		if len(embs) >= dt.Support() {
+			nodes = append(nodes, n.New(exts, embs))
+		}
+	}
+
+	errors.Logf("DEBUG", "n %v kids %v", n, len(nodes))
+
+	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
+}
+
+/*
+func children(n Node) (nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
 		return nil, err
@@ -140,3 +184,4 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	}
 	return nodesFromEmbeddings(n, exts.Wait(added))
 }
+*/

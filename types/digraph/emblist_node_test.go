@@ -90,7 +90,7 @@ func TestEmbChildren(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][0->2:]>":
-			x.Equal(len(kid.embeddings), 4, "4 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][2->1:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
@@ -192,7 +192,7 @@ func TestEmbCount(t *testing.T) {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][0->2:]>":
-			x.Equal(len(kid.embeddings), 4, "4 embeddings")
+			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][2->1:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")

@@ -33,7 +33,11 @@ func (e *Extension) list() *list.List {
 func (e *Extension) Equals(o types.Equatable) bool {
 	switch x := o.(type) {
 	case *Extension:
-		return e.list().Equals(x.list())
+		return e.Source.Idx == x.Source.Idx &&
+		       e.Source.Color == x.Source.Color &&
+		       e.Target.Idx == x.Target.Idx &&
+		       e.Target.Color == x.Target.Color &&
+		       e.Color == x.Color
 	}
 	return false
 }
@@ -47,6 +51,10 @@ func (e *Extension) Less(o types.Sortable) bool {
 }
 
 func (e *Extension) Hash() int {
-	return e.list().Hash()
+	return   e.Source.Idx +
+	       2*e.Source.Color +
+	       3*e.Target.Idx +
+	       5*e.Target.Color +
+	       7*e.Color
 }
 
