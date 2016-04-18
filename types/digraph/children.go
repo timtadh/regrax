@@ -48,20 +48,26 @@ func validExtChecker(dt *Digraph, do func(sg *goiso.SubGraph, e *goiso.Edge)) fu
 	}
 }
 
-func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.MultiMap) (nodes []lattice.Node, err error) {
+func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.MultiMap) (has bool, nodes []lattice.Node, err error) {
 	dt := n.dt()
 	if n.isRoot() {
-		return n.loadFrequentVertices()
+		nodes, err = n.loadFrequentVertices()
+		if err != nil {
+			return false, nil, err
+		}
+		return true, nodes, nil
 	}
 	if n.edges() >= dt.MaxEdges {
-		return []lattice.Node{}, nil
+		return true, []lattice.Node{}, nil
 	}
 	if nodes, has, err := cached(n, dt, kidCount, kids); err != nil {
-		return nil, err
+		return false, nil, err
 	} else if has {
-		return nodes, nil
+		// errors.Logf("DEBUG", "cached %v, %v", n, nodes)
+		return true, nodes, nil
 	}
-	return nil, nil
+	// errors.Logf("DEBUG", "not cached %v", n)
+	return false, nil, nil
 }
 
 func canonChildren(n Node) (nodes []lattice.Node, err error) {
@@ -69,6 +75,7 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	if nodes, has, err := cached(n, dt, dt.CanonKidCount, dt.CanonKids); err != nil {
 		return nil, err
 	} else if has {
+		// errors.Logf("DEBUG", "got from precheck %v", n)
 		return nodes, nil
 	}
 	kids, err := children(n)
@@ -105,9 +112,10 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "")
 	// errors.Logf("DEBUG", "n %v", n)
 	dt := n.dt()
-	if nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
+	if has, nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
 		return nil, err
-	} else if nodes != nil {
+	} else if has {
+		// errors.Logf("DEBUG", "got from precheck %v", n)
 		return nodes, nil
 	}
 

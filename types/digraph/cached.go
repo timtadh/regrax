@@ -28,7 +28,7 @@ func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, ke
 	}
 	for _, n := range nodes {
 		switch node := n.(type) {
-		case Saveable:
+		case *EmbListNode:
 			err = node.Save()
 			if err != nil {
 				return err
@@ -51,6 +51,7 @@ func cached(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.Mul
 	} else if !has {
 		return nil, false, nil
 	}
+	// errors.Logf("DEBUG", "loading %v", n)
 	err = cache.DoFind(key, func(_, adj []byte) (err error) {
 		node, err := LoadEmbListNode(dt, adj)
 		if err != nil {
