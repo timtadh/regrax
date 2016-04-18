@@ -68,6 +68,12 @@ func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
 			return nil, err
 		}
 		n.extensions = exts
+		for _, ext := range n.extensions {
+			err := n.Dt.Extensions.Add(label, ext)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	return n, nil
 }
