@@ -4,7 +4,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/data-structures/errors"
+	// "github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/goiso"
 )
@@ -96,7 +96,7 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 			nodes = append(nodes, n.New(exts, embs))
 		}
 	}
-	errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
+	// errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
 	return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
@@ -130,7 +130,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		}
 	}
 
-	errors.Logf("DEBUG", "n %v kids %v", n, len(nodes))
+	// errors.Logf("DEBUG", "n %v kids %v", n, len(nodes))
 
 	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
