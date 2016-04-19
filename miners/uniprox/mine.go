@@ -62,7 +62,7 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 		return nil, err
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
-	pr, next, err := walker.Transition(cur, kids, w.weight)
+	pr, next, err := walker.Transition(cur, kids, w.weight, true)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 			return nil, err
 		}
 		// errors.Logf("EST-WALK-DEBUG", "cur %v len(kids) %v", c, len(kids))
-		_, next, err := walker.Transition(c, kids, weight)
+		_, next, err := walker.Transition(c, kids, weight, false)
 		return next, err
 	}
 	c := v

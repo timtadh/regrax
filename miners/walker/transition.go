@@ -13,16 +13,19 @@ import (
 
 type Weight func(u, v lattice.Node) (float64, error)
 
-func TransitionPrs(u lattice.Node, adjs []lattice.Node, weight Weight) ([]float64, error) {
+func TransitionPrs(u lattice.Node, adjs []lattice.Node, weight Weight, debug bool) ([]float64, error) {
 	weights := make([]float64, 0, len(adjs))
 	var total float64 = 0
-	for _, v := range adjs {
+	for i, v := range adjs {
 		wght, err := weight(u, v)
 		if err != nil {
 			return nil, err
 		}
 		weights = append(weights, wght)
 		total += wght
+		if debug {
+			errors.Logf("DEBUG", "(%v/%v) weight %v %v", i+1, len(adjs), wght, v)
+		}
 	}
 	if total == 0 {
 		return nil, nil
@@ -34,14 +37,14 @@ func TransitionPrs(u lattice.Node, adjs []lattice.Node, weight Weight) ([]float6
 	return prs, nil
 }
 
-func Transition(cur lattice.Node, adjs []lattice.Node, weight Weight) (float64, lattice.Node, error) {
+func Transition(cur lattice.Node, adjs []lattice.Node, weight Weight, debug bool) (float64, lattice.Node, error) {
 	if len(adjs) <= 0 {
 		return 1, nil, nil
 	}
 	if len(adjs) == 1 {
 		return 1, adjs[0], nil
 	}
-	prs, err := TransitionPrs(cur, adjs, weight)
+	prs, err := TransitionPrs(cur, adjs, weight, debug)
 	if err != nil {
 		return 0, nil, err
 	} else if prs == nil {
