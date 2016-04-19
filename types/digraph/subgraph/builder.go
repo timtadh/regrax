@@ -28,6 +28,12 @@ func BuildFrom(sg *SubGraph) *Builder {
 	}
 }
 
+func BuildFromVertex(color int) *Builder {
+	b := BuildNew()
+	b.AddVertex(color)
+	return b
+}
+
 func (b *Builder) Copy() *Builder {
 	V := make([]Vertex, len(b.V))
 	E := make([]Edge, len(b.E))
@@ -139,6 +145,63 @@ func (b *Builder) Extend(e *Extension) (newe *Edge, newv *Vertex, err error) {
 	}
 	newe = b.AddEdge(src, targ, e.Color)
 	return newe, newv, nil
+}
+
+func (b *Builder) Kids() [][]*Edge {
+	kids := make([][]*Edge, 0, len(b.V))
+	for _ = range b.V {
+		kids = append(kids, make([]*Edge, 0, 5))
+	}
+	for i := range b.E {
+		e := &b.E[i]
+		kids[e.Src] = append(kids[e.Src], e)
+	}
+	return kids
+}
+
+func (b *Builder) Parents() [][]*Edge {
+	parents := make([][]*Edge, 0, len(b.V))
+	for _ = range b.V {
+		parents = append(parents, make([]*Edge, 0, 5))
+	}
+	for i := range b.E {
+		e := &b.E[i]
+		parents[e.Targ] = append(parents[e.Targ], e)
+	}
+	return parents
+}
+
+func (b *Builder) Connected() bool {
+	kids := b.Kids()
+	parents := b.Parents()
+	pop := func(stack []int) (int, []int) {
+		idx := stack[len(stack)-1]
+		stack = stack[0 : len(stack)-1]
+		return idx, stack
+	}
+	visit := func(idx int, stack []int, processed map[int]bool) []int {
+		processed[idx] = true
+		for _, kid := range kids[idx] {
+			if _, has := processed[kid.Targ]; !has {
+				stack = append(stack, kid.Targ)
+			}
+		}
+		for _, parent := range parents[idx] {
+			if _, has := processed[parent.Src]; !has {
+				stack = append(stack, parent.Src)
+			}
+		}
+		return stack
+	}
+	processed := make(map[int]bool, len(b.V))
+	stack := make([]int, 0, len(b.V))
+	stack = append(stack, 0)
+	for len(stack) > 0 {
+		var v int
+		v, stack = pop(stack)
+		stack = visit(v, stack, processed)
+	}
+	return len(processed) == len(b.V)
 }
 
 func (b *Builder) Build() *SubGraph {

@@ -209,3 +209,23 @@ func TestBuilderRemoveEdge(t *testing.T) {
 	x.Equal(right.String(), expected.String())
 }
 
+func TestBuilderConnected(t *testing.T) {
+	x := assert.New(t)
+	b := BuildNew()
+	n1 := b.AddVertex(0)
+	n2 := b.AddVertex(0)
+	n3 := b.AddVertex(1)
+	n4 := b.AddVertex(1)
+	n5 := b.AddVertex(1)
+	n6 := b.AddVertex(1)
+	b.AddEdge(n1, n3, 2)
+	b.AddEdge(n1, n4, 2)
+	b.AddEdge(n2, n5, 2)
+	b.AddEdge(n5, n3, 2)
+	b.AddEdge(n4, n6, 2)
+	b.AddEdge(n2, n6, 2)
+	x.True(b.Connected())
+	_ = b.AddVertex(2)
+	x.False(b.Connected())
+}
+
