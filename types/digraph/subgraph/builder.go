@@ -62,6 +62,64 @@ func (b *Builder) AddEdge(src, targ *Vertex, color int) *Edge {
 	return &b.E[len(b.E)-1]
 }
 
+func (b *Builder) RemoveEdge(edgeIdx int) error {
+	edge := &b.E[edgeIdx]
+	rmSrc := true
+	rmTarg := true
+	for i := range b.E {
+		e := &b.E[i]
+		if e == edge {
+			continue
+		}
+		if edge.Src == e.Src || edge.Src == e.Targ {
+			// a kid edge
+			rmSrc = false
+		}
+		if edge.Targ == e.Src || edge.Targ == e.Targ {
+			// a parent edge
+			rmTarg = false
+		}
+	}
+	if rmSrc || rmTarg {
+		return errors.Errorf("would have removed both source and target %v %v", rmSrc, rmTarg)
+	}
+	rmV := rmSrc || rmTarg
+	var rmVidx int
+	if rmSrc {
+		rmVidx = edge.Src
+	}
+	if rmTarg {
+		rmVidx = edge.Targ
+	}
+	adjustIdx := func(idx int) int {
+		if rmV && idx > rmVidx {
+			return idx - 1
+		}
+		return idx
+	}
+	V := make([]Vertex, 0, len(b.V))
+	for idx := range b.V {
+		if rmV && rmVidx == idx {
+			continue
+		}
+		V = append(V, Vertex{Idx:adjustIdx(idx), Color:b.V[idx].Color})
+	}
+	E := make([]Edge, 0, len(b.E)-1)
+	for idx := range b.E {
+		if idx == edgeIdx {
+			continue
+		}
+		E = append(E, Edge{
+			Src:adjustIdx(b.E[idx].Src),
+			Targ:adjustIdx(b.E[idx].Targ),
+			Color:b.E[idx].Color,
+		})
+	}
+	b.V = V
+	b.E = E
+	return nil
+}
+
 func (b *Builder) Extend(e *Extension) (newe *Edge, newv *Vertex, err error) {
 	if e.Source.Idx > len(b.V) {
 		return nil, nil, errors.Errorf("Source.Idx %v outside of |V| %v", e.Source.Idx, len(b.V))

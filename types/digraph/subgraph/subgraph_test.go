@@ -175,3 +175,37 @@ func TestFromExtension(t *testing.T) {
 	}
 	x.Equal(len(embs), 2, "embs should have 2 embeddings")
 }
+
+func TestBuilderRemoveEdge(t *testing.T) {
+	x := assert.New(t)
+	t.Logf("%T %v", x, x)
+	_, _, expected, _, _ := graph(t)
+	b := BuildNew()
+	n1 := b.AddVertex(0)
+	n2 := b.AddVertex(0)
+	n3 := b.AddVertex(1)
+	n4 := b.AddVertex(1)
+	n5 := b.AddVertex(1)
+	n6 := b.AddVertex(1)
+	b.AddEdge(n1, n3, 2)
+	b.AddEdge(n1, n4, 2)
+	b.AddEdge(n2, n5, 2)
+	b.AddEdge(n5, n3, 2)
+	b.AddEdge(n4, n6, 2)
+	b.AddEdge(n2, n6, 2)
+	b.AddEdge(n3, n6, 2)
+	wrong := b.Build()
+	t.Log(wrong)
+	t.Log(expected)
+	x.NotEqual(wrong.String(), expected.String())
+	b = BuildFrom(wrong)
+	err := b.RemoveEdge(6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	right := b.Build()
+	t.Log(right)
+	t.Log(expected)
+	x.Equal(right.String(), expected.String())
+}
+
