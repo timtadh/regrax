@@ -1,7 +1,6 @@
 package digraph
 
 import (
-	"bytes"
 )
 
 import (
@@ -72,28 +71,32 @@ func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.Mult
 
 func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	dt := n.dt()
-	if nodes, has, err := cached(n, dt, dt.CanonKidCount, dt.CanonKids); err != nil {
+	if has, nodes, err := precheckChildren(n, dt.CanonKidCount, dt.CanonKids); err != nil {
 		return nil, err
 	} else if has {
 		// errors.Logf("DEBUG", "got from precheck %v", n)
 		return nodes, nil
 	}
-	kids, err := children(n)
+	patterns, err := extendNode(n)
 	if err != nil {
 		return nil, err
 	}
-	if bytes.Equal(n.Label(), dt.Root().Pattern().Label()) {
-		return kids, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), kids)
-	}
-	for _, k := range kids {
-		if canonized, err := isCanonicalExtension(n.SubGraph(), k.(Node).SubGraph()); err != nil {
+	for i, next := patterns.Items()(); next != nil; i, next = next() {
+		extPat := i.(*subgraph.SubGraph)
+		if canonized, err := isCanonicalExtension(n.SubGraph(), extPat); err != nil {
 			return nil, err
 		} else if !canonized {
-			// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())
-		} else {
-			nodes = append(nodes, k)
+			continue
+		}
+		exts, embs, err := extsAndEmbs(dt, extPat)
+		if err != nil {
+			return nil, err
+		}
+		if len(embs) >= dt.Support() {
+			nodes = append(nodes, n.New(exts, embs))
 		}
 	}
+	errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
 	return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
@@ -111,6 +114,28 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		return nodes, nil
 	}
 
+	patterns, err := extendNode(n)
+	if err != nil {
+		return nil, err
+	}
+	for i, next := patterns.Items()(); next != nil; i, next = next() {
+		pattern := i.(*subgraph.SubGraph)
+		exts, embs, err := extsAndEmbs(dt, pattern)
+		if err != nil {
+			return nil, err
+		}
+		// errors.Logf("DEBUG", "pattern %v support %v exts %v", pattern, len(embs), len(exts))
+		if len(embs) >= dt.Support() {
+			nodes = append(nodes, n.New(exts, embs))
+		}
+	}
+
+	errors.Logf("DEBUG", "n %v kids %v", n, len(nodes))
+
+	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
+}
+
+func extendNode(n Node) (*set.SortedSet, error) {
 	// errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
 	b := subgraph.BuildFrom(n.SubGraph())
 	extPoints, err := n.Extensions()
@@ -127,21 +152,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		// errors.Logf("DEBUG", "    ext %v", ext)
 	}
 
-	for i, next := patterns.Items()(); next != nil; i, next = next() {
-		pattern := i.(*subgraph.SubGraph)
-		exts, embs, err := extsAndEmbs(dt, pattern)
-		if err != nil {
-			return nil, err
-		}
-		// errors.Logf("DEBUG", "pattern %v support %v exts %v", pattern, len(embs), len(exts))
-		if len(embs) >= dt.Support() {
-			nodes = append(nodes, n.New(exts, embs))
-		}
-	}
-
-	errors.Logf("DEBUG", "n %v kids %v", n, len(nodes))
-
-	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
+	return patterns, nil
 }
 
 /*
