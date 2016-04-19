@@ -86,7 +86,7 @@ func (b *Builder) RemoveEdge(edgeIdx int) error {
 			rmTarg = false
 		}
 	}
-	if rmSrc || rmTarg {
+	if rmSrc && rmTarg {
 		return errors.Errorf("would have removed both source and target %v %v", rmSrc, rmTarg)
 	}
 	rmV := rmSrc || rmTarg

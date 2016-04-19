@@ -3,7 +3,7 @@ package digraph
 import (
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
-	// "github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
@@ -103,6 +103,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	})
 	sets := make([]*set.MapSet, len(pattern.V))
 
+	total := 0
 	// add the supported embeddings to the vertex sets
 	// add the extensions to the extensions set
 	for emb, next := ei(); next != nil; emb, next = next() {
@@ -124,6 +125,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 				add(emb, e)
 			}
 		}
+		total++
 	}
 
 	// construct the extensions output slice
@@ -146,6 +148,8 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 		emb := i.(*goiso.SubGraph)
 		embeddings = append(embeddings, emb)
 	}
+
+	errors.Logf("DEBUG", "pat %v total-embeddings %v supported %v unique-ext %v", pattern, total, len(embeddings), len(extensions))
 
 	// return it all
 	return extensions, embeddings, nil

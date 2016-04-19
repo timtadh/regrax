@@ -85,16 +85,8 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	if bytes.Equal(n.Label(), dt.Root().Pattern().Label()) {
 		return kids, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), kids)
 	}
-	nEmb, err := n.Embedding()
-	if err != nil {
-		return nil, err
-	}
 	for _, k := range kids {
-		kEmb, err := k.(Node).Embedding()
-		if err != nil {
-			return nil, err
-		}
-		if canonized, err := isCanonicalExtension(nEmb, kEmb); err != nil {
+		if canonized, err := isCanonicalExtension(n.SubGraph(), k.(Node).SubGraph()); err != nil {
 			return nil, err
 		} else if !canonized {
 			// errors.Logf("DEBUG", "%v is not canon (skipping)", sgs[0].Label())

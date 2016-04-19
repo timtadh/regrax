@@ -6,64 +6,78 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
 )
 
-import ()
+import (
+	"github.com/timtadh/sfp/types/digraph/subgraph"
+)
 
-func isCanonicalExtension(cur *goiso.SubGraph, ext *goiso.SubGraph) (bool, error) {
+func isCanonicalExtension(cur *subgraph.SubGraph, ext *subgraph.SubGraph) (bool, error) {
 	// errors.Logf("DEBUG", "is %v a canonical ext of %v", ext.Label(), n)
-	parent, err := firstParent(ext)
+	parent, err := firstParent(subgraph.BuildFrom(ext))
 	if err != nil {
 		return false, err
 	} else if parent == nil {
-		return false, errors.Errorf("ext %v of node %v has no parents", ext.Label(), cur.Label())
+		return false, errors.Errorf("ext %v of node %v has no parents", ext, cur)
 	}
-	if bytes.Equal(parent.ShortLabel(), cur.ShortLabel()) {
+	if bytes.Equal(parent.Build().Label(), cur.Label()) {
 		return true, nil
 	}
 	return false, nil
 }
 
-func computeParent(sg *goiso.SubGraph, i int, parents []*goiso.SubGraph) []*goiso.SubGraph {
-	if len(sg.V) == 2 && len(sg.E) == 1 {
-		p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
-		parents = append(parents, p)
-	} else if len(sg.V) == 1 && len(sg.E) == 1 {
-		p, _ := sg.G.VertexSubGraph(sg.V[sg.E[0].Src].Id)
-		parents = append(parents, p)
-		p, _ = sg.G.VertexSubGraph(sg.V[sg.E[0].Targ].Id)
-		parents = append(parents, p)
+func computeParent(b *subgraph.Builder, i int, parents []*subgraph.Builder) ([]*subgraph.Builder, error) {
+	if len(b.V) == 1 && len(b.E) == 1 {
+		parents = append(
+			parents,
+			subgraph.BuildFromVertex(b.V[b.E[0].Src].Color),
+		)
+	} else if len(b.V) == 2 && len(b.E) == 1 {
+		parents = append(
+			parents,
+			subgraph.BuildFromVertex(b.V[b.E[0].Src].Color),
+			subgraph.BuildFromVertex(b.V[b.E[0].Targ].Color),
+		)
 	} else {
-		p, _ := sg.RemoveEdge(i)
-		if p.Connected() {
-			parents = append(parents, p)
+		nb := b.Copy()
+		err := nb.RemoveEdge(i)
+		if err != nil {
+			return nil, err
+		}
+		if nb.Connected() {
+			parents = append(parents, nb)
 		}
 	}
-	return parents
+	return parents, nil
 }
 
-func firstParent(sg *goiso.SubGraph) (*goiso.SubGraph, error) {
-	if len(sg.E) <= 0 {
+func firstParent(b *subgraph.Builder) (_ *subgraph.Builder, err error) {
+	if len(b.E) <= 0 {
 		return nil, nil
 	}
-	parents := make([]*goiso.SubGraph, 0, 10)
-	for i := len(sg.E) - 1; i >= 0; i-- {
-		parents = computeParent(sg, i, parents)
+	parents := make([]*subgraph.Builder, 0, 10)
+	for i := len(b.E) - 1; i >= 0; i-- {
+		parents, err = computeParent(b, i, parents)
+		if err != nil {
+			return nil, err
+		}
 		if len(parents) > 0 {
 			return parents[0], nil
 		}
 	}
-	return nil, errors.Errorf("no parents for %v", sg.Label())
+	return nil, errors.Errorf("no parents for %v", b)
 }
 
-func allParents(sg *goiso.SubGraph) ([]*goiso.SubGraph, error) {
-	if len(sg.E) <= 0 {
+func allParents(b *subgraph.Builder) (parents []*subgraph.Builder, err error) {
+	if len(b.E) <= 0 {
 		return nil, nil
 	}
-	parents := make([]*goiso.SubGraph, 0, 10)
-	for i := len(sg.E) - 1; i >= 0; i-- {
-		computeParent(sg, i, parents)
+	parents = make([]*subgraph.Builder, 0, 10)
+	for i := len(b.E) - 1; i >= 0; i-- {
+		parents, err = computeParent(b, i, parents)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return parents, nil
 }
