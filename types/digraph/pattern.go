@@ -44,65 +44,8 @@ func (n *SubgraphPattern) dt() *Digraph {
 	return n.Dt
 }
 
-func (n *SubgraphPattern) Save() error {
-	_, err := n.Embeddings() // ensures that the label is in the embeddings table
-	return err
-}
-
 func (n *SubgraphPattern) SubGraph() *subgraph.SubGraph {
 	return n.Pat
-}
-
-func (n *SubgraphPattern) Embedding() (*goiso.SubGraph, error) {
-	embs, err := n.Embeddings()
-	if err != nil {
-		return nil, err
-	} else if len(embs) == 0 {
-		return nil, nil
-	}
-	return embs[0], nil
-}
-
-func (n *SubgraphPattern) Embeddings() ([]*goiso.SubGraph, error) {
-	if has, err := n.Dt.Embeddings.Has(n.Label()); err != nil {
-		return nil, err
-	} else if has {
-		return n.loadEmbeddings()
-	} else {
-		embs, err := n.Pat.Embeddings(n.Dt.G, n.Dt.ColorMap, n.Dt.Extender)
-		if err != nil {
-			return nil, err
-		}
-		err = n.saveEmbeddings(embs)
-		if err != nil {
-			return nil, err
-		}
-		return embs, nil
-	}
-}
-
-func (n *SubgraphPattern) loadEmbeddings() ([]*goiso.SubGraph, error) {
-	embs := make([]*goiso.SubGraph, 0, n.Dt.Support())
-	label := n.Label()
-	err := n.Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
-		embs = append(embs, sg)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return embs, nil
-}
-
-func (n *SubgraphPattern) saveEmbeddings(embs []*goiso.SubGraph) error {
-	label := n.Label()
-	for _, emb := range embs {
-		err := n.Dt.Embeddings.Add(label, emb)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (n *SubgraphPattern) Lattice() (*lattice.Lattice, error) {
