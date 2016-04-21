@@ -80,11 +80,6 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 		for len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)
-			label := types.ByteSlice(i.emb.Serialize())
-			if seen.Has(label) {
-				continue
-			}
-			seen.Put(label, nil)
 			if prune != nil && prune(i.emb) {
 				continue
 			}
@@ -98,6 +93,11 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 			} else {
 				// ok extend the embedding
 				for _, ext := range sg.ExtendEmbedding(G, extender, i.emb, chain[i.eid]) {
+					label := types.ByteSlice(ext.Serialize())
+					if seen.Has(label) {
+						continue
+					}
+					seen.Put(label, nil)
 					stack = append(stack, entry{ext, i.eid + 1})
 				}
 			}
