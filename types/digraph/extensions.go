@@ -15,15 +15,15 @@ import (
 
 // YOU ARE HERE:
 //
-// Ok so what we need to do is take an a pattern (eg. subgraph.SubGraph) and
-// compute all of the unique subgraph.Extension(s). Those will then get stored
-// in digraph.Extension.
+// 1. The embeddings and extensions are being computed multiple times for the
+//    same pattern. Memoization needs to be added!
 //
-// Then when computing children the extensions are looked up rather than found
-// using the embeddings list. Furthermore, the only supported embeddings are
-// stored in the embedding list to cut down on space.
+// 2. There may be duplicate embeddings computed. Investigate.
 //
-// kk.
+// 3. There may be automorphic embeddings computed. Investigate.
+//
+// 4. Instead of the full Embeddings we could work in overlap space.
+//    Investigate.
 
 
 func extensionPoint(G *goiso.Graph, sg *goiso.SubGraph, e *goiso.Edge) *subgraph.Extension {
