@@ -157,7 +157,14 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	// errors.Logf("DEBUG", "pat %v total-embeddings %v supported %v unique-ext %v", pattern, total, len(embeddings), len(extensions))
 
 	// return it all
-	return extensions, embeddings, cacheExtsEmbs(dt, pattern, extensions, embeddings)
+	if true {
+		errors.Logf("CACHE-DEBUG", "Caching %v exts %v embs %v total-embs %v", pattern, len(extensions), len(embeddings), total)
+	}
+	err = cacheExtsEmbs(dt, pattern, extensions, embeddings)
+	if err != nil {
+		return nil, nil, err
+	}
+	return extensions, embeddings, nil
 }
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*goiso.SubGraph) error {

@@ -5,6 +5,7 @@ import ()
 import (
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/types"
+	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/goiso"
 )
 
@@ -51,6 +52,13 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 	pop := func(stack []entry) (entry, []entry) {
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
+	vertexSet := func(emb *goiso.SubGraph) *set.SortedSet {
+		vertices := set.NewSortedSet(len(emb.V))
+		for i := range emb.V {
+			vertices.Add(types.Int(emb.V[i].Id))
+		}
+		return vertices
+	}
 
 	if len(sg.V) == 0 {
 		ei = func() (*goiso.SubGraph, EmbIterator) {
@@ -71,6 +79,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 	}
 
 	seen := hashtable.NewLinearHash()
+	visited := hashtable.NewLinearHash()
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
 		stack = append(stack, entry{vemb, 0})
@@ -85,9 +94,15 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 			}
 			// otherwise success we have an embedding we haven't seen
 			if i.eid >= len(chain) {
+				// check that this is the subgraph we sought
 				if sg.Matches(i.emb) {
-					// sweet we can yield this embedding!
-					return i.emb, ei
+					// check for automorphisms
+					vertices := vertexSet(i.emb)
+					if !visited.Has(vertices) {
+						visited.Put(vertices, nil)
+						// sweet we can yield this embedding!
+						return i.emb, ei
+					}
 				}
 				// nope wasn't an embedding drop it
 			} else {
