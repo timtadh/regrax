@@ -1,8 +1,6 @@
 package dfs
 
-import (
-	"math/rand"
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -69,12 +67,7 @@ func (m *Miner) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.For
 }
 
 func (m *Miner) mine() (err error) {
-	runes := make([]rune, 0, 10)
-	for i := 0; i < 10; i++ {
-		runes = append(runes, rune(97+rand.Intn(26)))
-	}
-	name := string(runes)
-	seen, err := m.Config.BytesIntMultiMap("stack-seen-" + name)
+	seen, err := m.Config.BytesIntMultiMap("stack-seen")
 	if err != nil {
 		return err
 	}
