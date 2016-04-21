@@ -5,6 +5,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
 )
 
@@ -37,43 +38,23 @@ func (n *EmbListNode) New(exts []*subgraph.Extension, sgs []*goiso.SubGraph) Nod
 	return NewEmbListNode(n.Dt, exts, sgs)
 }
 
-func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
-	embs := make([]*goiso.SubGraph, 0, 10)
-	err := Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
-		embs = append(embs, sg)
-		return nil
-	})
+func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
+	sg, err := subgraph.FromLabel(label)
 	if err != nil {
 		return nil, err
 	}
-
-	exts := make([]*subgraph.Extension, 0, 10)
-	err = Dt.Extensions.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
-		exts = append(exts, ext)
-		return nil
-	})
+	has, exts, embs, err := loadCachedExtsEmbs(dt, sg)
 	if err != nil {
 		return nil, err
+	}
+	if !has {
+		return nil, errors.Errorf("Node was not saved: %v", &SubgraphPattern{Dt: dt, Pat: sg})
 	}
 
 	n := &EmbListNode{
-		SubgraphPattern: newSubgraphPattern(Dt, embs[0]),
+		SubgraphPattern: SubgraphPattern{Dt: dt, Pat: sg},
 		extensions: exts,
 		embeddings: embs,
-	}
-
-	if len(n.extensions) == 0 {
-		exts, err := extensions(Dt, n.Pat)
-		if err != nil {
-			return nil, err
-		}
-		n.extensions = exts
-		for _, ext := range n.extensions {
-			err := n.Dt.Extensions.Add(label, ext)
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 	return n, nil
 }
@@ -98,27 +79,6 @@ func (n *EmbListNode) Embedding() (*goiso.SubGraph, error) {
 
 func (n *EmbListNode) Embeddings() ([]*goiso.SubGraph, error) {
 	return n.embeddings, nil
-}
-
-func (n *EmbListNode) Save() error {
-	if has, err := n.Dt.Embeddings.Has(n.Label()); err != nil {
-		return err
-	} else if has {
-		return nil
-	}
-	for _, ext := range n.extensions {
-		err := n.Dt.Extensions.Add(n.Label(), ext)
-		if err != nil {
-			return err
-		}
-	}
-	for _, sg := range n.embeddings {
-		err := n.Dt.Embeddings.Add(n.Label(), sg)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (n *EmbListNode) String() string {

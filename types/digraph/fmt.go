@@ -51,16 +51,10 @@ func (f *Formatter) PatternName(node lattice.Node) string {
 func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	switch n := node.(type) {
 	case *EmbListNode:
-		max := ""
-		if ismax, err := n.Maximal(); err != nil {
-			return "", err
-		} else if ismax {
-			max = " # maximal"
-		}
 		if len(n.embeddings) > 0 {
 			Pat := n.embeddings[0].Label()
 			dot := n.embeddings[0].String()
-			return fmt.Sprintf("// %s%s\n\n%s\n", Pat, max, dot), nil
+			return fmt.Sprintf("// %s\n\n%s\n", Pat, dot), nil
 		} else {
 			return fmt.Sprintf("// 0:0\n\ndigraph{}\n"), nil
 		}

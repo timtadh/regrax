@@ -59,7 +59,7 @@ func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.Mult
 	if n.edges() >= dt.MaxEdges {
 		return true, []lattice.Node{}, nil
 	}
-	if nodes, has, err := cached(n, dt, kidCount, kids); err != nil {
+	if nodes, has, err := cachedAdj(n, dt, kidCount, kids); err != nil {
 		return false, nil, err
 	} else if has {
 		// errors.Logf("DEBUG", "cached %v, %v", n, nodes)
@@ -97,7 +97,7 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 		}
 	}
 	// errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
-	return nodes, cache(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
+	return nodes, cacheAdj(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
 func children(n Node) (nodes []lattice.Node, err error) {
@@ -132,7 +132,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 
 	// errors.Logf("DEBUG", "n %v kids %v", n, len(nodes))
 
-	return nodes, cache(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
+	return nodes, cacheAdj(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
 
 func extendNode(n Node) (*set.SortedSet, error) {

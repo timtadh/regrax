@@ -19,6 +19,7 @@ import (
 	"github.com/timtadh/sfp/stores/int_int"
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/types/digraph/ext"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 
@@ -40,6 +41,7 @@ type Digraph struct {
 	CanonKids                bytes_bytes.MultiMap
 	CanonKidCount            bytes_int.MultiMap
 	ColorMap                 int_int.MultiMap
+	Frequency                bytes_int.MultiMap
 	config                   *config.Config
 }
 
@@ -80,6 +82,10 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 	if err != nil {
 		return nil, err
 	}
+	frequency, err := config.BytesIntMultiMap("digraph-pattern-frequency")
+	if err != nil {
+		return nil, err
+	}
 	g = &Digraph{
 		Supported:     sup,
 		Extender:      ext.NewExtender(runtime.NumCPU()),
@@ -96,6 +102,7 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		CanonKids:     canonKids,
 		CanonKidCount: canonKidCount,
 		ColorMap:      colorMap,
+		Frequency:     frequency,
 		config:        config,
 	}
 	return g, nil
@@ -125,8 +132,30 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 
 	err = bytes_subgraph.DoKey(dt.Embeddings.Keys, func(label []byte) error {
 		dt.FrequentVertices = append(dt.FrequentVertices, label)
+		pat, err := subgraph.FromLabel(label)
+		if err != nil {
+			return err
+		}
+		exts, err := extensions(dt, pat)
+		if err != nil {
+			return err
+		}
+		color := pat.V[0].Color
+		err = dt.Frequency.Add(label, int32(G.ColorFrequency(color)))
+		if err != nil {
+			return err
+		}
+		for _, ext := range exts {
+			err := dt.Extensions.Add(label, ext)
+			if err != nil {
+				return err
+			}
+		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -194,6 +223,7 @@ func (g *Digraph) Close() error {
 	g.Extensions.Close()
 	g.NodeAttrs.Close()
 	g.ColorMap.Close()
+	g.Frequency.Close()
 	return nil
 }
 

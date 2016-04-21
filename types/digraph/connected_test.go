@@ -102,7 +102,7 @@ func dfs(t testing.TB, x *assert.Assertions, root Node) {
 }
 
 func visit(t testing.TB, x *assert.Assertions, visited *set.SortedSet, node Node) {
-	// errors.Logf("DEBUG", "visiting %v", node)
+	errors.Logf("DEBUG", "visiting %v", node)
 	if visited.Has(node.Pattern()) {
 		return
 	}

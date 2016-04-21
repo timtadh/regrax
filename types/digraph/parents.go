@@ -23,7 +23,7 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 	if len(sg.V) == 1 && len(sg.E) == 0 {
 		return []lattice.Node{NewEmbListNode(dt, nil, nil)}, nil
 	}
-	if nodes, has, err := cached(n, dt, dt.ParentCount, dt.Parents); err != nil {
+	if nodes, has, err := cachedAdj(n, dt, dt.ParentCount, dt.Parents); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
@@ -44,5 +44,5 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 	if len(nodes) == 0 {
 		return nil, errors.Errorf("Found no parents!!\n    node %v", n)
 	}
-	return nodes, cache(dt, dt.ParentCount, dt.Parents, n.Label(), nodes)
+	return nodes, cacheAdj(dt, dt.ParentCount, dt.Parents, n.Label(), nodes)
 }
