@@ -22,17 +22,12 @@ func (b *Builder) From(sg *SubGraph) *Builder {
 	if len(b.V) != 0 || len(b.E) != 0 {
 		panic("builder must be empty to use From")
 	}
-	if cap(b.V) < len(sg.V) {
-		b.V = make([]Vertex, len(sg.V))
+	for i := range sg.V {
+		b.AddVertex(sg.V[i].Color)
 	}
-	if cap(b.E) < len(sg.E) {
-		b.E = make([]Edge, len(sg.E))
+	for i := range sg.E {
+		b.AddEdge(&b.V[sg.E[i].Src], &b.V[sg.E[i].Targ], sg.E[i].Color)
 	}
-	b.V = b.V[:len(sg.V)]
-	errors.Logf("DEBUG", "cap(b.E) %v len(sg.E) %v", cap(b.E), len(sg.E))
-	b.E = b.E[:len(sg.E)]
-	copy(b.V, sg.V)
-	copy(b.E, sg.E)
 	return b
 }
 
@@ -52,10 +47,17 @@ func (b *Builder) Copy() *Builder {
 	}
 }
 
-func (b *Builder) Mutation(do func(*Builder)) *Builder {
-	nb := b.Copy()
-	do(nb)
-	return nb
+func (b *Builder) Ctx(do func(*Builder)) *Builder {
+	do(b)
+	return b
+}
+
+func (b *Builder) Do(do func(*Builder) error) (*Builder, error) {
+	err := do(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func (b *Builder) AddVertex(color int) *Vertex {
@@ -233,7 +235,7 @@ func (b *Builder) build(vord, eord []int) *SubGraph {
 		Adj: make([][]int, len(b.V)),
 	}
 	for i, j := range vord {
-		pat.V[j].Idx = b.V[i].Idx
+		pat.V[j].Idx = j
 		pat.V[j].Color = b.V[i].Color
 		pat.Adj[j] = make([]int, 0, 5)
 	}

@@ -44,10 +44,17 @@ func (b *EmbeddingBuilder) Copy() *EmbeddingBuilder {
 	}
 }
 
-func (b *EmbeddingBuilder) Mutation(do func(*EmbeddingBuilder)) *EmbeddingBuilder {
-	nb := b.Copy()
-	do(nb)
-	return nb
+func (b *EmbeddingBuilder) Ctx(do func(*EmbeddingBuilder)) *EmbeddingBuilder {
+	do(b)
+	return b
+}
+
+func (b *EmbeddingBuilder) Do(do func(*EmbeddingBuilder) error) (*EmbeddingBuilder, error) {
+	err := do(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func (b *EmbeddingBuilder) AddVertex(color, id int) *Vertex {

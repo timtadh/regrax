@@ -107,6 +107,10 @@ func FromLabel(label []byte) (*SubGraph, error) {
 	return sg, nil
 }
 
+func (sg *SubGraph) Builder() *Builder {
+	return Build(len(sg.V), len(sg.E)).From(sg)
+}
+
 func (sg *SubGraph) MarshalBinary() ([]byte, error) {
 	return sg.Label(), nil
 }

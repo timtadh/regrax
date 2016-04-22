@@ -122,8 +122,11 @@ func TestFromBuilder(t *testing.T) {
 	sg1 := b.Build()
 	t.Log(sg1)
 	t.Log(sg1.Adj)
-	b2 := Build(6, 6).From(sg1)
-	sg := b2.Mutation(func(b *Builder) { b.AddEdge(&b.V[3], &b.V[5], 2) }).Build()
+	b2 := sg1.Builder()
+	sg := b2.Copy().Ctx(func(b *Builder) {
+		t.Log(b)
+		b.AddEdge(&b.V[2], &b.V[3], 2)
+	}).Build()
 	t.Log(b2.Build())
 	t.Log(sg)
 	t.Log(expected)

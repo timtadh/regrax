@@ -17,9 +17,52 @@ type Embedding struct {
 }
 
 
+func LoadEmbedding(bytes []byte) (*Embedding, error) {
+	emb := new(Embedding)
+	err := emb.UnmarshalBinary(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return emb, nil
+}
+
+
+func (emb *Embedding) Builder() *EmbeddingBuilder {
+	return BuildEmbedding(len(emb.SG.V), len(emb.SG.E)).From(emb)
+}
 
 func (emb *Embedding) MarshalBinary() ([]byte, error) {
-	return emb.Label(), nil
+	return emb.Serialize(), nil
+}
+
+func (emb *Embedding) Serialize() []byte {
+	size := 8 + len(emb.SG.V)*8 + len(emb.SG.E)*12
+	label := make([]byte, size)
+	binary.BigEndian.PutUint32(label[0:4], uint32(len(emb.SG.E)))
+	binary.BigEndian.PutUint32(label[4:8], uint32(len(emb.SG.V)))
+	off := 8
+	for i := range emb.SG.V {
+		s := off + i*8
+		e := s + 4
+		binary.BigEndian.PutUint32(label[s:e], uint32(emb.Ids[i]))
+		s += 4
+		e += 4
+		binary.BigEndian.PutUint32(label[s:e], uint32(emb.SG.V[i].Color))
+	}
+	off += len(emb.SG.V) * 8
+	for i := range emb.SG.E {
+		edge := &emb.SG.E[i]
+		s := off + i*12
+		e := s + 4
+		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Src))
+		s += 4
+		e += 4
+		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Targ))
+		s += 4
+		e += 4
+		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Color))
+	}
+	return label
 }
 
 func (emb *Embedding) UnmarshalBinary(bytes []byte) error {
@@ -77,33 +120,7 @@ func (emb *Embedding) UnmarshalBinary(bytes []byte) error {
 }
 
 func (emb *Embedding) Label() []byte {
-	size := 8 + len(emb.SG.V)*8 + len(emb.SG.E)*12
-	label := make([]byte, size)
-	binary.BigEndian.PutUint32(label[0:4], uint32(len(emb.SG.E)))
-	binary.BigEndian.PutUint32(label[4:8], uint32(len(emb.SG.V)))
-	off := 8
-	for i := range emb.SG.V {
-		s := off + i*8
-		e := s + 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(emb.SG.V[i].Color))
-		s += 4
-		e += 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(emb.Ids[i]))
-	}
-	off += len(emb.SG.V) * 8
-	for i := range emb.SG.E {
-		edge := &emb.SG.E[i]
-		s := off + i*12
-		e := s + 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Src))
-		s += 4
-		e += 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Targ))
-		s += 4
-		e += 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Color))
-	}
-	return label
+	return emb.SG.Label()
 }
 
 func (emb *Embedding) String() string {
