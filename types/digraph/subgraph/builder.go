@@ -69,6 +69,15 @@ func (b *Builder) AddEdge(src, targ *Vertex, color int) *Edge {
 }
 
 func (b *Builder) RemoveEdge(edgeIdx int) error {
+	dropVertex, vertexIdx, err := b.droppedVertexOnEdgeRm(edgeIdx)
+	if err != nil {
+		return err
+	}
+	b.V, b.E = b.removeVertexAndEdge(dropVertex, vertexIdx, edgeIdx)
+	return nil
+}
+
+func (b *Builder) droppedVertexOnEdgeRm(edgeIdx int) (drop bool, idx int, err error) {
 	edge := &b.E[edgeIdx]
 	rmSrc := true
 	rmTarg := true
@@ -87,7 +96,7 @@ func (b *Builder) RemoveEdge(edgeIdx int) error {
 		}
 	}
 	if rmSrc && rmTarg {
-		return errors.Errorf("would have removed both source and target %v %v", rmSrc, rmTarg)
+		return false, 0, errors.Errorf("would have removed both source and target %v %v", rmSrc, rmTarg)
 	}
 	rmV := rmSrc || rmTarg
 	var rmVidx int
@@ -97,15 +106,19 @@ func (b *Builder) RemoveEdge(edgeIdx int) error {
 	if rmTarg {
 		rmVidx = edge.Targ
 	}
+	return rmV, rmVidx, nil
+}
+
+func (b *Builder) removeVertexAndEdge(dropVertex bool, vertexIdx, edgeIdx int) (Vertices, Edges) {
 	adjustIdx := func(idx int) int {
-		if rmV && idx > rmVidx {
+		if dropVertex && idx > vertexIdx {
 			return idx - 1
 		}
 		return idx
 	}
 	V := make([]Vertex, 0, len(b.V))
 	for idx := range b.V {
-		if rmV && rmVidx == idx {
+		if dropVertex && vertexIdx == idx {
 			continue
 		}
 		V = append(V, Vertex{Idx:adjustIdx(idx), Color:b.V[idx].Color})
@@ -121,9 +134,7 @@ func (b *Builder) RemoveEdge(edgeIdx int) error {
 			Color:b.E[idx].Color,
 		})
 	}
-	b.V = V
-	b.E = E
-	return nil
+	return V, E
 }
 
 func (b *Builder) Extend(e *Extension) (newe *Edge, newv *Vertex, err error) {
@@ -205,13 +216,15 @@ func (b *Builder) Connected() bool {
 }
 
 func (b *Builder) Build() *SubGraph {
+	return b.build(b.canonicalPermutation())
+}
+
+func (b *Builder) build(vord, eord []int) *SubGraph {
 	pat := &SubGraph{
 		V:   make([]Vertex, len(b.V)),
 		E:   make([]Edge, len(b.E)),
 		Adj: make([][]int, len(b.V)),
 	}
-	bMap := bliss.NewMap(len(b.V), len(b.E), b.V.Iterate(), b.E.Iterate())
-	vord, eord, _ := bMap.CanonicalPermutation()
 	for i, j := range vord {
 		pat.V[j].Idx = b.V[i].Idx
 		pat.V[j].Color = b.V[i].Color
@@ -225,4 +238,10 @@ func (b *Builder) Build() *SubGraph {
 		pat.Adj[pat.E[j].Targ] = append(pat.Adj[pat.E[j].Targ], j)
 	}
 	return pat
+}
+
+func (b *Builder) canonicalPermutation() (vord, eord []int) {
+	bMap := bliss.NewMap(len(b.V), len(b.E), b.V.Iterate(), b.E.Iterate())
+	vord, eord, _ = bMap.CanonicalPermutation()
+	return vord, eord
 }
