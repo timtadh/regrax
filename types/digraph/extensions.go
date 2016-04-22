@@ -96,7 +96,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	}
 	// errors.Logf("DEBUG", "----   extsAndEmbs pattern %v", pattern)
 	// compute the embeddings
-	ei, err := pattern.IterEmbeddings(dt.G, dt.ColorMap, dt.Extender, nil)
+	ei, err := subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.G, dt.ColorMap, dt.Extender, nil))
 	if err != nil {
 		return nil, nil, err
 	}
