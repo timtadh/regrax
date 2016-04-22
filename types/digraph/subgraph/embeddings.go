@@ -44,13 +44,9 @@ func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, exte
 	return nil
 }
 
-func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, pruner Pruner) (ei EmbIterator, err error) {
-	type entry struct {
-		emb *goiso.SubGraph
-		eid int
-	}
-	pop := func(stack []entry) (entry, []entry) {
-		return stack[len(stack)-1], stack[0 : len(stack)-1]
+func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
+	if err != nil {
+		return nil, err
 	}
 	vertexSet := func(emb *goiso.SubGraph) *set.SortedSet {
 		vertices := set.NewSortedSet(len(emb.V))
@@ -58,6 +54,31 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 			vertices.Add(types.Int(emb.V[i].Id))
 		}
 		return vertices
+	}
+	seen := hashtable.NewLinearHash()
+	ei = func() (emb *goiso.SubGraph, _ EmbIterator) {
+		if it == nil {
+			return nil, nil
+		}
+		for emb, it = it(); it != nil; emb, it = it() {
+			vertices := vertexSet(emb)
+			if !seen.Has(vertices) {
+				seen.Put(vertices, nil)
+				return emb, ei
+			}
+		}
+		return nil, nil
+	}
+	return ei, nil
+}
+
+func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, pruner Pruner) (ei EmbIterator, err error) {
+	type entry struct {
+		emb *goiso.SubGraph
+		eid int
+	}
+	pop := func(stack []entry) (entry, []entry) {
+		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
 
 	if len(sg.V) == 0 {
@@ -79,7 +100,6 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 	}
 
 	seen := hashtable.NewLinearHash()
-	visited := hashtable.NewLinearHash()
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
 		stack = append(stack, entry{vemb, 0})
@@ -96,13 +116,8 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 			if i.eid >= len(chain) {
 				// check that this is the subgraph we sought
 				if sg.Matches(i.emb) {
-					// check for automorphisms
-					vertices := vertexSet(i.emb)
-					if !visited.Has(vertices) {
-						visited.Put(vertices, nil)
-						// sweet we can yield this embedding!
-						return i.emb, ei
-					}
+					// sweet we can yield this embedding!
+					return i.emb, ei
 				}
 				// nope wasn't an embedding drop it
 			} else {

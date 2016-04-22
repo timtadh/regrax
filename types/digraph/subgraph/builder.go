@@ -10,26 +10,33 @@ type Builder struct {
 	E Edges
 }
 
-func BuildNew() *Builder {
+func Build(V, E int) *Builder {
 	return &Builder{
-		V: make([]Vertex, 0, 10),
-		E: make([]Edge, 0, 10),
+		V: make([]Vertex, 0, V),
+		E: make([]Edge, 0, E),
 	}
 }
 
-func BuildFrom(sg *SubGraph) *Builder {
-	V := make([]Vertex, len(sg.V))
-	E := make([]Edge, len(sg.E))
-	copy(V, sg.V)
-	copy(E, sg.E)
-	return &Builder{
-		V: V,
-		E: E,
+// Mutates the current builder and returns it
+func (b *Builder) From(sg *SubGraph) *Builder {
+	if len(b.V) != 0 || len(b.E) != 0 {
+		panic("builder must be empty to use From")
 	}
+	if cap(b.V) < len(sg.V) {
+		b.V = make([]Vertex, len(sg.V))
+	}
+	if cap(b.E) < len(sg.E) {
+		b.E = make([]Edge, len(sg.E))
+	}
+	b.V = b.V[:len(sg.V)]
+	errors.Logf("DEBUG", "cap(b.E) %v len(sg.E) %v", cap(b.E), len(sg.E))
+	b.E = b.E[:len(sg.E)]
+	copy(b.V, sg.V)
+	copy(b.E, sg.E)
+	return b
 }
 
-func BuildFromVertex(color int) *Builder {
-	b := BuildNew()
+func (b *Builder) FromVertex(color int) *Builder {
 	b.AddVertex(color)
 	return b
 }

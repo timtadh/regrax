@@ -14,7 +14,7 @@ import (
 
 func isCanonicalExtension(cur *subgraph.SubGraph, ext *subgraph.SubGraph) (bool, error) {
 	// errors.Logf("DEBUG", "is %v a canonical ext of %v", ext.Label(), n)
-	parent, err := firstParent(subgraph.BuildFrom(ext))
+	parent, err := firstParent(subgraph.Build(len(ext.V), len(ext.E)).From(ext))
 	if err != nil {
 		return false, err
 	} else if parent == nil {
@@ -30,13 +30,13 @@ func computeParent(b *subgraph.Builder, i int, parents []*subgraph.Builder) ([]*
 	if len(b.V) == 1 && len(b.E) == 1 {
 		parents = append(
 			parents,
-			subgraph.BuildFromVertex(b.V[b.E[0].Src].Color),
+			subgraph.Build(1, 0).FromVertex(b.V[b.E[0].Src].Color),
 		)
 	} else if len(b.V) == 2 && len(b.E) == 1 {
 		parents = append(
 			parents,
-			subgraph.BuildFromVertex(b.V[b.E[0].Src].Color),
-			subgraph.BuildFromVertex(b.V[b.E[0].Targ].Color),
+			subgraph.Build(1, 0).FromVertex(b.V[b.E[0].Src].Color),
+			subgraph.Build(1, 0).FromVertex(b.V[b.E[0].Targ].Color),
 		)
 	} else {
 		nb := b.Copy()

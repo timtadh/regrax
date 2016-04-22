@@ -137,7 +137,8 @@ func children(n Node) (nodes []lattice.Node, err error) {
 
 func extendNode(n Node) (*set.SortedSet, error) {
 	// errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
-	b := subgraph.BuildFrom(n.SubGraph())
+	sg := n.SubGraph()
+	b := subgraph.Build(len(sg.V), len(sg.E)).From(sg)
 	extPoints, err := n.Extensions()
 	if err != nil {
 		return nil, err

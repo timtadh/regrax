@@ -21,6 +21,20 @@ func BuildEmbedding(V, E int) *EmbeddingBuilder {
 	}
 }
 
+// Mutates the current builder and returns it
+func (b *EmbeddingBuilder) From(emb *Embedding) *EmbeddingBuilder {
+	if len(b.V) != 0 || len(b.E) != 0 || len(b.Ids) != 0 {
+		panic("embedding builder must be empty to use From")
+	}
+	for i := range emb.V {
+		b.AddVertex(emb.V[i].Color, emb.Ids[i])
+	}
+	for i := range emb.E {
+		b.AddEdge(&emb.V[emb.E[i].Src], &emb.V[emb.E[i].Targ], emb.E[i].Color)
+	}
+	return b
+}
+
 func (b *EmbeddingBuilder) Copy() *EmbeddingBuilder {
 	ids := make([]int, len(b.Ids))
 	copy(ids, b.Ids)
@@ -34,18 +48,6 @@ func (b *EmbeddingBuilder) Mutation(do func(*EmbeddingBuilder)) *EmbeddingBuilde
 	nb := b.Copy()
 	do(nb)
 	return nb
-}
-
-func (b *EmbeddingBuilder) From(emb *Embedding) {
-	if len(b.V) != 0 || len(b.E) != 0 || len(b.Ids) != 0 {
-		panic("embedding builder must be empty to use From")
-	}
-	for i := range emb.V {
-		b.AddVertex(emb.V[i].Color, emb.Ids[i])
-	}
-	for i := range emb.E {
-		b.AddEdge(&emb.V[emb.E[i].Src], &emb.V[emb.E[i].Targ], emb.E[i].Color)
-	}
 }
 
 func (b *EmbeddingBuilder) AddVertex(color, id int) *Vertex {

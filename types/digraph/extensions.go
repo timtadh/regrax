@@ -54,7 +54,7 @@ func extensionPoint(G *goiso.Graph, sg *goiso.SubGraph, e *goiso.Edge) *subgraph
 // unique extensions
 func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, error) {
 	// compute the embeddings
-	ei, err := pattern.IterEmbeddings(dt.G, dt.ColorMap, dt.Extender, nil)
+	ei, err := subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.G, dt.ColorMap, dt.Extender, nil))
 	if err != nil {
 		return nil, err
 	}
