@@ -26,11 +26,11 @@ func (b *EmbeddingBuilder) From(emb *Embedding) *EmbeddingBuilder {
 	if len(b.V) != 0 || len(b.E) != 0 || len(b.Ids) != 0 {
 		panic("embedding builder must be empty to use From")
 	}
-	for i := range emb.V {
-		b.AddVertex(emb.V[i].Color, emb.Ids[i])
+	for i := range emb.SG.V {
+		b.AddVertex(emb.SG.V[i].Color, emb.Ids[i])
 	}
-	for i := range emb.E {
-		b.AddEdge(&emb.V[emb.E[i].Src], &emb.V[emb.E[i].Targ], emb.E[i].Color)
+	for i := range emb.SG.E {
+		b.AddEdge(&emb.SG.V[emb.SG.E[i].Src], &emb.SG.V[emb.SG.E[i].Targ], emb.SG.E[i].Color)
 	}
 	return b
 }
@@ -89,7 +89,7 @@ func (b *EmbeddingBuilder) Build() *Embedding {
 	for i, p := range vord {
 		ids[p] = b.Ids[i]
 	}
-	return &Embedding{SubGraph: sg, Ids: ids}
+	return &Embedding{SG: sg, Ids: ids}
 }
 
 

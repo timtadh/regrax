@@ -201,3 +201,4 @@ func (sg *SubGraph) String() string {
 	}
 	return fmt.Sprintf("{%v:%v}%v%v", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
 }
+
