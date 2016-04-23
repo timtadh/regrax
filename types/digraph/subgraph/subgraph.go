@@ -18,6 +18,7 @@ type SubGraph struct {
 	V   Vertices
 	E   Edges
 	Adj [][]int
+	labelCache []byte
 }
 
 type Vertices []Vertex
@@ -96,7 +97,7 @@ func FromEmbedding(sg *goiso.SubGraph) *SubGraph {
 	return pat
 }
 
-func FromLabel(label []byte) (*SubGraph, error) {
+func LoadSubGraph(label []byte) (*SubGraph, error) {
 	sg := new(SubGraph)
 	err := sg.UnmarshalBinary(label)
 	if err != nil {
@@ -107,6 +108,10 @@ func FromLabel(label []byte) (*SubGraph, error) {
 
 func (sg *SubGraph) Builder() *Builder {
 	return Build(len(sg.V), len(sg.E)).From(sg)
+}
+
+func (sg *SubGraph) Serialize() []byte {
+	return sg.Label()
 }
 
 func (sg *SubGraph) MarshalBinary() ([]byte, error) {
@@ -155,10 +160,14 @@ func (sg *SubGraph) UnmarshalBinary(bytes []byte) error {
 		sg.Adj[src] = append(sg.Adj[src], i)
 		sg.Adj[targ] = append(sg.Adj[targ], i)
 	}
+	sg.labelCache = bytes
 	return nil
 }
 
 func (sg *SubGraph) Label() []byte {
+	if sg.labelCache != nil {
+		return sg.labelCache
+	}
 	size := 8 + len(sg.V)*4 + len(sg.E)*12
 	label := make([]byte, size)
 	binary.BigEndian.PutUint32(label[0:4], uint32(len(sg.E)))
@@ -181,6 +190,7 @@ func (sg *SubGraph) Label() []byte {
 		e += 4
 		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Color))
 	}
+	sg.labelCache = label
 	return label
 }
 
