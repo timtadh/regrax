@@ -42,8 +42,8 @@ func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge) *sub
 		}
 	}
 	if !hasTarg && !hasSrc {
-		srcIdx = 0
-		targIdx = 1
+		srcIdx = len(emb.SG.V)
+		targIdx = len(emb.SG.V)+1
 	}
 	src := subgraph.Vertex{Idx: srcIdx, Color: G.V[e.Src].Color}
 	targ := subgraph.Vertex{Idx: targIdx, Color: G.V[e.Targ].Color}
@@ -109,7 +109,9 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	if has, exts, embs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
 		return nil, nil, err
 	} else if has {
-		errors.Logf("LOAD-DEBUG", "Loaded cached %v exts %v embs %v", pattern, len(exts), len(embs))
+		if false {
+			errors.Logf("LOAD-DEBUG", "Loaded cached %v exts %v embs %v", pattern, len(exts), len(embs))
+		}
 		return exts, embs, nil
 	}
 	// errors.Logf("DEBUG", "----   extsAndEmbs pattern %v", pattern)
@@ -127,6 +129,8 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	total := 0
 	// add the supported embeddings to the vertex sets
 	// add the extensions to the extensions set
+	// errors.Logf("DEBUG", "parent %v", parent)
+	// errors.Logf("DEBUG", "computing embeddings %v", pattern.Pretty(dt.G.Colors))
 	// errors.Logf("DEBUG", "computing embeddings %v", pattern)
 	for emb, next := ei(); next != nil; emb, next = next() {
 		// errors.Logf("DEBUG", "emb %v", emb)
@@ -177,7 +181,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	// errors.Logf("DEBUG", "pat %v total-embeddings %v supported %v unique-ext %v", pattern, total, len(embeddings), len(extensions))
 
 	// return it all
-	if true {
+	if false {
 		errors.Logf("CACHE-DEBUG", "Caching %v exts %v embs %v total-embs %v", pattern, len(extensions), len(embeddings), total)
 	}
 	err = cacheExtsEmbs(dt, pattern, extensions, embeddings)

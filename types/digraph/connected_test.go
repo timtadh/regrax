@@ -157,7 +157,7 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		}
 	}
 	if !found {
-		x.Fail(errors.Errorf("parent %v kids %v did not have %v", parent, pkids, kid).Error())
+		t.Fatalf("parent %v kids %v did not have %v", parent, pkids, kid)
 	}
 	kparents, err := kid.Parents()
 	if err != nil { t.Fatal(err) }
@@ -168,7 +168,7 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		}
 	}
 	if !found {
-		x.Fail(errors.Errorf("kid %v parents %v did not have %v", kid, kparents, parent).Error())
+		t.Fatalf("kid %v parents %v did not have %v", kid, kparents, parent)
 	}
 	pkids, err = parent.CanonKids()
 	if err != nil {

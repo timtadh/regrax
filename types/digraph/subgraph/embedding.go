@@ -47,6 +47,34 @@ func (emb *Embedding) HasExtension(ext *Extension) bool {
 	return false
 }
 
+func (emb *Embedding) Exists(G *goiso.Graph) bool {
+	for i := range emb.SG.E {
+		e := &emb.SG.E[i]
+		found := false
+		for _, ke := range G.Kids[emb.Ids[e.Src]] {
+			if ke.Color != e.Color {
+				continue
+			}
+			if G.V[ke.Src].Color != emb.SG.V[e.Src].Color {
+				continue
+			}
+			if G.V[ke.Targ].Color != emb.SG.V[e.Targ].Color {
+				continue
+			}
+			if ke.Src != emb.Ids[e.Src] {
+				continue
+			}
+			if ke.Targ != emb.Ids[e.Targ] {
+				continue
+			}
+			found = true
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
 
 func (emb *Embedding) MarshalBinary() ([]byte, error) {
 	return emb.Serialize(), nil
@@ -213,7 +241,7 @@ func (emb *Embedding) Dotty(G *goiso.Graph, attrs map[int]map[string]interface{}
 		V = append(V, fmt.Sprintf(
 			"%v [%v];",
 			G.V[id].Id,
-			renderAttrs(id, emb.SG.V[idx].Color),
+			renderAttrs(emb.SG.V[idx].Color, id),
 		))
 	}
 	for idx := range emb.SG.E {
