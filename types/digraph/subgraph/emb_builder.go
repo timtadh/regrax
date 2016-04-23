@@ -32,6 +32,7 @@ func (b *EmbeddingBuilder) Fillable() *FillableEmbeddingBuilder {
 	b.Ids = b.Ids[:cap(b.Ids)]
 	for i := range b.V {
 		b.V[i].Idx = -1
+		b.Ids[i] = -1
 	}
 	return &FillableEmbeddingBuilder{b}
 }
@@ -75,6 +76,15 @@ func (b *EmbeddingBuilder) Do(do func(*EmbeddingBuilder) error) (*EmbeddingBuild
 		return nil, err
 	}
 	return b, nil
+}
+
+func (b *EmbeddingBuilder) HasId(id int) bool {
+	for _, x := range b.Ids {
+		if id == x {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *EmbeddingBuilder) AddVertex(color, id int) *Vertex {
@@ -123,5 +133,14 @@ func (b *FillableEmbeddingBuilder) SetVertex(idx, color, id int) {
 	b.V[idx].Idx = idx
 	b.V[idx].Color = color
 	b.Ids[idx] = id
+}
+
+func (b *FillableEmbeddingBuilder) Copy() *FillableEmbeddingBuilder {
+	return &FillableEmbeddingBuilder{b.EmbeddingBuilder.Copy()}
+}
+
+func (b *FillableEmbeddingBuilder) Ctx(do func(*FillableEmbeddingBuilder)) *FillableEmbeddingBuilder {
+	do(b)
+	return b
 }
 

@@ -81,25 +81,22 @@ func TestEdgeChain(t *testing.T) {
 	}
 }
 
-/*
 func TestEmbeddings(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	G, _, sg, colors, extender := graph(t)
-	t.Log(sg)
-	t.Log(sg.Adj)
+	G, _, sg, colors, _ := graph(t)
+	t.Log(sg.Pretty(G.Colors))
 
-	embs, err := sg.Embeddings(G, colors, extender)
+	embs, err := sg.Embeddings(G, colors)
 	x.Nil(err)
 	for _, emb := range embs {
-		t.Log(emb.Label())
+		t.Log(emb.SG.Pretty(G.Colors))
 	}
 	for _, emb := range embs {
-		t.Log(emb)
+		t.Log(emb.Pretty(G.Colors))
 	}
 	x.Equal(len(embs), 2, "embs should have 2 embeddings")
 }
-*/
 
 func TestNewBuilder(t *testing.T) {
 	x := assert.New(t)

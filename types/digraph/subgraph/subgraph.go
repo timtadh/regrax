@@ -204,3 +204,23 @@ func (sg *SubGraph) String() string {
 	return fmt.Sprintf("{%v:%v}%v%v", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
 }
 
+func (sg *SubGraph) Pretty(colors []string) string {
+	V := make([]string, 0, len(sg.V))
+	E := make([]string, 0, len(sg.E))
+	for _, v := range sg.V {
+		V = append(V, fmt.Sprintf(
+			"(%v)",
+			colors[v.Color],
+		))
+	}
+	for _, e := range sg.E {
+		E = append(E, fmt.Sprintf(
+			"[%v->%v:%v]",
+			e.Src,
+			e.Targ,
+			colors[e.Color],
+		))
+	}
+	return fmt.Sprintf("{%v:%v}%v%v", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
+}
+

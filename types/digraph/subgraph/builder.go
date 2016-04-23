@@ -37,8 +37,8 @@ func (b *Builder) FromVertex(color int) *Builder {
 }
 
 func (b *Builder) Copy() *Builder {
-	V := make([]Vertex, len(b.V))
-	E := make([]Edge, len(b.E))
+	V := make([]Vertex, len(b.V), cap(b.V))
+	E := make([]Edge, len(b.E), cap(b.E))
 	copy(V, b.V)
 	copy(E, b.E)
 	return &Builder{

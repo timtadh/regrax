@@ -144,3 +144,25 @@ func (emb *Embedding) String() string {
 	return fmt.Sprintf("{%v:%v}%v%v", len(emb.SG.E), len(emb.SG.V), strings.Join(V, ""), strings.Join(E, ""))
 }
 
+func (emb *Embedding) Pretty(colors []string) string {
+	V := make([]string, 0, len(emb.SG.V))
+	E := make([]string, 0, len(emb.SG.E))
+	for i := range emb.SG.V {
+		V = append(V, fmt.Sprintf(
+			"(%v:%v)",
+			emb.Ids[i],
+			colors[emb.SG.V[i].Color],
+		))
+	}
+	for i := range emb.SG.E {
+		E = append(E, fmt.Sprintf(
+			"[%v->%v:%v]",
+			emb.SG.E[i].Src,
+			emb.SG.E[i].Targ,
+			colors[emb.SG.E[i].Color],
+		))
+	}
+	return fmt.Sprintf("{%v:%v}%v%v", len(emb.SG.E), len(emb.SG.V), strings.Join(V, ""), strings.Join(E, ""))
+}
+
+
