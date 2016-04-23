@@ -95,8 +95,8 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 		}
 		return ei, nil
 	}
-	chain := sg.EdgeChain()
-	vembs, err := sg.StartEmbeddings(G, ColorMap)
+	chain := sg.edgeChain()
+	vembs, err := sg.startEmbeddings(G, ColorMap)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 				// check that this is the subgraph we sought
 				emb := i.emb.Build()
 				errors.Logf("FOUND", "\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
-				if sg.Matches(emb) {
+				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
 					return emb, ei
 				}
@@ -131,7 +131,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 			} else {
 				// ok extend the embedding
 				errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
-				for _, ext := range sg.ExtendEmbedding(G, i.emb, chain[i.eid]) {
+				for _, ext := range sg.extendEmbedding(G, i.emb, chain[i.eid]) {
 					stack = append(stack, entry{ext, i.eid + 1})
 				}
 				errors.Logf("DEBUG", "stack len %v", len(stack))
@@ -142,33 +142,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 	return ei, nil
 }
 
-func (sg *SubGraph) Matches(emb *Embedding) bool {
-	if len(sg.V) != len(emb.SG.V) {
-		return false
-	}
-	if len(sg.E) != len(emb.SG.E) {
-		return false
-	}
-	for i := range sg.V {
-		if sg.V[i].Color != emb.SG.V[i].Color {
-			return false
-		}
-	}
-	for i := range sg.E {
-		if sg.E[i].Src != emb.SG.E[i].Src {
-			return false
-		}
-		if sg.E[i].Targ != emb.SG.E[i].Targ {
-			return false
-		}
-		if sg.E[i].Color != emb.SG.E[i].Color {
-			return false
-		}
-	}
-	return true
-}
-
-func (sg *SubGraph) StartEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap) ([]*FillableEmbeddingBuilder, error) {
+func (sg *SubGraph) startEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap) ([]*FillableEmbeddingBuilder, error) {
 	color := sg.V[0].Color
 	embs := make([]*FillableEmbeddingBuilder, 0, G.ColorFrequency(color))
 	err := ColorMap.DoFind(int32(color), func(color, gIdx int32) error {
@@ -184,7 +158,7 @@ func (sg *SubGraph) StartEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap) (
 }
 
 // this is really a depth first search from the given idx
-func (sg *SubGraph) EdgeChain() []*Edge {
+func (sg *SubGraph) edgeChain() []*Edge {
 	edges := make([]*Edge, 0, len(sg.E))
 	added := make(map[int]bool, len(sg.E))
 	seen := make(map[int]bool, len(sg.V))
@@ -220,7 +194,7 @@ func (sg *SubGraph) EdgeChain() []*Edge {
 	return edges
 }
 
-func (sg *SubGraph) ExtendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilder, e *Edge) []*FillableEmbeddingBuilder {
+func (sg *SubGraph) extendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilder, e *Edge) []*FillableEmbeddingBuilder {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	// exts := ext.NewCollector(-1)
 	exts := make([]*FillableEmbeddingBuilder, 0, 10)

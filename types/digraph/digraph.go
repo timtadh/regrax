@@ -156,7 +156,6 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

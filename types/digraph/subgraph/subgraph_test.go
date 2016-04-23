@@ -53,7 +53,7 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.Mult
 func TestEdgeChain(t *testing.T) {
 	_, _, sg, _, _ := graph(t)
 	t.Log(sg)
-	chain := sg.EdgeChain()
+	chain := sg.edgeChain()
 	for _, e := range chain {
 		t.Log(e)
 	}
