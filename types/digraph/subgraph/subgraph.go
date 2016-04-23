@@ -35,7 +35,11 @@ type Edge struct {
 
 
 func EmptySubGraph() *SubGraph {
-	return &SubGraph{}
+	return &SubGraph{
+		V: make(Vertices, 0),
+		E: make(Edges, 0),
+		Adj: make([][]int, 0),
+	}
 }
 
 func (V Vertices) Iterate() (vi bliss.VertexIterator) {

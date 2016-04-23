@@ -8,6 +8,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/goiso"
 )
 
 
@@ -26,10 +27,26 @@ func LoadEmbedding(bytes []byte) (*Embedding, error) {
 	return emb, nil
 }
 
-
 func (emb *Embedding) Builder() *EmbeddingBuilder {
 	return BuildEmbedding(len(emb.SG.V), len(emb.SG.E)).From(emb)
 }
+
+func (emb *Embedding) HasExtension(ext *Extension) bool {
+	if ext.Source.Idx >= len(emb.SG.V) || ext.Source.Color != emb.SG.V[ext.Source.Idx].Color {
+		return false
+	}
+	if ext.Target.Idx >= len(emb.SG.V) || ext.Target.Color != emb.SG.V[ext.Target.Idx].Color {
+		return false
+	}
+	for _, eidx := range emb.SG.Adj[ext.Source.Idx] {
+		e := &emb.SG.E[eidx]
+		if e.Src == ext.Source.Idx && e.Targ == ext.Target.Idx && e.Color == ext.Color {
+			return true
+		}
+	}
+	return false
+}
+
 
 func (emb *Embedding) MarshalBinary() ([]byte, error) {
 	return emb.Serialize(), nil
@@ -165,4 +182,53 @@ func (emb *Embedding) Pretty(colors []string) string {
 	return fmt.Sprintf("{%v:%v}%v%v", len(emb.SG.E), len(emb.SG.V), strings.Join(V, ""), strings.Join(E, ""))
 }
 
-
+func (emb *Embedding) Dotty(G *goiso.Graph, attrs map[int]map[string]interface{}) string {
+	V := make([]string, 0, len(emb.SG.V))
+	E := make([]string, 0, len(emb.SG.E))
+	safeStr := func(i interface{}) string {
+		s := fmt.Sprint(i)
+		s = strings.Replace(s, "\n", "\\n", -1)
+		s = strings.Replace(s, "\"", "\\\"", -1)
+		return s
+	}
+	renderAttrs := func(color, id int) string {
+		a := attrs[id]
+		label := G.Colors[color]
+		strs := make([]string, 0, len(a)+1)
+		strs = append(strs, fmt.Sprintf(`idx="%v"`, id))
+		if line, has := a["start_line"]; has {
+			strs = append(strs, fmt.Sprintf(`label="%v\n[line: %v]"`, safeStr(label), safeStr(line)))
+		} else {
+			strs = append(strs, fmt.Sprintf(`label="%v"`, safeStr(label)))
+		}
+		for name, value := range a {
+			if name == "label" || name == "id" {
+				continue
+			}
+			strs = append(strs, fmt.Sprintf("%v=\"%v\"", name, safeStr(value)))
+		}
+		return strings.Join(strs, ",")
+	}
+	for idx, id := range emb.Ids {
+		V = append(V, fmt.Sprintf(
+			"%v [%v];",
+			G.V[id].Id,
+			renderAttrs(id, emb.SG.V[idx].Color),
+		))
+	}
+	for idx := range emb.SG.E {
+		e := &emb.SG.E[idx]
+		E = append(E, fmt.Sprintf(
+			"%v -> %v [label=\"%v\"];",
+			G.V[emb.Ids[e.Src]].Id,
+			G.V[emb.Ids[e.Targ]].Id,
+			safeStr(G.Colors[e.Color]),
+		))
+	}
+	return fmt.Sprintf(
+		`digraph {
+    %v
+    %v
+}
+`, strings.Join(V, "\n    "), strings.Join(E, "\n    "))
+}

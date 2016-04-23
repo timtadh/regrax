@@ -229,7 +229,8 @@ func (sg *SubGraph) extendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilde
 	return exts
 }
 
-func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *FillableEmbeddingBuilder, srcId int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *FillableEmbeddingBuilder, srcIdx int, e *Edge) []*goiso.Edge {
+	srcId := cur.Ids[srcIdx]
 	tcolor := sg.V[e.Targ].Color
 	ecolor := e.Color
 	edges := make([]*goiso.Edge, 0, 10)
@@ -246,11 +247,14 @@ func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *FillableEmbeddingBuild
 	return edges
 }
 
-func (sg *SubGraph) findEdgesToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilder, targId int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilder, targIdx int, e *Edge) []*goiso.Edge {
+	targId := cur.Ids[targIdx]
+	errors.Logf("EMB-DEBUG", "to targ %v edge %v", targId, e)
 	scolor := sg.V[e.Src].Color
 	ecolor := e.Color
 	edges := make([]*goiso.Edge, 0, 10)
 	for _, pe := range G.Parents[targId] {
+		errors.Logf("EMB-DEBUG", "  pe %v", pe)
 		if pe.Color != ecolor {
 			continue
 		} else if G.V[pe.Src].Color != scolor {

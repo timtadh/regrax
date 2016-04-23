@@ -81,6 +81,43 @@ func TestEdgeChain(t *testing.T) {
 	}
 }
 
+func TestEdgeChain2(t *testing.T) {
+	sg := Build(3, 2).Ctx(func(b *Builder) {
+		x := b.AddVertex(0)
+		y := b.AddVertex(1)
+		z := b.AddVertex(1)
+		b.AddEdge(x, y, 2)
+		b.AddEdge(z, y, 2)
+	}).Build()
+	t.Log(sg)
+	chain := sg.edgeChain()
+	for _, e := range chain {
+		t.Log(e)
+	}
+	b := BuildEmbedding(len(sg.V), len(sg.E)).Fillable()
+	t.Log(b.Builder, b.Ids)
+	id := 0
+	for _, e := range chain {
+		if b.V[e.Src].Idx == -1 {
+			b.SetVertex(e.Src, sg.V[e.Src].Color, id)
+			id++
+		}
+		if b.V[e.Targ].Idx == -1 {
+			b.SetVertex(e.Targ, sg.V[e.Targ].Color, id)
+			id++
+		}
+		b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
+		t.Log(b.Builder, b.Ids)
+	}
+	emb := b.Build()
+	t.Log(emb)
+	t.Log(emb.SG)
+	t.Log(sg)
+	if !sg.Equals(emb.SG) {
+		t.Fatal("emb != sg")
+	}
+}
+
 func TestEmbeddings(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
@@ -88,7 +125,7 @@ func TestEmbeddings(t *testing.T) {
 	t.Log(sg.Pretty(G.Colors))
 
 	embs, err := sg.Embeddings(G, colors)
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	for _, emb := range embs {
 		t.Log(emb.SG.Pretty(G.Colors))
 	}
@@ -96,6 +133,29 @@ func TestEmbeddings(t *testing.T) {
 		t.Log(emb.Pretty(G.Colors))
 	}
 	x.Equal(len(embs), 2, "embs should have 2 embeddings")
+}
+
+func TestEmbeddings2(t *testing.T) {
+	G, _, _, colors, _ := graph(t)
+	sg := Build(3, 2).Ctx(func(b *Builder) {
+		x := b.AddVertex(0)
+		y := b.AddVertex(1)
+		z := b.AddVertex(1)
+		b.AddEdge(x, y, 2)
+		b.AddEdge(z, y, 2)
+	}).Build()
+	t.Log(sg)
+	embs, err := sg.Embeddings(G, colors)
+	if err != nil { t.Fatal(err) }
+	for _, emb := range embs {
+		t.Log(emb.SG.Pretty(G.Colors))
+	}
+	for _, emb := range embs {
+		t.Log(emb.Pretty(G.Colors))
+	}
+	if len(embs) != 2 {
+		t.Error("embs should have 2 embeddings")
+	}
 }
 
 func TestNewBuilder(t *testing.T) {
@@ -124,7 +184,7 @@ func TestNewBuilder(t *testing.T) {
 
 	/*
 	embs, err := sg.Embeddings(G, colors, extender)
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	for _, emb := range embs {
 		t.Log(emb.Label())
 	}
