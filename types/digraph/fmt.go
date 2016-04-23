@@ -8,11 +8,11 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 type Formatter struct {
@@ -39,7 +39,7 @@ func (f *Formatter) PatternName(node lattice.Node) string {
 	switch n := node.(type) {
 	case *EmbListNode:
 		if len(n.embeddings) > 0 {
-			return n.embeddings[0].Label()
+			return n.Pat.Pretty(n.Dt.G.Colors)
 		} else {
 			return "0:0"
 		}
@@ -64,28 +64,30 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 }
 
 func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
-	var embeddings []*goiso.SubGraph = nil
+	var dt *Digraph
+	var embeddings []*subgraph.Embedding = nil
 	switch n := node.(type) {
 	case *EmbListNode:
 		embeddings = n.embeddings
+		dt = n.Dt
 	default:
 		return nil, errors.Errorf("unknown node type %v", node)
 	}
 	embs := make([]string, 0, len(embeddings))
-	for _, sg := range embeddings {
+	for _, emb := range embeddings {
 		allAttrs := make(map[int]map[string]interface{})
-		for _, v := range sg.V {
+		for _, id := range emb.Ids {
 			err := f.g.NodeAttrs.DoFind(
-				int32(f.g.G.V[v.Id].Id),
-				func(id int32, attrs map[string]interface{}) error {
-					allAttrs[v.Id] = attrs
+				int32(f.g.G.V[id].Id),
+				func(_ int32, attrs map[string]interface{}) error {
+					allAttrs[id] = attrs
 					return nil
 				})
 			if err != nil {
 				return nil, err
 			}
 		}
-		embs = append(embs, sg.StringWithAttrs(allAttrs))
+		embs = append(embs, emb.Dotty(dt.G, allAttrs))
 	}
 	return embs, nil
 }

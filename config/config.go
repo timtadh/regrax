@@ -21,6 +21,7 @@ import (
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/ints_int"
 	"github.com/timtadh/sfp/stores/ints_ints"
+	"github.com/timtadh/sfp/stores/subgraph_embedding"
 )
 
 type Config struct {
@@ -140,5 +141,13 @@ func (c *Config) IntsIntsMultiMap(name string) (ints_ints.MultiMap, error) {
 		return ints_ints.AnonBpTree()
 	} else {
 		return ints_ints.NewBpTree(c.CacheFile(name + "-" + c.Randstr() + ".bptree"))
+	}
+}
+
+func (c *Config) SubgraphEmbeddingMultiMap(name string) (subgraph_embedding.MultiMap, error) {
+	if c.Cache == "" {
+		return subgraph_embedding.AnonBpTree()
+	} else {
+		return subgraph_embedding.NewBpTree(c.CacheFile(name + "-" + c.Randstr() + ".bptree"))
 	}
 }

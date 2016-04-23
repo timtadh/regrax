@@ -1,8 +1,6 @@
 package digraph
 
-import (
-	"runtime"
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -14,11 +12,10 @@ import (
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
-	"github.com/timtadh/sfp/stores/bytes_subgraph"
 	"github.com/timtadh/sfp/stores/bytes_extension"
 	"github.com/timtadh/sfp/stores/int_int"
 	"github.com/timtadh/sfp/stores/int_json"
-	"github.com/timtadh/sfp/types/digraph/ext"
+	"github.com/timtadh/sfp/stores/subgraph_embedding"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
@@ -30,9 +27,8 @@ type Digraph struct {
 	G                        *goiso.Graph
 	FrequentVertices         [][]byte
 	Supported                Supported
-	Extender                 *ext.Extender
 	NodeAttrs                int_json.MultiMap
-	Embeddings               bytes_subgraph.MultiMap
+	Embeddings               subgraph_embedding.MultiMap
 	Extensions               bytes_extension.MultiMap
 	Parents                  bytes_bytes.MultiMap
 	ParentCount              bytes_int.MultiMap
@@ -78,6 +74,10 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 	if err != nil {
 		return nil, err
 	}
+	embeddings, err := config.SubgraphEmbeddingMultiMap("digraph-embeddings")
+	if err != nil {
+		return nil, err
+	}
 	exts, err := config.BytesExtensionMultiMap("digraph-extensions")
 	if err != nil {
 		return nil, err
@@ -88,12 +88,12 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 	}
 	g = &Digraph{
 		Supported:     sup,
-		Extender:      ext.NewExtender(runtime.NumCPU()),
 		MinEdges:      minE,
 		MaxEdges:      maxE,
 		MinVertices:   minV,
 		MaxVertices:   maxV,
 		NodeAttrs:     nodeAttrs,
+		Embeddings:    embeddings,
 		Extensions:    exts,
 		Parents:       parents,
 		ParentCount:   parentCount,
@@ -110,10 +110,6 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 
 func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 	dt.G = G
-	dt.Embeddings, err = dt.config.BytesSubgraphMultiMap("digraph-embeddings", bytes_subgraph.DeserializeSubGraph(G))
-	if err != nil {
-		return err
-	}
 
 	for i := range G.V {
 		u := &G.V[i]
@@ -122,31 +118,27 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 			return err
 		}
 		if G.ColorFrequency(u.Color) >= dt.config.Support {
-			sg, _ := G.VertexSubGraph(u.Idx)
-			err := dt.Embeddings.Add(sg.ShortLabel(), sg)
+			emb := subgraph.BuildEmbedding(1, 0).FromVertex(u.Color, u.Idx).Build()
+			err := dt.Embeddings.Add(emb.SG, emb)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	err = bytes_subgraph.DoKey(dt.Embeddings.Keys, func(label []byte) error {
-		dt.FrequentVertices = append(dt.FrequentVertices, label)
-		pat, err := subgraph.FromLabel(label)
+	err = subgraph_embedding.DoKey(dt.Embeddings.Keys, func(sg *subgraph.SubGraph) error {
+		dt.FrequentVertices = append(dt.FrequentVertices, sg.Label())
+		exts, err := extensions(dt, sg)
 		if err != nil {
 			return err
 		}
-		exts, err := extensions(dt, pat)
-		if err != nil {
-			return err
-		}
-		color := pat.V[0].Color
-		err = dt.Frequency.Add(label, int32(G.ColorFrequency(color)))
+		color := sg.V[0].Color
+		err = dt.Frequency.Add(sg.Label(), int32(G.ColorFrequency(color)))
 		if err != nil {
 			return err
 		}
 		for _, ext := range exts {
-			err := dt.Extensions.Add(label, ext)
+			err := dt.Extensions.Add(sg.Label(), ext)
 			if err != nil {
 				return err
 			}
@@ -177,7 +169,7 @@ func (g *Digraph) MinimumLevel() int {
 }
 
 func RootEmbListNode(g *Digraph) *EmbListNode {
-	return NewEmbListNode(g, nil, nil)
+	return NewEmbListNode(g, subgraph.EmptySubGraph(), nil, nil)
 }
 
 func (g *Digraph) Root() lattice.Node {
@@ -189,10 +181,7 @@ func VE(node lattice.Node) (V, E int) {
 	V = 0
 	switch n := node.(type) {
 	case *EmbListNode:
-		if len(n.embeddings) > 0 {
-			E = len(n.embeddings[0].E)
-			V = len(n.embeddings[0].V)
-		}
+		return len(n.Pat.V), len(n.Pat.E)
 	default:
 		panic(errors.Errorf("unknown node type %T %v", node, node))
 	}
@@ -211,7 +200,6 @@ func (g *Digraph) TooLarge(node lattice.Node) bool {
 
 func (g *Digraph) Close() error {
 	g.config.AsyncTasks.Wait()
-	g.Extender.Stop()
 	g.Parents.Close()
 	g.ParentCount.Close()
 	g.Children.Close()

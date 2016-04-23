@@ -4,7 +4,7 @@ import ()
 
 import (
 	"github.com/timtadh/data-structures/hashtable"
-	"github.com/timtadh/data-structures/errors"
+	// "github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/goiso"
@@ -122,7 +122,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 			if i.eid >= len(chain) {
 				// check that this is the subgraph we sought
 				emb := i.emb.Build()
-				errors.Logf("FOUND", "\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
+				// errors.Logf("FOUND", "\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
 				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
 					return emb, ei
@@ -130,11 +130,11 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 				// nope wasn't an embedding drop it
 			} else {
 				// ok extend the embedding
-				errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
+				// errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
 				for _, ext := range sg.extendEmbedding(G, i.emb, chain[i.eid]) {
 					stack = append(stack, entry{ext, i.eid + 1})
 				}
-				errors.Logf("DEBUG", "stack len %v", len(stack))
+				// errors.Logf("DEBUG", "stack len %v", len(stack))
 			}
 		}
 		return nil, nil
@@ -249,12 +249,12 @@ func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *FillableEmbeddingBuild
 
 func (sg *SubGraph) findEdgesToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilder, targIdx int, e *Edge) []*goiso.Edge {
 	targId := cur.Ids[targIdx]
-	errors.Logf("EMB-DEBUG", "to targ %v edge %v", targId, e)
+	// errors.Logf("EMB-DEBUG", "to targ %v edge %v", targId, e)
 	scolor := sg.V[e.Src].Color
 	ecolor := e.Color
 	edges := make([]*goiso.Edge, 0, 10)
 	for _, pe := range G.Parents[targId] {
-		errors.Logf("EMB-DEBUG", "  pe %v", pe)
+		// errors.Logf("EMB-DEBUG", "  pe %v", pe)
 		if pe.Color != ecolor {
 			continue
 		} else if G.V[pe.Src].Color != scolor {

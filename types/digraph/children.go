@@ -6,7 +6,6 @@ import (
 import (
 	// "github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
-	"github.com/timtadh/goiso"
 )
 
 import (
@@ -18,11 +17,10 @@ import (
 
 type Node interface {
 	lattice.Node
-	New([]*subgraph.Extension, []*goiso.SubGraph) Node
+	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding) Node
 	Label() []byte
 	Extensions() ([]*subgraph.Extension, error)
-	Embeddings() ([]*goiso.SubGraph, error)
-	Embedding() (*goiso.SubGraph, error)
+	Embeddings() ([]*subgraph.Embedding, error)
 	SubGraph() *subgraph.SubGraph
 	loadFrequentVertices() ([]lattice.Node, error)
 	isRoot() bool
@@ -30,22 +28,6 @@ type Node interface {
 	dt() *Digraph
 }
 
-func validExtChecker(dt *Digraph, do func(sg *goiso.SubGraph, e *goiso.Edge)) func(*goiso.SubGraph, *goiso.Edge) int {
-	return func(sg *goiso.SubGraph, e *goiso.Edge) int {
-		if dt.G.ColorFrequency(e.Color) < dt.Support() {
-			return 0
-		} else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {
-			return 0
-		} else if dt.G.ColorFrequency(dt.G.V[e.Targ].Color) < dt.Support() {
-			return 0
-		}
-		if !sg.HasEdge(goiso.ColoredArc{e.Arc, e.Color}) {
-			do(sg, e)
-			return 1
-		}
-		return 0
-	}
-}
 
 func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.MultiMap) (has bool, nodes []lattice.Node, err error) {
 	dt := n.dt()
@@ -93,7 +75,7 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 			return nil, err
 		}
 		if len(embs) >= dt.Support() {
-			nodes = append(nodes, n.New(exts, embs))
+			nodes = append(nodes, n.New(extPat, exts, embs))
 		}
 	}
 	// errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
@@ -126,7 +108,7 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		}
 		// errors.Logf("DEBUG", "pattern %v support %v exts %v", pattern, len(embs), len(exts))
 		if len(embs) >= dt.Support() {
-			nodes = append(nodes, n.New(exts, embs))
+			nodes = append(nodes, n.New(pattern, exts, embs))
 		}
 	}
 

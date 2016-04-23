@@ -17,29 +17,29 @@ import (
 type EmbListNode struct {
 	SubgraphPattern
 	extensions []*subgraph.Extension
-	embeddings []*goiso.SubGraph
+	embeddings []*subgraph.Embedding
 }
 
 type Embedding struct {
 	sg *goiso.SubGraph
 }
 
-func NewEmbListNode(Dt *Digraph, exts []*subgraph.Extension, sgs []*goiso.SubGraph) *EmbListNode {
-	if len(sgs) > 0 {
+func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding) *EmbListNode {
+	if len(embs) > 0 {
 		if exts == nil {
 			panic("nil exts")
 		}
-		return &EmbListNode{newSubgraphPattern(Dt, sgs[0]), exts, sgs}
+		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs}
 	}
-	return &EmbListNode{newSubgraphPattern(Dt, nil), nil, nil}
+		return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil}
 }
 
-func (n *EmbListNode) New(exts []*subgraph.Extension, sgs []*goiso.SubGraph) Node {
-	return NewEmbListNode(n.Dt, exts, sgs)
+func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding) Node {
+	return NewEmbListNode(n.Dt, pattern, exts, embs)
 }
 
 func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
-	sg, err := subgraph.FromLabel(label)
+	sg, err := subgraph.LoadSubGraph(label)
 	if err != nil {
 		return nil, err
 	}
@@ -67,26 +67,12 @@ func (n *EmbListNode) Extensions() ([]*subgraph.Extension, error) {
 	return n.extensions, nil
 }
 
-func (n *EmbListNode) Embedding() (*goiso.SubGraph, error) {
-	// errors.Logf("DEBUG", "Embedding() %v", n)
-	if len(n.embeddings) == 0 {
-		return nil, nil
-	} else {
-		return n.embeddings[0], nil
-	}
-}
-
-
-func (n *EmbListNode) Embeddings() ([]*goiso.SubGraph, error) {
+func (n *EmbListNode) Embeddings() ([]*subgraph.Embedding, error) {
 	return n.embeddings, nil
 }
 
 func (n *EmbListNode) String() string {
-	if len(n.embeddings) > 0 {
-		return fmt.Sprintf("<EmbListNode %v>", n.embeddings[0].Label())
-	} else {
-		return fmt.Sprintf("<EmbListNode {}>")
-	}
+	return fmt.Sprintf("<EmbListNode %v>", n.Pat.Pretty(n.Dt.G.Colors))
 }
 
 func (n *EmbListNode) Parents() ([]lattice.Node, error) {

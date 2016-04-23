@@ -54,14 +54,14 @@ func TestEmbChildren(t *testing.T) {
 	_, _, _, _, n := graph(t)
 	x.NotNil(n)
 	kids, err := n.Children()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	var next *EmbListNode = nil
 	for _, k := range kids {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
-		case "<EmbListNode 0:1(0:red)>":
+		case "<EmbListNode {0:1}(red)>":
 			x.Equal(len(kid.embeddings), 4, "4 embeddings")
-		case "<EmbListNode 0:1(0:black)>":
+		case "<EmbListNode {0:1}(black)>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		default:
@@ -76,28 +76,28 @@ func TestEmbChildren(t *testing.T) {
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
-		x.Nil(err)
+		if err != nil { t.Fatal(err) }
 	}
-	x.Equal(len(kids), 1, "should have 1 kids 1:2(0:black)(1:red)[0->1:] got %v", kids)
+	x.Equal(len(kids), 1, "should have 1 kids {1:2}(black)(red)[0->1:] got %v", kids)
 	cur = kids[0].(*EmbListNode)
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
-		x.Nil(err)
+		if err != nil { t.Fatal(err) }
 	}
 	x.Equal(len(kids), 3, "should have 3 kids got %v", kids)
 	for _, k := range kids {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
-		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][0->2:]>":
+		case "<EmbListNode {2:3}(black)(red)(red)[0->1:][0->2:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
-		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][2->1:]>":
+		case "<EmbListNode {2:3}(black)(red)(red)[0->1:][2->1:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
-		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
+		case "<EmbListNode {2:3}(black)(red)(red)[0->2:][2->1:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
-			x.Fail("unexpected kid %v", kid)
+			t.Fatalf("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -105,19 +105,19 @@ func TestEmbChildren(t *testing.T) {
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
-		x.Nil(err)
+		if err != nil { t.Fatal(err) }
 	}
 	x.Equal(len(kids), 2, "should have 2 kids got %v", kids)
 	for _, k := range kids {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
-		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->2:][3->2:]>":
+		case "<EmbListNode {3:4}(black)(red)(red)(red)[0->1:][0->2:][3->2:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
-		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
+		case "<EmbListNode {3:4}(black)(red)(red)(red)[0->1:][0->3:][3->2:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
-			x.Fail("unexpected kid %v", kid)
+			t.Fatalf("unexpected kid %v", kid)
 		}
 	}
 	cur = next
@@ -125,7 +125,7 @@ func TestEmbChildren(t *testing.T) {
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
-		x.Nil(err)
+		if err != nil { t.Fatal(err) }
 	}
 	x.Equal(len(kids), 2, "should have 2 kids got %v", kids)
 	/// stopping this exercise here.
@@ -136,23 +136,23 @@ func TestEmbCount(t *testing.T) {
 	_, _, _, _, n := graph(t)
 	x.NotNil(n)
 	count, err := n.ChildCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 2, "should have 2 kids")
 	count, err = n.ParentCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 0, "should have 0 parents")
 	count, err = n.ChildCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 2, "should have 2 kids")
 	kids, err := n.Children()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	var next *EmbListNode = nil
 	for _, k := range kids {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
-		case "<EmbListNode 0:1(0:red)>":
+		case "<EmbListNode {0:1}(red)>":
 			x.Equal(len(kid.embeddings), 4, "4 embeddings")
-		case "<EmbListNode 0:1(0:black)>":
+		case "<EmbListNode {0:1}(black)>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
 		default:
@@ -165,76 +165,86 @@ func TestEmbCount(t *testing.T) {
 	cur := next
 	next = nil
 	count, err = cur.ChildCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 1, "should have 1 kids")
 	count, err = cur.ParentCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 1, "should have 1 parents")
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
-		x.Nil(err)
+		if err != nil { t.Fatal(err) }
 	}
 	cur = kids[0].(*EmbListNode)
 	count, err = cur.ChildCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 3, "should have 3 kids")
 	count, err = cur.ParentCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 2, "should have 2 parents")
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
-		x.Nil(err)
+		if err != nil { t.Fatal(err) }
 	}
 	x.Equal(len(kids), 3, "should have 3 kids got %v", kids)
 	for _, k := range kids {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
-		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][0->2:]>":
+		case "<EmbListNode {2:3}(black)(red)(red)[0->1:][0->2:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
-		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->1:][2->1:]>":
+		case "<EmbListNode {2:3}(black)(red)(red)[0->1:][2->1:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
-		case "<EmbListNode 2:3(0:black)(1:red)(2:red)[0->2:][2->1:]>":
+		case "<EmbListNode {2:3}(black)(red)(red)[0->2:][2->1:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
-			x.Fail("unexpected kid %v", kid)
+			t.Fatalf("unexpected kid %v", kid)
 		}
 	}
 	cur = next
 	next = nil
 	count, err = cur.ChildCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 2, "should have 2 kids")
 	count, err = cur.ParentCount()
-	x.Nil(err)
-	x.Equal(count, 1, "should have 1 parents")
+	if err != nil { t.Fatal(err) }
+	if count != 1 {
+		t.Errorf("cur %v should have 1 parents", cur)
+		t.Logf("cur parents")
+		parents, err := cur.Parents()
+		if err != nil {
+			t.Error(err)
+		}
+		for _, p := range parents {
+			t.Logf("parent %v", p)
+		}
+	}
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
-		x.Nil(err)
+		if err != nil { t.Fatal(err) }
 	}
 	x.Equal(len(kids), 2, "should have 2 kids got %v", kids)
 	for _, k := range kids {
 		kid := k.(*EmbListNode)
 		switch kid.String() {
-		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->2:][3->2:]>":
+		case "<EmbListNode {3:4}(black)(red)(red)(red)[0->1:][0->2:][3->2:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 			next = kid
-		case "<EmbListNode 3:4(0:black)(1:red)(2:red)(3:red)[0->1:][0->3:][3->2:]>":
+		case "<EmbListNode {3:4}(black)(red)(red)(red)[0->1:][0->3:][3->2:]>":
 			x.Equal(len(kid.embeddings), 2, "2 embeddings")
 		default:
-			x.Fail("unexpected kid %v", kid)
+			t.Fatalf("unexpected kid %v", kid)
 		}
 	}
 	cur = next
 	next = nil
 	count, err = cur.ChildCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 2, "should have 2 kids")
 	count, err = cur.ParentCount()
-	x.Nil(err)
+	if err != nil { t.Fatal(err) }
 	x.Equal(count, 2, "should have 2 parents")
 	/// stopping this exercise here.
 }

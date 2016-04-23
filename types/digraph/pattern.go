@@ -7,7 +7,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/types"
-	"github.com/timtadh/goiso"
 )
 
 import (
@@ -20,24 +19,19 @@ type SubgraphPattern struct {
 	Pat *subgraph.SubGraph
 }
 
-func newSubgraphPattern(Dt *Digraph, sg *goiso.SubGraph) SubgraphPattern {
-	return SubgraphPattern{
+func NewSubgraphPattern(Dt *Digraph, sg *subgraph.SubGraph) *SubgraphPattern {
+	return &SubgraphPattern{
 		Dt:  Dt,
-		Pat: subgraph.FromEmbedding(sg),
+		Pat: sg,
 	}
-}
-
-func NewSubgraphPattern(Dt *Digraph, sg *goiso.SubGraph) *SubgraphPattern {
-	n := newSubgraphPattern(Dt, sg)
-	return &n
 }
 
 func LoadSubgraphPattern(Dt *Digraph, label []byte) (*SubgraphPattern, error) {
-	pat, err := subgraph.FromLabel(label)
+	pat, err := subgraph.LoadSubGraph(label)
 	if err != nil {
 		return nil, err
 	}
-	return &SubgraphPattern{Dt: Dt, Pat: pat}, nil
+	return NewSubgraphPattern(Dt, pat), nil
 }
 
 func (n *SubgraphPattern) dt() *Digraph {

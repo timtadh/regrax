@@ -16,29 +16,29 @@ import (
 // YOU ARE HERE:
 //
 // 1. The embeddings and extensions are being computed multiple times for the
-//    same pattern. Memoization needs to be added!
+//    same pattern. Memoization needs to be added! (done)
 //
-// 2. There may be duplicate embeddings computed. Investigate.
+// 2. There may be duplicate embeddings computed. Investigate. (recheck)
 //
-// 3. There may be automorphic embeddings computed. Investigate.
+// 3. There may be automorphic embeddings computed. Investigate. (recheck)
 //
-// 4. Instead of the full Embeddings we could work in overlap space.
+// 4. Instead of the full Embeddings we could work in overlap space. (todo)
 //    Investigate.
 
 
-func extensionPoint(G *goiso.Graph, sg *goiso.SubGraph, e *goiso.Edge) *subgraph.Extension {
+func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge) *subgraph.Extension {
 	hasTarg := false
 	hasSrc := false
-	var srcIdx int = len(sg.V)
-	var targIdx int = len(sg.V)
-	for _, v := range sg.V {
-		if e.Src == v.Id {
+	var srcIdx int = len(emb.SG.V)
+	var targIdx int = len(emb.SG.V)
+	for idx, id := range emb.Ids {
+		if e.Src == id {
 			hasSrc = true
-			srcIdx = v.Idx
+			srcIdx = idx
 		}
-		if e.Targ == v.Id {
+		if e.Targ == id {
 			hasTarg = true
-			targIdx = v.Idx
+			targIdx = idx
 		}
 	}
 	if !hasTarg && !hasSrc {
@@ -51,26 +51,44 @@ func extensionPoint(G *goiso.Graph, sg *goiso.SubGraph, e *goiso.Edge) *subgraph
 	return ext
 }
 
+func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extension)) func(*subgraph.Embedding, *goiso.Edge) int {
+	return func(emb *subgraph.Embedding, e *goiso.Edge) int {
+		if dt.G.ColorFrequency(e.Color) < dt.Support() {
+			return 0
+		} else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {
+			return 0
+		} else if dt.G.ColorFrequency(dt.G.V[e.Targ].Color) < dt.Support() {
+			return 0
+		}
+		ep := extensionPoint(dt.G, emb, e)
+		if !emb.HasExtension(ep) {
+			do(emb, ep)
+			return 1
+		}
+		return 0
+	}
+}
+
 // unique extensions
 func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, error) {
 	// compute the embeddings
-	ei, err := subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.G, dt.ColorMap, dt.Extender, nil))
+	ei, err := pattern.IterEmbeddings(dt.G, dt.ColorMap, nil)
 	if err != nil {
 		return nil, err
 	}
 	exts := set.NewSortedSet(10)
-	add := validExtChecker(dt, func(sg *goiso.SubGraph, e *goiso.Edge) {
-		exts.Add(extensionPoint(dt.G, sg, e))
+	add := validExtChecker(dt, func(emb *subgraph.Embedding, ep *subgraph.Extension) {
+		exts.Add(ep)
 	})
 
 	// add the extensions to the extensions set
 	for emb, next := ei(); next != nil; emb, next = next() {
-		for i := range emb.V {
-			u := &emb.V[i]
-			for _, e := range dt.G.Kids[u.Id] {
+		for i := range emb.SG.V {
+			id := emb.Ids[i]
+			for _, e := range dt.G.Kids[id] {
 				add(emb, e)
 			}
-			for _, e := range dt.G.Parents[u.Id] {
+			for _, e := range dt.G.Parents[id] {
 				add(emb, e)
 			}
 		}
@@ -87,7 +105,7 @@ func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension,
 }
 
 // unique extensions and supported embeddings
-func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, []*goiso.SubGraph, error) {
+func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, []*subgraph.Embedding, error) {
 	if has, exts, embs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
 		return nil, nil, err
 	} else if has {
@@ -96,41 +114,42 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	}
 	// errors.Logf("DEBUG", "----   extsAndEmbs pattern %v", pattern)
 	// compute the embeddings
-	ei, err := subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.G, dt.ColorMap, dt.Extender, nil))
+	ei, err := pattern.IterEmbeddings(dt.G, dt.ColorMap, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	exts := hashtable.NewLinearHash()
-	add := validExtChecker(dt, func(sg *goiso.SubGraph, e *goiso.Edge) {
-		ep := extensionPoint(dt.G, sg, e)
-		exts.Put(ep, nil)
-		// errors.Logf("DEBUG", "----   -- ext point %v", ep)
+	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
+		exts.Put(ext, nil)
 	})
 	sets := make([]*set.MapSet, len(pattern.V))
 
 	total := 0
 	// add the supported embeddings to the vertex sets
 	// add the extensions to the extensions set
+	// errors.Logf("DEBUG", "computing embeddings %v", pattern)
 	for emb, next := ei(); next != nil; emb, next = next() {
-		// errors.Logf("DEBUG", "----   - emb %v", emb.Label())
-		for i := range emb.V {
-			if sets[i] == nil {
-				sets[i] = set.NewMapSet(set.NewSortedSet(10))
+		// errors.Logf("DEBUG", "emb %v", emb)
+		for idx, id := range emb.Ids {
+			if sets[idx] == nil {
+				sets[idx] = set.NewMapSet(set.NewSortedSet(10))
 			}
-			set := sets[i]
-			u := &emb.V[i]
-			id := types.Int(u.Id)
-			if !set.Has(id) {
-				set.Put(id, emb)
+			set := sets[idx]
+			if !set.Has(types.Int(id)) {
+				set.Put(types.Int(id), emb)
 			}
-			for _, e := range dt.G.Kids[u.Id] {
+			for _, e := range dt.G.Kids[id] {
 				add(emb, e)
 			}
-			for _, e := range dt.G.Parents[u.Id] {
+			for _, e := range dt.G.Parents[id] {
 				add(emb, e)
 			}
 		}
 		total++
+	}
+
+	if total == 0 {
+		return nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
 	}
 
 	// construct the extensions output slice
@@ -141,6 +160,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	}
 	// errors.Logf("DEBUG", "----   exts %v", exts)
 	
+	// errors.Logf("DEBUG", "pattern %v len sets %v sets %v", pattern, len(sets), sets)
 	// compute the minimally supported vertex
 	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
 		return float64(sets[i].Size())
@@ -148,9 +168,9 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	// errors.Logf("DEBUG", "----   support %v", size)
 
 	// construct the embeddings output slice
-	embeddings := make([]*goiso.SubGraph, 0, int(size)+1)
+	embeddings := make([]*subgraph.Embedding, 0, int(size)+1)
 	for i, next := sets[arg].Values()(); next != nil; i, next = next() {
-		emb := i.(*goiso.SubGraph)
+		emb := i.(*subgraph.Embedding)
 		embeddings = append(embeddings, emb)
 	}
 
@@ -167,7 +187,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	return extensions, embeddings, nil
 }
 
-func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*goiso.SubGraph) error {
+func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding) error {
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return err
@@ -188,8 +208,8 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Ext
 			return err
 		}
 	}
-	for _, sg := range embs {
-		err := dt.Embeddings.Add(label, sg)
+	for _, emb := range embs {
+		err := dt.Embeddings.Add(emb.SG, emb)
 		if err != nil {
 			return err
 		}
@@ -197,7 +217,7 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Ext
 	return nil
 }
 
-func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, []*subgraph.Extension, []*goiso.SubGraph, error) {
+func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, []*subgraph.Extension, []*subgraph.Embedding, error) {
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return false, nil, nil, err
@@ -214,9 +234,9 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, []*subgr
 		return false, nil, nil, err
 	}
 
-	embs := make([]*goiso.SubGraph, 0, 10)
-	err = dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
-		embs = append(embs, sg)
+	embs := make([]*subgraph.Embedding, 0, 10)
+	err = dt.Embeddings.DoFind(pattern, func(_ *subgraph.SubGraph, emb *subgraph.Embedding) error {
+		embs = append(embs, emb)
 		return nil
 	})
 	if err != nil {
