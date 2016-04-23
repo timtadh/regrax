@@ -10,6 +10,9 @@ type EmbeddingBuilder struct {
 	Ids []int // Idx vertices in the graph
 }
 
+type FillableEmbeddingBuilder struct {
+	*EmbeddingBuilder
+}
 
 func BuildEmbedding(V, E int) *EmbeddingBuilder {
 	return &EmbeddingBuilder{
@@ -19,6 +22,18 @@ func BuildEmbedding(V, E int) *EmbeddingBuilder {
 		},
 		Ids: make([]int, 0, V),
 	}
+}
+
+func (b *EmbeddingBuilder) Fillable() *FillableEmbeddingBuilder {
+	if len(b.V) != 0 || len(b.E) != 0 || len(b.Ids) != 0 {
+		panic("embedding builder must be empty to use Fillable")
+	}
+	b.V = b.V[:cap(b.V)]
+	b.Ids = b.Ids[:cap(b.Ids)]
+	for i := range b.V {
+		b.V[i].Idx = -1
+	}
+	return &FillableEmbeddingBuilder{b}
 }
 
 // Mutates the current builder and returns it
@@ -32,6 +47,11 @@ func (b *EmbeddingBuilder) From(emb *Embedding) *EmbeddingBuilder {
 	for i := range emb.SG.E {
 		b.AddEdge(&emb.SG.V[emb.SG.E[i].Src], &emb.SG.V[emb.SG.E[i].Targ], emb.SG.E[i].Color)
 	}
+	return b
+}
+
+func (b *EmbeddingBuilder) FromVertex(color, id int) *EmbeddingBuilder {
+	b.AddVertex(color, id)
 	return b
 }
 
@@ -99,5 +119,9 @@ func (b *EmbeddingBuilder) Build() *Embedding {
 	return &Embedding{SG: sg, Ids: ids}
 }
 
-
+func (b *FillableEmbeddingBuilder) SetVertex(idx, color, id int) {
+	b.V[idx].Idx = idx
+	b.V[idx].Color = color
+	b.Ids[idx] = id
+}
 

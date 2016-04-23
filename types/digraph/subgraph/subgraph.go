@@ -32,8 +32,6 @@ type Edge struct {
 	Src, Targ, Color int
 }
 
-type EmbIterator func() (*goiso.SubGraph, EmbIterator)
-type Pruner func(leastCommonVertex int, chain []*Edge) func(emb *goiso.SubGraph) bool
 
 func EmptySubGraph() *SubGraph {
 	return &SubGraph{}

@@ -3,7 +3,8 @@ package subgraph
 import ()
 
 import (
-	"github.com/timtadh/data-structures/hashtable"
+	// "github.com/timtadh/data-structures/hashtable"
+	// "github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/goiso"
@@ -11,15 +12,23 @@ import (
 
 import (
 	"github.com/timtadh/sfp/stores/int_int"
-	"github.com/timtadh/sfp/types/digraph/ext"
 )
 
+// Tim You Are Here:
+// You just ran %s/\*goiso.SubGraph/*Embedding/g
+//
+// Now it is time to transition this thing over to *Embeddings
+// Next it is time to create stores for *Embeddings
+// Then it is time to transition types/digraph to *Embeddings
 
 
+type EmbIterator func() (*Embedding, EmbIterator)
+type Pruner func(leastCommonVertex int, chain []*Edge) func(emb *Embedding) bool
 
-func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender) ([]*goiso.SubGraph, error) {
-	embeddings := make([]*goiso.SubGraph, 0, 10)
-	err := sg.DoEmbeddings(G, ColorMap, extender, nil, func(emb *goiso.SubGraph) error {
+/*
+func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender) ([]*Embedding, error) {
+	embeddings := make([]*Embedding, 0, 10)
+	err := sg.DoEmbeddings(G, ColorMap, extender, nil, func(emb *Embedding) error {
 		embeddings = append(embeddings, emb)
 		return nil
 	})
@@ -30,7 +39,7 @@ func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extend
 
 }
 
-func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, pruner Pruner, do func(*goiso.SubGraph) error) error {
+func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, pruner Pruner, do func(*Embedding) error) error {
 	ei, err := sg.IterEmbeddings(G, ColorMap, extender, pruner)
 	if err != nil {
 		return err
@@ -48,7 +57,7 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 	if err != nil {
 		return nil, err
 	}
-	vertexSet := func(emb *goiso.SubGraph) *set.SortedSet {
+	vertexSet := func(emb *Embedding) *set.SortedSet {
 		vertices := set.NewSortedSet(len(emb.V))
 		for i := range emb.V {
 			vertices.Add(types.Int(emb.V[i].Id))
@@ -56,7 +65,7 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 		return vertices
 	}
 	seen := hashtable.NewLinearHash()
-	ei = func() (emb *goiso.SubGraph, _ EmbIterator) {
+	ei = func() (emb *Embedding, _ EmbIterator) {
 		if it == nil {
 			return nil, nil
 		}
@@ -71,10 +80,12 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 	}
 	return ei, nil
 }
+*/
 
-func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, extender *ext.Extender, pruner Pruner) (ei EmbIterator, err error) {
+/*
+func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pruner Pruner) (ei EmbIterator, err error) {
 	type entry struct {
-		emb *goiso.SubGraph
+		emb *Embedding
 		eid int
 	}
 	pop := func(stack []entry) (entry, []entry) {
@@ -82,7 +93,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 	}
 
 	if len(sg.V) == 0 {
-		ei = func() (*goiso.SubGraph, EmbIterator) {
+		ei = func() (*Embedding, EmbIterator) {
 			return nil, nil
 		}
 		return ei, nil
@@ -94,7 +105,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 		return nil, err
 	}
 
-	var prune func(*goiso.SubGraph) bool = nil
+	var prune func(*Embedding) bool = nil
 	if pruner != nil {
 		prune = pruner(startIdx, chain)
 	}
@@ -105,7 +116,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 		stack = append(stack, entry{vemb, 0})
 	}
 
-	ei = func() (*goiso.SubGraph, EmbIterator) {
+	ei = func() (*Embedding, EmbIterator) {
 		for len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)
@@ -136,51 +147,38 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, ex
 	}
 	return ei, nil
 }
+*/
 
-func (sg *SubGraph) Matches(emb *goiso.SubGraph) bool {
-	if len(sg.V) != len(emb.V) {
+func (sg *SubGraph) Matches(emb *Embedding) bool {
+	if len(sg.V) != len(emb.SG.V) {
 		return false
 	}
-	if len(sg.E) != len(emb.E) {
+	if len(sg.E) != len(emb.SG.E) {
 		return false
 	}
 	for i := range sg.V {
-		if sg.V[i].Color != emb.V[i].Color {
+		if sg.V[i].Color != emb.SG.V[i].Color {
 			return false
 		}
 	}
 	for i := range sg.E {
-		if sg.E[i].Src != emb.E[i].Src {
+		if sg.E[i].Src != emb.SG.E[i].Src {
 			return false
 		}
-		if sg.E[i].Targ != emb.E[i].Targ {
+		if sg.E[i].Targ != emb.SG.E[i].Targ {
 			return false
 		}
-		if sg.E[i].Color != emb.E[i].Color {
+		if sg.E[i].Color != emb.SG.E[i].Color {
 			return false
 		}
 	}
 	return true
 }
 
-func (sg *SubGraph) LeastCommonVertex(G *goiso.Graph) int {
-	minFreq := -1
-	minIdx := -1
-	for i := range sg.V {
-		f := G.ColorFrequency(sg.V[i].Color)
-		if f < minFreq || minIdx == -1 {
-			minFreq = f
-			minIdx = i
-		}
-	}
-	return minIdx
-}
-
-func (sg *SubGraph) VertexEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, idx int) ([]*goiso.SubGraph, error) {
-	embs := make([]*goiso.SubGraph, 0, G.ColorFrequency(sg.V[idx].Color))
-	err := ColorMap.DoFind(int32(sg.V[idx].Color), func(color, gIdx int32) error {
-		sg, _ := G.VertexSubGraph(int(gIdx))
-		embs = append(embs, sg)
+func VertexEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, color int) ([]*EmbeddingBuilder, error) {
+	embs := make([]*EmbeddingBuilder, 0, G.ColorFrequency(color))
+	err := ColorMap.DoFind(int32(color), func(color, gIdx int32) error {
+		embs = append(embs, BuildEmbedding(1, 0).FromVertex(int(color), int(gIdx)))
 		return nil
 	})
 	if err != nil {
@@ -190,11 +188,17 @@ func (sg *SubGraph) VertexEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, 
 }
 
 // this is really a depth first search from the given idx
-func (sg *SubGraph) EdgeChainFrom(idx int) []*Edge {
+func (sg *SubGraph) EdgeChain() []*Edge {
 	edges := make([]*Edge, 0, len(sg.E))
 	added := make(map[int]bool, len(sg.E))
 	seen := make(map[int]bool, len(sg.V))
 	var visit func(int)
+	var tryVisit func(int)
+	tryVisit = func(u int) {
+		if !seen[u] {
+			visit(u)
+		}
+	}
 	visit = func(u int) {
 		seen[u] = true
 		for _, e := range sg.Adj[u] {
@@ -203,28 +207,28 @@ func (sg *SubGraph) EdgeChainFrom(idx int) []*Edge {
 				edges = append(edges, &sg.E[e])
 			}
 		}
+		toTry := set.NewSortedSet(len(sg.Adj[u])*2)
 		for _, e := range sg.Adj[u] {
-			// errors.Logf("DEBUG", "u %v adj %v", u, sg.E[e])
-			v := sg.E[e].Src
-			if !seen[v] {
-				visit(v)
-			}
-			v = sg.E[e].Targ
-			if !seen[v] {
-				visit(v)
-			}
+			toTry.Add(types.Int(sg.E[e].Src))
+			toTry.Add(types.Int(sg.E[e].Targ))
+		}
+		// errors.Logf("EDGE-CHAIN-DEBUG", "%v toTry %v", u, toTry)
+		for x, next := toTry.Items()(); next != nil; x, next = next() {
+			tryVisit(int(x.(types.Int)))
 		}
 	}
-	visit(idx)
+	visit(0)
 	// errors.Logf("DEBUG", "edge chain seen %v", seen)
+	// errors.Logf("DEBUG", "edge chain added %v", added)
 	// errors.Logf("DEBUG", "edge chain added %v", added)
 	return edges
 }
 
-func (sg *SubGraph) ExtendEmbedding(G *goiso.Graph, extender *ext.Extender, cur *goiso.SubGraph, e *Edge) []*goiso.SubGraph {
+/*
+func (sg *SubGraph) ExtendEmbedding(G *goiso.Graph, cur *EmbeddingBuilder, e *Edge) []*EmbeddingBuilder {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	// exts := ext.NewCollector(-1)
-	exts := make([]*goiso.SubGraph, 0, 10)
+	exts := make([]*Embedding, 0, 10)
 	srcs := sg.findSrcs(cur, e)
 	// errors.Logf("DEBUG", "  srcs %v", srcs)
 	seen := make(map[int]bool)
@@ -258,8 +262,10 @@ func (sg *SubGraph) ExtendEmbedding(G *goiso.Graph, extender *ext.Extender, cur 
 	// return exts.Wait(added)
 	return exts
 }
+*/
 
-func (sg *SubGraph) findSrcs(cur *goiso.SubGraph, e *Edge) []int {
+/*
+func (sg *SubGraph) findSrcs(cur *Embedding, e *Edge) []int {
 	color := sg.V[e.Src].Color
 	srcs := make([]int, 0, 10)
 	for i := range cur.V {
@@ -270,7 +276,7 @@ func (sg *SubGraph) findSrcs(cur *goiso.SubGraph, e *Edge) []int {
 	return srcs
 }
 
-func (sg *SubGraph) findTargs(cur *goiso.SubGraph, e *Edge) []int {
+func (sg *SubGraph) findTargs(cur *Embedding, e *Edge) []int {
 	color := sg.V[e.Targ].Color
 	targs := make([]int, 0, 10)
 	for i := range cur.V {
@@ -281,7 +287,7 @@ func (sg *SubGraph) findTargs(cur *goiso.SubGraph, e *Edge) []int {
 	return targs
 }
 
-func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *goiso.SubGraph, src int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *Embedding, src int, e *Edge) []*goiso.Edge {
 	srcDtIdx := cur.V[src].Id
 	tcolor := sg.V[e.Targ].Color
 	ecolor := e.Color
@@ -299,7 +305,7 @@ func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *goiso.SubGraph, src in
 	return edges
 }
 
-func (sg *SubGraph) findEdgesFromTarg(G *goiso.Graph, cur *goiso.SubGraph, targ int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findEdgesFromTarg(G *goiso.Graph, cur *Embedding, targ int, e *Edge) []*goiso.Edge {
 	targDtIdx := cur.V[targ].Id
 	scolor := sg.V[e.Src].Color
 	ecolor := e.Color
@@ -317,4 +323,4 @@ func (sg *SubGraph) findEdgesFromTarg(G *goiso.Graph, cur *goiso.SubGraph, targ 
 	return edges
 }
 
-
+*/

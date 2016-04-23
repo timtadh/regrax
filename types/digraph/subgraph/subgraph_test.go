@@ -50,6 +50,38 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.Mult
 	return G, sg, FromEmbedding(sg), ColorMap, ext.NewExtender(runtime.NumCPU())
 }
 
+func TestEdgeChain(t *testing.T) {
+	_, _, sg, _, _ := graph(t)
+	t.Log(sg)
+	chain := sg.EdgeChain()
+	for _, e := range chain {
+		t.Log(e)
+	}
+	b := BuildEmbedding(len(sg.V), len(sg.E)).Fillable()
+	t.Log(b.Builder, b.Ids)
+	id := 0
+	for _, e := range chain {
+		if b.V[e.Src].Idx == -1 {
+			b.SetVertex(e.Src, sg.V[e.Src].Color, id)
+			id++
+		}
+		if b.V[e.Targ].Idx == -1 {
+			b.SetVertex(e.Targ, sg.V[e.Targ].Color, id)
+			id++
+		}
+		b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
+		t.Log(b.Builder, b.Ids)
+	}
+	emb := b.Build()
+	t.Log(emb)
+	t.Log(emb.SG)
+	t.Log(sg)
+	if !sg.Equals(emb.SG) {
+		t.Fatal("emb != sg")
+	}
+}
+
+/*
 func TestEmbeddings(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
@@ -67,11 +99,12 @@ func TestEmbeddings(t *testing.T) {
 	}
 	x.Equal(len(embs), 2, "embs should have 2 embeddings")
 }
+*/
 
 func TestNewBuilder(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	G, _, expected, colors, extender := graph(t)
+	_, _, expected, _, _ := graph(t)
 	b := Build(6, 6)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -92,6 +125,7 @@ func TestNewBuilder(t *testing.T) {
 	t.Log(expected.Adj)
 	x.Equal(sg.String(), expected.String())
 
+	/*
 	embs, err := sg.Embeddings(G, colors, extender)
 	x.Nil(err)
 	for _, emb := range embs {
@@ -101,12 +135,13 @@ func TestNewBuilder(t *testing.T) {
 		t.Log(emb)
 	}
 	x.Equal(len(embs), 2, "embs should have 2 embeddings")
+	*/
 }
 
 func TestFromBuilder(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	G, _, expected, colors, extender := graph(t)
+	_, _, expected, _, _ := graph(t)
 	b := Build(6, 6)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -133,22 +168,12 @@ func TestFromBuilder(t *testing.T) {
 	t.Log(sg.Adj)
 	t.Log(expected.Adj)
 	x.Equal(sg.String(), expected.String())
-
-	embs, err := sg.Embeddings(G, colors, extender)
-	x.Nil(err)
-	for _, emb := range embs {
-		t.Log(emb.Label())
-	}
-	for _, emb := range embs {
-		t.Log(emb)
-	}
-	x.Equal(len(embs), 2, "embs should have 2 embeddings")
 }
 
 func TestFromExtension(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	G, _, expected, colors, extender := graph(t)
+	_, _, expected, _, _ := graph(t)
 	b := Build(6, 6)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -167,16 +192,6 @@ func TestFromExtension(t *testing.T) {
 	t.Log(sg.Adj)
 	t.Log(expected.Adj)
 	x.Equal(sg.String(), expected.String())
-
-	embs, err := sg.Embeddings(G, colors, extender)
-	x.Nil(err)
-	for _, emb := range embs {
-		t.Log(emb.Label())
-	}
-	for _, emb := range embs {
-		t.Log(emb)
-	}
-	x.Equal(len(embs), 2, "embs should have 2 embeddings")
 }
 
 func TestBuilderRemoveEdge(t *testing.T) {
