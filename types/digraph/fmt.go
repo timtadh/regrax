@@ -52,8 +52,8 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	switch n := node.(type) {
 	case *EmbListNode:
 		if len(n.embeddings) > 0 {
-			Pat := n.embeddings[0].Label()
-			dot := n.embeddings[0].String()
+			Pat := n.Pat.Pretty(n.Dt.G.Colors)
+			dot := n.embeddings[0].Dotty(n.Dt.G, nil)
 			return fmt.Sprintf("// %s\n\n%s\n", Pat, dot), nil
 		} else {
 			return fmt.Sprintf("// 0:0\n\ndigraph{}\n"), nil
