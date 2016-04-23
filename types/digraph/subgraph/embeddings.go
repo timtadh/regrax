@@ -17,7 +17,7 @@ import (
 // Tim You Are Here:
 // You just ran %s/\*goiso.SubGraph/*Embedding/g
 //
-// Now it is time to transition this thing over to *Embeddings
+// Now it is time to transition this thing over to *Embeddings :check:
 // Next it is time to create stores for *Embeddings
 // Then it is time to transition types/digraph to *Embeddings
 
@@ -106,7 +106,6 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 		prune = pruner(0, chain)
 	}
 
-	// seen := hashtable.NewLinearHash()
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
 		stack = append(stack, entry{vemb, 0})
@@ -133,11 +132,6 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 				// ok extend the embedding
 				errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
 				for _, ext := range sg.ExtendEmbedding(G, i.emb, chain[i.eid]) {
-					/*label := types.ByteSlice(ext.Serialize())
-					if seen.Has(label) {
-						continue
-					}
-					seen.Put(label, nil)*/
 					stack = append(stack, entry{ext, i.eid + 1})
 				}
 				errors.Logf("DEBUG", "stack len %v", len(stack))
@@ -295,108 +289,3 @@ func (sg *SubGraph) findEdgesToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilde
 	return edges
 }
 
-
-
-
-
-/*
-
-func (sg *SubGraph) ExtendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilder, e *Edge) []*FillableEmbeddingBuilder {
-	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
-	// exts := ext.NewCollector(-1)
-	exts := make([]*Embedding, 0, 10)
-
-	srcs := sg.findSrcs(cur, e)
-	// errors.Logf("DEBUG", "  srcs %v", srcs)
-	seen := make(map[int]bool)
-	added := 0
-	for _, src := range srcs {
-		for _, ke := range sg.findEdgesFromSrc(G, cur, src, e) {
-			// errors.Logf("DEBUG", "    ke %v %v", ke.Idx, ke)
-			if !seen[ke.Idx] {
-				seen[ke.Idx] = true
-				// extender.Extend(cur, ke, exts.Ch())
-				x, _ := cur.EdgeExtend(ke)
-				exts = append(exts, x)
-				added += 1
-			}
-		}
-	}
-	targs := sg.findTargs(cur, e)
-	// errors.Logf("DEBUG", "  targs %v", targs)
-	for _, targ := range targs {
-		for _, pe := range sg.findEdgesFromTarg(G, cur, targ, e) {
-			// errors.Logf("DEBUG", "    pe %v %v", pe.Idx, pe)
-			if !seen[pe.Idx] {
-				seen[pe.Idx] = true
-				// extender.Extend(cur, pe, exts.Ch())
-				x, _ := cur.EdgeExtend(pe)
-				exts = append(exts, x)
-				added += 1
-			}
-		}
-	}
-	// return exts.Wait(added)
-	return exts
-}
-
-
-func (sg *SubGraph) findSrcs(cur *Embedding, e *Edge) []int {
-	color := sg.V[e.Src].Color
-	srcs := make([]int, 0, 10)
-	for i := range cur.V {
-		if cur.V[i].Color == color {
-			srcs = append(srcs, i)
-		}
-	}
-	return srcs
-}
-
-func (sg *SubGraph) findTargs(cur *Embedding, e *Edge) []int {
-	color := sg.V[e.Targ].Color
-	targs := make([]int, 0, 10)
-	for i := range cur.V {
-		if cur.V[i].Color == color {
-			targs = append(targs, i)
-		}
-	}
-	return targs
-}
-
-func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *Embedding, src int, e *Edge) []*goiso.Edge {
-	srcDtIdx := cur.V[src].Id
-	tcolor := sg.V[e.Targ].Color
-	ecolor := e.Color
-	edges := make([]*goiso.Edge, 0, 10)
-	for _, ke := range G.Kids[srcDtIdx] {
-		if ke.Color != ecolor {
-			continue
-		} else if G.V[ke.Targ].Color != tcolor {
-			continue
-		}
-		if !cur.HasEdge(goiso.ColoredArc{ke.Arc, ke.Color}) {
-			edges = append(edges, ke)
-		}
-	}
-	return edges
-}
-
-func (sg *SubGraph) findEdgesFromTarg(G *goiso.Graph, cur *Embedding, targ int, e *Edge) []*goiso.Edge {
-	targDtIdx := cur.V[targ].Id
-	scolor := sg.V[e.Src].Color
-	ecolor := e.Color
-	edges := make([]*goiso.Edge, 0, 10)
-	for _, pe := range G.Parents[targDtIdx] {
-		if pe.Color != ecolor {
-			continue
-		} else if G.V[pe.Src].Color != scolor {
-			continue
-		}
-		if !cur.HasEdge(goiso.ColoredArc{pe.Arc, pe.Color}) {
-			edges = append(edges, pe)
-		}
-	}
-	return edges
-}
-
-*/
