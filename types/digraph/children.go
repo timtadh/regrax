@@ -1,7 +1,6 @@
 package digraph
 
-import (
-)
+import ()
 
 import (
 	// "github.com/timtadh/data-structures/errors"
@@ -10,9 +9,9 @@ import (
 
 import (
 	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
 	"github.com/timtadh/sfp/stores/bytes_int"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 type Node interface {
@@ -27,7 +26,6 @@ type Node interface {
 	edges() int
 	dt() *Digraph
 }
-
 
 func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.MultiMap) (has bool, nodes []lattice.Node, err error) {
 	dt := n.dt()

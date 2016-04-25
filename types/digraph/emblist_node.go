@@ -31,7 +31,7 @@ func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Ex
 		}
 		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs}
 	}
-		return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil}
+	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil}
 }
 
 func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding) Node {
@@ -53,8 +53,8 @@ func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
 
 	n := &EmbListNode{
 		SubgraphPattern: SubgraphPattern{Dt: dt, Pat: sg},
-		extensions: exts,
-		embeddings: embs,
+		extensions:      exts,
+		embeddings:      embs,
 	}
 	return n, nil
 }

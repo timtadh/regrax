@@ -1,9 +1,9 @@
 package digraph
 
 import (
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
-	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
@@ -25,7 +25,6 @@ import (
 // 4. Instead of the full Embeddings we could work in overlap space. (todo)
 //    Investigate.
 
-
 func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge) *subgraph.Extension {
 	hasTarg := false
 	hasSrc := false
@@ -43,7 +42,7 @@ func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge) *sub
 	}
 	if !hasTarg && !hasSrc {
 		srcIdx = len(emb.SG.V)
-		targIdx = len(emb.SG.V)+1
+		targIdx = len(emb.SG.V) + 1
 	}
 	src := subgraph.Vertex{Idx: srcIdx, Color: G.V[e.Src].Color}
 	targ := subgraph.Vertex{Idx: targIdx, Color: G.V[e.Targ].Color}
@@ -72,7 +71,7 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 // unique extensions
 func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, error) {
 	// compute the embeddings
-	ei, err := pattern.IterEmbeddings(dt.G, dt.ColorMap, nil)
+	ei, err := pattern.IterEmbeddings(dt.G, dt.Indices, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +115,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	}
 	// errors.Logf("DEBUG", "----   extsAndEmbs pattern %v", pattern)
 	// compute the embeddings
-	ei, err := pattern.IterEmbeddings(dt.G, dt.ColorMap, nil)
+	ei, err := pattern.IterEmbeddings(dt.G, dt.Indices, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,7 +162,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 		extensions = append(extensions, ext)
 	}
 	// errors.Logf("DEBUG", "----   exts %v", exts)
-	
+
 	// errors.Logf("DEBUG", "pattern %v len sets %v sets %v", pattern, len(sets), sets)
 	// compute the minimally supported vertex
 	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
@@ -249,5 +248,3 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, []*subgr
 
 	return true, exts, embs, nil
 }
-
-

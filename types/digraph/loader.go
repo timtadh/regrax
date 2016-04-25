@@ -29,6 +29,7 @@ func (self ErrorList) Error() string {
 	}
 	return "Errors [" + strings.Join(s, ", ") + "]"
 }
+
 type VegLoader struct {
 	dt *Digraph
 }

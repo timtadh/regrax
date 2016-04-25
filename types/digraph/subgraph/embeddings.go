@@ -10,9 +10,7 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-import (
-	"github.com/timtadh/sfp/stores/int_int"
-)
+import ()
 
 // Tim You Are Here:
 // You just ran %s/\*goiso.SubGraph/*Embedding/g
@@ -21,13 +19,12 @@ import (
 // Next it is time to create stores for *Embeddings
 // Then it is time to transition types/digraph to *Embeddings
 
-
 type EmbIterator func() (*Embedding, EmbIterator)
 type Pruner func(leastCommonVertex int, chain []*Edge) func(emb *FillableEmbeddingBuilder) bool
 
-func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap) ([]*Embedding, error) {
+func (sg *SubGraph) Embeddings(G *goiso.Graph, indices *Indices) ([]*Embedding, error) {
 	embeddings := make([]*Embedding, 0, 10)
-	err := sg.DoEmbeddings(G, ColorMap, func(emb *Embedding) error {
+	err := sg.DoEmbeddings(G, indices, func(emb *Embedding) error {
 		embeddings = append(embeddings, emb)
 		return nil
 	})
@@ -38,8 +35,8 @@ func (sg *SubGraph) Embeddings(G *goiso.Graph, ColorMap int_int.MultiMap) ([]*Em
 
 }
 
-func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, do func(*Embedding) error) error {
-	ei, err := sg.IterEmbeddings(G, ColorMap, nil)
+func (sg *SubGraph) DoEmbeddings(G *goiso.Graph, indices *Indices, do func(*Embedding) error) error {
+	ei, err := sg.IterEmbeddings(G, indices, nil)
 	if err != nil {
 		return err
 	}
@@ -80,7 +77,7 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 	return ei, nil
 }
 
-func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pruner Pruner) (ei EmbIterator, err error) {
+func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, indices *Indices, pruner Pruner) (ei EmbIterator, err error) {
 	type entry struct {
 		emb *FillableEmbeddingBuilder
 		eid int
@@ -96,7 +93,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 		return ei, nil
 	}
 	chain := sg.edgeChain()
-	vembs, err := sg.startEmbeddings(G, ColorMap)
+	vembs, err := sg.startEmbeddings(G, indices)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +133,7 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 			} else {
 				// ok extend the embedding
 				// errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
-				for _, ext := range sg.extendEmbedding(G, i.emb, chain[i.eid]) {
+				for _, ext := range sg.extendEmbedding(G, indices, i.emb, chain[i.eid]) {
 					stack = append(stack, entry{ext, i.eid + 1})
 				}
 				// errors.Logf("DEBUG", "stack len %v", len(stack))
@@ -147,10 +144,10 @@ func (sg *SubGraph) IterEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap, pr
 	return ei, nil
 }
 
-func (sg *SubGraph) startEmbeddings(G *goiso.Graph, ColorMap int_int.MultiMap) ([]*FillableEmbeddingBuilder, error) {
+func (sg *SubGraph) startEmbeddings(G *goiso.Graph, indices *Indices) ([]*FillableEmbeddingBuilder, error) {
 	color := sg.V[0].Color
 	embs := make([]*FillableEmbeddingBuilder, 0, G.ColorFrequency(color))
-	err := ColorMap.DoFind(int32(color), func(color, gIdx int32) error {
+	err := indices.ColorMap.DoFind(int32(color), func(color, gIdx int32) error {
 		b := BuildEmbedding(len(sg.V), len(sg.E)).Fillable()
 		b.SetVertex(0, int(color), int(gIdx))
 		embs = append(embs, b)
@@ -202,7 +199,7 @@ func (sg *SubGraph) edgeChain() []*Edge {
 	return edges
 }
 
-func (sg *SubGraph) extendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilder, e *Edge) []*FillableEmbeddingBuilder {
+func (sg *SubGraph) extendEmbedding(G *goiso.Graph, indices *Indices, cur *FillableEmbeddingBuilder, e *Edge) []*FillableEmbeddingBuilder {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	// exts := ext.NewCollector(-1)
 	exts := make([]*FillableEmbeddingBuilder, 0, 10)
@@ -215,41 +212,41 @@ func (sg *SubGraph) extendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilde
 	} else if src != -1 && targ != -1 {
 		// both src and targ are in the builder so we can just add this edge
 		// errors.Logf("EMB-DEBUG", "    add existing %v", e)
-		if sg.hasEdgeFromSrcToTarg(G, cur, src, targ, e) {
+		if sg.hasEdgeFromSrcToTarg(G, indices, cur, src, targ, e) {
 			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
 				b.AddEdge(&cur.V[e.Src], &cur.V[e.Targ], e.Color)
 			}))
 		}
 	} else if src != -1 {
-		edges := sg.findEdgesFromSrc(G, cur, src, e)
-		if len(edges) == 1 {
-			ke := edges[0]
+		targs := sg.findTargsFromSrc(G, indices, cur, src, e)
+		if len(targs) == 1 {
+			targ := targs[0]
 			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
-				b.SetVertex(e.Targ, G.V[ke.Targ].Color, ke.Targ)
+				b.SetVertex(e.Targ, targ.Color, targ.Idx)
 				b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 			}))
 		} else {
-			for _, ke := range edges {
+			for _, targ := range targs {
 				// errors.Logf("EMB-DEBUG", "    add targ vertex, %v ke %v", e, ke)
 				exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
-					b.SetVertex(e.Targ, G.V[ke.Targ].Color, ke.Targ)
+					b.SetVertex(e.Targ, targ.Color, targ.Idx)
 					b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 				}))
 			}
 		}
 	} else if targ != -1 {
-		edges := sg.findEdgesToTarg(G, cur, targ, e)
-		if len(edges) == 1 {
-			pe := edges[0]
+		srcs := sg.findSrcsToTarg(G, indices, cur, targ, e)
+		if len(srcs) == 1 {
+			src := srcs[0]
 			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
-				b.SetVertex(e.Src, G.V[pe.Src].Color, pe.Src)
+				b.SetVertex(e.Src, src.Color, src.Idx)
 				b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 			}))
 		} else {
-			for _, pe := range edges {
+			for _, src := range srcs {
 				// errors.Logf("EMB-DEBUG", "    add src vertex, %v pe %v", e, pe)
 				exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
-					b.SetVertex(e.Src, G.V[pe.Src].Color, pe.Src)
+					b.SetVertex(e.Src, src.Color, src.Idx)
 					b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 				}))
 			}
@@ -260,30 +257,20 @@ func (sg *SubGraph) extendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilde
 	return exts
 }
 
-func (sg *SubGraph) hasEdgeFromSrcToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilder, srcIdx, targIdx int, e *Edge) bool {
+func (sg *SubGraph) hasEdgeFromSrcToTarg(G *goiso.Graph, indices *Indices, cur *FillableEmbeddingBuilder, srcIdx, targIdx int, e *Edge) bool {
 	srcId := cur.Ids[srcIdx]
 	targId := cur.Ids[targIdx]
 	// errors.Logf("EMB-DEBUG", "from src %v edge %v", srcId, e)
-	ecolor := e.Color
-	for _, ke := range G.Kids[srcId] {
-		// errors.Logf("EMB-DEBUG", "  ke %v", ke)
-		if ke.Color != ecolor {
-			// errors.Logf("EMB-DEBUG", "    edge color didn't match")
-			continue
-		} else if ke.Src != srcId {
-			// errors.Logf("EMB-DEBUG", "    src didn't match")
-			continue
-		} else if ke.Targ != targId {
-			// errors.Logf("EMB-DEBUG", "    targ didn't match")
-			continue
+	for _, oTargId := range indices.SrcIndex[IndexKey{srcId, e.Color, sg.V[e.Targ].Color}] {
+		if targId == oTargId {
+			return true
 		}
-		return true
 	}
 	return false
 }
 
 
-func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *FillableEmbeddingBuilder, srcIdx int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findTargsFromSrc(G *goiso.Graph, indices *Indices, cur *FillableEmbeddingBuilder, srcIdx int, e *Edge) []*goiso.Vertex {
 	srcId := cur.Ids[srcIdx]
 	if G.V[srcId].Color != cur.V[srcIdx].Color {
 		errors.Logf("ERROR", "src color didn't match")
@@ -292,25 +279,18 @@ func (sg *SubGraph) findEdgesFromSrc(G *goiso.Graph, cur *FillableEmbeddingBuild
 	// errors.Logf("EMB-DEBUG", "from src %v edge %v", srcId, e)
 	tcolor := sg.V[e.Targ].Color
 	ecolor := e.Color
-	edges := make([]*goiso.Edge, 0, 10)
-	for _, ke := range G.Kids[srcId] {
-		// errors.Logf("EMB-DEBUG", "  ke %v", ke)
-		if ke.Color != ecolor {
-			// errors.Logf("EMB-DEBUG", "    edge color didn't match")
-			continue
-		} else if G.V[ke.Targ].Color != tcolor {
-			// errors.Logf("EMB-DEBUG", "    targ color didn't match")
-			continue
-		} else if cur.HasId(ke.Targ) {
+	targs := make([]*goiso.Vertex, 0, 10)
+	for _, targId := range indices.SrcIndex[IndexKey{srcId, ecolor, tcolor}] {
+		if cur.HasId(targId) {
 			// errors.Logf("EMB-DEBUG", "    already had target")
 			continue
 		}
-		edges = append(edges, ke)
+		targs = append(targs, &G.V[targId])
 	}
-	return edges
+	return targs
 }
 
-func (sg *SubGraph) findEdgesToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilder, targIdx int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) findSrcsToTarg(G *goiso.Graph, indices *Indices, cur *FillableEmbeddingBuilder, targIdx int, e *Edge) []*goiso.Vertex {
 	targId := cur.Ids[targIdx]
 	if G.V[targId].Color != cur.V[targIdx].Color {
 		errors.Logf("ERROR", "targ color didn't match")
@@ -319,21 +299,14 @@ func (sg *SubGraph) findEdgesToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilde
 	// errors.Logf("EMB-DEBUG", "to targ %v edge %v", targId, e)
 	scolor := sg.V[e.Src].Color
 	ecolor := e.Color
-	edges := make([]*goiso.Edge, 0, 10)
-	for _, pe := range G.Parents[targId] {
-		// errors.Logf("EMB-DEBUG", "  pe %v", pe)
-		if pe.Color != ecolor {
-			// errors.Logf("EMB-DEBUG", "    edge color didn't match")
-			continue
-		} else if G.V[pe.Src].Color != scolor {
-			// errors.Logf("EMB-DEBUG", "    src color didn't match")
-			continue
-		} else if cur.HasId(pe.Src) {
+	srcs := make([]*goiso.Vertex, 0, 10)
+	for _, srcId := range indices.TargIndex[IndexKey{targId, ecolor, scolor}] {
+		if cur.HasId(srcId) {
 			// errors.Logf("EMB-DEBUG", "    already had src")
 			continue
 		}
-		edges = append(edges, pe)
+		srcs = append(srcs, &G.V[srcId])
 	}
-	return edges
+	return srcs
 }
 

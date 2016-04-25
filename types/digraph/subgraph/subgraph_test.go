@@ -16,7 +16,7 @@ import (
 	"github.com/timtadh/sfp/types/digraph/ext"
 )
 
-func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.MultiMap, *ext.Extender) {
+func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices, *ext.Extender) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 	n1 := G.AddVertex(1, "black")
@@ -34,20 +34,23 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, int_int.Mult
 	sg, _ := G.SubGraph([]int{n1.Idx, n2.Idx, n3.Idx, n4.Idx, n5.Idx, n6.Idx}, nil)
 
 	// make config
-	ColorMap, err := int_int.AnonBpTree()
+	cm, err := int_int.AnonBpTree()
+	if err != nil {
+		t.Fatal(err)
+	}
+	indices := &Indices{
+		ColorMap:  cm,
+		SrcIndex:  make(map[IndexKey][]int),
+		TargIndex: make(map[IndexKey][]int),
+	}
+
+	indices.InitEdgeIndices(G)
+	err = indices.InitColorMap(G)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for i := range G.V {
-		u := &G.V[i]
-		err := ColorMap.Add(int32(u.Color), int32(u.Idx))
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	return G, sg, FromEmbedding(sg), ColorMap, ext.NewExtender(runtime.NumCPU())
+	return G, sg, FromEmbedding(sg), indices, ext.NewExtender(runtime.NumCPU())
 }
 
 func TestEdgeChain(t *testing.T) {

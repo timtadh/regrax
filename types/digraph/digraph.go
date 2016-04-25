@@ -11,15 +11,12 @@ import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
-	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_extension"
-	"github.com/timtadh/sfp/stores/int_int"
+	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/subgraph_embedding"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
-
-
 
 type Digraph struct {
 	MinEdges, MaxEdges       int
@@ -36,8 +33,8 @@ type Digraph struct {
 	ChildCount               bytes_int.MultiMap
 	CanonKids                bytes_bytes.MultiMap
 	CanonKidCount            bytes_int.MultiMap
-	ColorMap                 int_int.MultiMap
 	Frequency                bytes_int.MultiMap
+	Indices                  *subgraph.Indices
 	config                   *config.Config
 }
 
@@ -101,9 +98,13 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		ChildCount:    childCount,
 		CanonKids:     canonKids,
 		CanonKidCount: canonKidCount,
-		ColorMap:      colorMap,
 		Frequency:     frequency,
-		config:        config,
+		Indices: &subgraph.Indices{
+			ColorMap:  colorMap,
+			SrcIndex:  make(map[subgraph.IndexKey][]int),
+			TargIndex: make(map[subgraph.IndexKey][]int),
+		},
+		config: config,
 	}
 	return g, nil
 }
@@ -113,7 +114,7 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 
 	for i := range G.V {
 		u := &G.V[i]
-		err = dt.ColorMap.Add(int32(u.Color), int32(u.Idx))
+		err = dt.Indices.ColorMap.Add(int32(u.Color), int32(u.Idx))
 		if err != nil {
 			return err
 		}
@@ -125,6 +126,8 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 			}
 		}
 	}
+
+	dt.Indices.InitEdgeIndices(G)
 
 	err = subgraph_embedding.DoKey(dt.Embeddings.Keys, func(sg *subgraph.SubGraph) error {
 		dt.FrequentVertices = append(dt.FrequentVertices, sg.Label())
@@ -209,8 +212,7 @@ func (g *Digraph) Close() error {
 	g.Embeddings.Close()
 	g.Extensions.Close()
 	g.NodeAttrs.Close()
-	g.ColorMap.Close()
+	g.Indices.ColorMap.Close()
 	g.Frequency.Close()
 	return nil
 }
-

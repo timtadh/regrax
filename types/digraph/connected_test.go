@@ -121,15 +121,25 @@ func visit(t testing.TB, x *assert.Assertions, visited *set.SortedSet, node Node
 
 func checkNode(t testing.TB, x *assert.Assertions, node Node) {
 	acount, err := node.AdjacentCount()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	kcount, err := node.ChildCount()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	kids, err := node.Children()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	pcount, err := node.ParentCount()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	parents, err := node.Parents()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if kcount != len(kids) {
 		x.Fail("kcount != len(kids)")
 	}
@@ -149,7 +159,9 @@ func checkNode(t testing.TB, x *assert.Assertions, node Node) {
 
 func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 	pkids, err := parent.Children()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	found := false
 	for _, pkid := range pkids {
 		if bytes.Equal(pkid.Pattern().Label(), kid.Label()) {
@@ -160,7 +172,9 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		t.Fatalf("parent %v kids %v did not have %v", parent, pkids, kid)
 	}
 	kparents, err := kid.Parents()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	found = false
 	for _, kparent := range kparents {
 		if bytes.Equal(kparent.Pattern().Label(), parent.Label()) {
@@ -186,14 +200,18 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		// kid is a canon kid
 		// kid should have no other canon parents
 		kparents, err := kid.Parents()
-		if err != nil { t.Fatal(err) }
+		if err != nil {
+			t.Fatal(err)
+		}
 		found = false
 		for _, kparent := range kparents {
 			if bytes.Equal(kparent.Pattern().Label(), parent.Label()) {
 				continue
 			}
 			kparent_ckids, err := kparent.CanonKids()
-			if err != nil { t.Fatal(err) }
+			if err != nil {
+				t.Fatal(err)
+			}
 			for _, kparent_ckid := range kparent_ckids {
 				if bytes.Equal(kparent_ckid.Pattern().Label(), kid.Label()) {
 					x.Fail(errors.Errorf("kid %v had multiple canon parents %v %v", kid, parent, kparent).Error())

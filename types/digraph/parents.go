@@ -3,8 +3,8 @@ package digraph
 import ()
 
 import (
-	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
 )
 
 import (
