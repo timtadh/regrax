@@ -215,26 +215,44 @@ func (sg *SubGraph) extendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilde
 	} else if src != -1 && targ != -1 {
 		// both src and targ are in the builder so we can just add this edge
 		// errors.Logf("EMB-DEBUG", "    add existing %v", e)
-		for range sg.findEdgesFromSrcToTarg(G, cur, src, targ, e) {
-			exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
+		if sg.hasEdgeFromSrcToTarg(G, cur, src, targ, e) {
+			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
 				b.AddEdge(&cur.V[e.Src], &cur.V[e.Targ], e.Color)
 			}))
 		}
 	} else if src != -1 {
-		for _, ke := range sg.findEdgesFromSrc(G, cur, src, e) {
-			// errors.Logf("EMB-DEBUG", "    add targ vertex, %v ke %v", e, ke)
-			exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
+		edges := sg.findEdgesFromSrc(G, cur, src, e)
+		if len(edges) == 1 {
+			ke := edges[0]
+			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
 				b.SetVertex(e.Targ, G.V[ke.Targ].Color, ke.Targ)
 				b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 			}))
+		} else {
+			for _, ke := range edges {
+				// errors.Logf("EMB-DEBUG", "    add targ vertex, %v ke %v", e, ke)
+				exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
+					b.SetVertex(e.Targ, G.V[ke.Targ].Color, ke.Targ)
+					b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
+				}))
+			}
 		}
 	} else if targ != -1 {
-		for _, pe := range sg.findEdgesToTarg(G, cur, targ, e) {
-			// errors.Logf("EMB-DEBUG", "    add src vertex, %v pe %v", e, pe)
-			exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
+		edges := sg.findEdgesToTarg(G, cur, targ, e)
+		if len(edges) == 1 {
+			pe := edges[0]
+			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
 				b.SetVertex(e.Src, G.V[pe.Src].Color, pe.Src)
 				b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 			}))
+		} else {
+			for _, pe := range edges {
+				// errors.Logf("EMB-DEBUG", "    add src vertex, %v pe %v", e, pe)
+				exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
+					b.SetVertex(e.Src, G.V[pe.Src].Color, pe.Src)
+					b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
+				}))
+			}
 		}
 	} else {
 		panic("unreachable")
@@ -242,12 +260,11 @@ func (sg *SubGraph) extendEmbedding(G *goiso.Graph, cur *FillableEmbeddingBuilde
 	return exts
 }
 
-func (sg *SubGraph) findEdgesFromSrcToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilder, srcIdx, targIdx int, e *Edge) []*goiso.Edge {
+func (sg *SubGraph) hasEdgeFromSrcToTarg(G *goiso.Graph, cur *FillableEmbeddingBuilder, srcIdx, targIdx int, e *Edge) bool {
 	srcId := cur.Ids[srcIdx]
 	targId := cur.Ids[targIdx]
 	// errors.Logf("EMB-DEBUG", "from src %v edge %v", srcId, e)
 	ecolor := e.Color
-	edges := make([]*goiso.Edge, 0, 10)
 	for _, ke := range G.Kids[srcId] {
 		// errors.Logf("EMB-DEBUG", "  ke %v", ke)
 		if ke.Color != ecolor {
@@ -260,9 +277,9 @@ func (sg *SubGraph) findEdgesFromSrcToTarg(G *goiso.Graph, cur *FillableEmbeddin
 			// errors.Logf("EMB-DEBUG", "    targ didn't match")
 			continue
 		}
-		edges = append(edges, ke)
+		return true
 	}
-	return edges
+	return false
 }
 
 
