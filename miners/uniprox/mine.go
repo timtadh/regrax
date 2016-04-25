@@ -192,13 +192,15 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 
 func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 	weight := func(_, a lattice.Node) (float64, error) {
-		kids, err := a.CanonKids()
-		if err != nil {
-			return 0, err
-		}
-		return float64(len(kids)), nil
+		// kids, err := a.CanonKids()
+		// if err != nil {
+		// 	return 0, err
+		// }
+		// return float64(len(kids)), nil
+		return 1, nil
 	}
 	transition := func(c lattice.Node) (lattice.Node, error) {
+		errors.Logf("EST-WALK-DEBUG", "walk cur %v", c)
 		kids, err := c.CanonKids()
 		if err != nil {
 			return nil, err
