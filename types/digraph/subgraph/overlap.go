@@ -27,7 +27,7 @@ func (sg *SubGraph) FindVertexEmbeddings(indices *Indices, minSupport int) (*Ove
 		sg.pruneVertices(minSupport, indices, b, sg.extendOverlap(indices, b, e))
 		errors.Logf("VE-DEBUG", "so far %v", b)
 	}
-	return nil, errors.Errorf("unfinished")
+	return b.Build(), nil
 }
 
 func (sg *SubGraph) extendOverlap(indices *Indices, b *FillableOverlapBuilder, e *Edge) (dirty *linked.UniqueDeque) {
@@ -158,3 +158,25 @@ func (o *Overlap) String() string {
 	}
 	return fmt.Sprintf("{%v:%v}%v%v", len(o.SG.E), len(o.SG.V), strings.Join(V, ""), strings.Join(E, ""))
 }
+
+func (o *Overlap) Pretty(colors []string) string {
+	V := make([]string, 0, len(o.SG.V))
+	E := make([]string, 0, len(o.SG.E))
+	for i, v := range o.SG.V {
+		V = append(V, fmt.Sprintf(
+			"(%v:%v)",
+			colors[v.Color],
+			o.Ids[i],
+		))
+	}
+	for _, e := range o.SG.E {
+		E = append(E, fmt.Sprintf(
+			"[%v->%v:%v]",
+			e.Src,
+			e.Targ,
+			colors[e.Color],
+		))
+	}
+	return fmt.Sprintf("{%v:%v}%v%v", len(o.SG.E), len(o.SG.V), strings.Join(V, ""), strings.Join(E, ""))
+}
+
