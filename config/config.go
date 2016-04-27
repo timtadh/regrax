@@ -13,10 +13,10 @@ import (
 import (
 	"github.com/timtadh/sfp/stacks/subgraph"
 	"github.com/timtadh/sfp/stores/bytes_bytes"
+	"github.com/timtadh/sfp/stores/bytes_extension"
 	"github.com/timtadh/sfp/stores/bytes_float"
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/bytes_subgraph"
-	"github.com/timtadh/sfp/stores/bytes_extension"
 	"github.com/timtadh/sfp/stores/int_int"
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/ints_int"
@@ -73,7 +73,7 @@ func (c *Config) SubgraphList(
 	if c.Cache == "" {
 		return subgraph.AnonList(bytes_subgraph.SerializeSubGraph, deserializeValue)
 	} else {
-		return subgraph.NewList(c.CacheFile(name + "-" + c.Randstr() + ".mmlist"), bytes_subgraph.SerializeSubGraph, deserializeValue)
+		return subgraph.NewList(c.CacheFile(name+"-"+c.Randstr()+".mmlist"), bytes_subgraph.SerializeSubGraph, deserializeValue)
 	}
 }
 
@@ -84,7 +84,7 @@ func (c *Config) BytesSubgraphMultiMap(
 	if c.Cache == "" {
 		return bytes_subgraph.AnonBpTree(bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
 	} else {
-		return bytes_subgraph.NewBpTree(c.CacheFile(name + "-" + c.Randstr() + ".bptree"), bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
+		return bytes_subgraph.NewBpTree(c.CacheFile(name+"-"+c.Randstr()+".bptree"), bytes_subgraph.Identity, bytes_subgraph.SerializeSubGraph, bytes_subgraph.Identity, deserializeValue)
 	}
 }
 

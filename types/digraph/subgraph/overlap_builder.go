@@ -25,6 +25,7 @@ func BuildOverlap(V, E int) *OverlapBuilder {
 			V: make([]Vertex, 0, V),
 			E: make([]Edge, 0, E),
 		},
+		Adj: make([][]int, 0, V),
 		Ids: make([]*set.SortedSet, 0, V),
 	}
 }
@@ -45,22 +46,33 @@ func (b *OverlapBuilder) Fillable() *FillableOverlapBuilder {
 	}
 	b.V = b.V[:cap(b.V)]
 	b.Ids = b.Ids[:cap(b.Ids)]
+	b.Adj = b.Adj[:cap(b.Adj)]
 	for i := range b.V {
 		b.V[i].Idx = -1
 	}
 	for i := range b.Ids {
 		b.Ids[i] = set.NewSortedSet(1)
 	}
+	for i := range b.Adj {
+		b.Adj[i] = make([]int, 0, 1)
+	}
 	return &FillableOverlapBuilder{b}
 }
 
 func (b *OverlapBuilder) Copy() *OverlapBuilder {
+	adj := make([][]int, len(b.Adj))
+	for i := range adj {
+		a := make([]int, len(b.Adj[i]))
+		copy(a, b.Adj[i])
+		adj[i] = a
+	}
 	ids := make([]*set.SortedSet, len(b.Ids))
 	for i := range ids {
 		ids[i] = b.Ids[i].Copy()
 	}
 	return &OverlapBuilder{
 		Builder: b.Builder.Copy(),
+		Adj:     adj,
 		Ids:     ids,
 	}
 }

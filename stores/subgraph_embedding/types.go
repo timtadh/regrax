@@ -6,7 +6,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-
 func SerializeSubGraph(sg *subgraph.SubGraph) []byte {
 	return sg.Serialize()
 }

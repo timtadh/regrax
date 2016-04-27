@@ -9,9 +9,7 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-import (
-	"github.com/timtadh/sfp/stores/int_int"
-)
+import ()
 
 func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices) {
 	Graph := goiso.NewGraph(10, 10)
@@ -30,24 +28,16 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices) {
 	G.AddEdge(n4, n6, "")
 	sg, _ := G.SubGraph([]int{n1.Idx, n2.Idx, n3.Idx, n4.Idx, n5.Idx, n6.Idx}, nil)
 
-	// make config
-	cm, err := int_int.AnonBpTree()
-	if err != nil {
-		t.Fatal(err)
-	}
 	indices := &Indices{
-		G:         G,
-		ColorMap:  cm,
-		SrcIndex:  make(map[IdColorColor][]int),
-		TargIndex: make(map[IdColorColor][]int),
-		EdgeIndex: make(map[Edge]*goiso.Edge),
+		G:          G,
+		ColorIndex: make(map[int][]int),
+		SrcIndex:   make(map[IdColorColor][]int),
+		TargIndex:  make(map[IdColorColor][]int),
+		EdgeIndex:  make(map[Edge]*goiso.Edge),
 	}
 
 	indices.InitEdgeIndices(G)
-	err = indices.InitColorMap(G)
-	if err != nil {
-		t.Fatal(err)
-	}
+	indices.InitColorMap(G)
 
 	return G, sg, FromEmbedding(sg), indices
 }
@@ -123,10 +113,10 @@ func TestEdgeChain2(t *testing.T) {
 func TestEmbeddings(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	G, _, sg, colors := graph(t)
+	G, _, sg, indices := graph(t)
 	t.Log(sg.Pretty(G.Colors))
 
-	embs, err := sg.Embeddings(G, colors)
+	embs, err := sg.Embeddings(indices)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +130,7 @@ func TestEmbeddings(t *testing.T) {
 }
 
 func TestEmbeddings2(t *testing.T) {
-	G, _, _, colors := graph(t)
+	G, _, _, indices := graph(t)
 	sg := Build(3, 2).Ctx(func(b *Builder) {
 		x := b.AddVertex(0)
 		y := b.AddVertex(1)
@@ -149,7 +139,7 @@ func TestEmbeddings2(t *testing.T) {
 		b.AddEdge(z, y, 2)
 	}).Build()
 	t.Log(sg)
-	embs, err := sg.Embeddings(G, colors)
+	embs, err := sg.Embeddings(indices)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +179,7 @@ func TestNewBuilder(t *testing.T) {
 	x.Equal(sg.String(), expected.String())
 
 	/*
-		embs, err := sg.Embeddings(G, colors, extender)
+		embs, err := sg.Embeddings(indices, extender)
 		if err != nil { t.Fatal(err) }
 		for _, emb := range embs {
 			t.Log(emb.Label())

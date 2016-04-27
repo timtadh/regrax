@@ -6,7 +6,7 @@ func TestOverlap(t *testing.T) {
 	G, _, sg, indices := graph(t)
 	t.Log(sg.Pretty(G.Colors))
 
-	ve, err := sg.FindVertexEmbeddings(G, indices, 2)
+	ve, err := sg.FindVertexEmbeddings(indices, 2)
 	if err != nil {
 		t.Fatal(err)
 	}

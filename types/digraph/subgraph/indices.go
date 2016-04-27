@@ -6,20 +6,18 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-import (
-	"github.com/timtadh/sfp/stores/int_int"
-)
+import ()
 
 type IdColorColor struct {
 	Id, EdgeColor, VertexColor int
 }
 
 type Indices struct {
-	G         *goiso.Graph
-	ColorMap  int_int.MultiMap
-	SrcIndex  map[IdColorColor][]int // (SrcIdx, EdgeColor, TargColor) -> TargIdx (where Idx in G.V)
-	TargIndex map[IdColorColor][]int // (TargIdx, EdgeColor, SrcColor) -> SrcIdx (where Idx in G.V)
-	EdgeIndex map[Edge]*goiso.Edge
+	G          *goiso.Graph
+	ColorIndex map[int][]int          // Colors -> []Idx in G.V
+	SrcIndex   map[IdColorColor][]int // (SrcIdx, EdgeColor, TargColor) -> TargIdx (where Idx in G.V)
+	TargIndex  map[IdColorColor][]int // (TargIdx, EdgeColor, SrcColor) -> SrcIdx (where Idx in G.V)
+	EdgeIndex  map[Edge]*goiso.Edge
 }
 
 func intSet(ints []int) *set.SortedSet {
@@ -30,15 +28,11 @@ func intSet(ints []int) *set.SortedSet {
 	return s
 }
 
-func (indices *Indices) InitColorMap(G *goiso.Graph) error {
+func (indices *Indices) InitColorMap(G *goiso.Graph) {
 	for i := range G.V {
 		u := &G.V[i]
-		err := indices.ColorMap.Add(int32(u.Color), int32(u.Idx))
-		if err != nil {
-			return err
-		}
+		indices.ColorIndex[u.Color] = append(indices.ColorIndex[u.Color], u.Idx)
 	}
-	return nil
 }
 
 func (indices *Indices) InitEdgeIndices(G *goiso.Graph) {
@@ -53,28 +47,36 @@ func (indices *Indices) InitEdgeIndices(G *goiso.Graph) {
 	}
 }
 
+func (indices *Indices) IdSet(color int) *set.SortedSet {
+	s := set.NewSortedSet(indices.G.ColorFrequency(color))
+	for _, gIdx := range indices.ColorIndex[color] {
+		s.Add(types.Int(int(gIdx)))
+	}
+	return s
+}
+
 func (indices *Indices) HasEdge(srcId, targId, color int) bool {
 	_, has := indices.EdgeIndex[Edge{Src: srcId, Targ: targId, Color: color}]
 	return has
 }
 
-func (indices *Indices) TargsFromSrc(srcId, edgeColor, targColor int, excludeIds []int) []*goiso.Vertex {
+func (indices *Indices) TargsFromSrc(srcId, edgeColor, targColor int, excludeIds []int) []int {
 	exclude := intSet(excludeIds)
-	targs := make([]*goiso.Vertex, 0, 10)
+	targs := make([]int, 0, 10)
 	for _, targId := range indices.SrcIndex[IdColorColor{srcId, edgeColor, targColor}] {
 		if !exclude.Has(types.Int(targId)) {
-			targs = append(targs, &indices.G.V[targId])
+			targs = append(targs, targId)
 		}
 	}
 	return targs
 }
 
-func (indices *Indices) SrcsToTarg(targId, edgeColor, srcColor int, excludeIds []int) []*goiso.Vertex {
+func (indices *Indices) SrcsToTarg(targId, edgeColor, srcColor int, excludeIds []int) []int {
 	exclude := intSet(excludeIds)
-	srcs := make([]*goiso.Vertex, 0, 10)
+	srcs := make([]int, 0, 10)
 	for _, srcId := range indices.TargIndex[IdColorColor{targId, edgeColor, srcColor}] {
 		if !exclude.Has(types.Int(srcId)) {
-			srcs = append(srcs, &indices.G.V[srcId])
+			srcs = append(srcs, srcId)
 		}
 	}
 	return srcs
