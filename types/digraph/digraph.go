@@ -101,8 +101,9 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		Frequency:     frequency,
 		Indices: &subgraph.Indices{
 			ColorMap:  colorMap,
-			SrcIndex:  make(map[subgraph.IndexKey][]int),
-			TargIndex: make(map[subgraph.IndexKey][]int),
+			SrcIndex:  make(map[subgraph.IdColorColor][]int),
+			TargIndex: make(map[subgraph.IdColorColor][]int),
+			EdgeIndex: make(map[subgraph.Edge][]int),
 		},
 		config: config,
 	}
@@ -111,6 +112,7 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 
 func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 	dt.G = G
+	dt.Indices.G = G
 
 	for i := range G.V {
 		u := &G.V[i]

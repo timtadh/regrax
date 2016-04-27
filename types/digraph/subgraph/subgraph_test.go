@@ -3,9 +3,7 @@ package subgraph
 import "testing"
 import "github.com/stretchr/testify/assert"
 
-import (
-	"runtime"
-)
+import ()
 
 import (
 	"github.com/timtadh/goiso"
@@ -13,10 +11,9 @@ import (
 
 import (
 	"github.com/timtadh/sfp/stores/int_int"
-	"github.com/timtadh/sfp/types/digraph/ext"
 )
 
-func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices, *ext.Extender) {
+func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 	n1 := G.AddVertex(1, "black")
@@ -39,9 +36,11 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices, *e
 		t.Fatal(err)
 	}
 	indices := &Indices{
+		G:         G,
 		ColorMap:  cm,
-		SrcIndex:  make(map[IndexKey][]int),
-		TargIndex: make(map[IndexKey][]int),
+		SrcIndex:  make(map[IdColorColor][]int),
+		TargIndex: make(map[IdColorColor][]int),
+		EdgeIndex: make(map[Edge]*goiso.Edge),
 	}
 
 	indices.InitEdgeIndices(G)
@@ -50,11 +49,11 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices, *e
 		t.Fatal(err)
 	}
 
-	return G, sg, FromEmbedding(sg), indices, ext.NewExtender(runtime.NumCPU())
+	return G, sg, FromEmbedding(sg), indices
 }
 
 func TestEdgeChain(t *testing.T) {
-	_, _, sg, _, _ := graph(t)
+	_, _, sg, _ := graph(t)
 	t.Log(sg)
 	chain := sg.edgeChain()
 	for _, e := range chain {
@@ -124,11 +123,13 @@ func TestEdgeChain2(t *testing.T) {
 func TestEmbeddings(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	G, _, sg, colors, _ := graph(t)
+	G, _, sg, colors := graph(t)
 	t.Log(sg.Pretty(G.Colors))
 
 	embs, err := sg.Embeddings(G, colors)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, emb := range embs {
 		t.Log(emb.SG.Pretty(G.Colors))
 	}
@@ -139,7 +140,7 @@ func TestEmbeddings(t *testing.T) {
 }
 
 func TestEmbeddings2(t *testing.T) {
-	G, _, _, colors, _ := graph(t)
+	G, _, _, colors := graph(t)
 	sg := Build(3, 2).Ctx(func(b *Builder) {
 		x := b.AddVertex(0)
 		y := b.AddVertex(1)
@@ -149,7 +150,9 @@ func TestEmbeddings2(t *testing.T) {
 	}).Build()
 	t.Log(sg)
 	embs, err := sg.Embeddings(G, colors)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, emb := range embs {
 		t.Log(emb.SG.Pretty(G.Colors))
 	}
@@ -164,7 +167,7 @@ func TestEmbeddings2(t *testing.T) {
 func TestNewBuilder(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	_, _, expected, _, _ := graph(t)
+	_, _, expected, _ := graph(t)
 	b := Build(6, 6)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -186,22 +189,22 @@ func TestNewBuilder(t *testing.T) {
 	x.Equal(sg.String(), expected.String())
 
 	/*
-	embs, err := sg.Embeddings(G, colors, extender)
-	if err != nil { t.Fatal(err) }
-	for _, emb := range embs {
-		t.Log(emb.Label())
-	}
-	for _, emb := range embs {
-		t.Log(emb)
-	}
-	x.Equal(len(embs), 2, "embs should have 2 embeddings")
+		embs, err := sg.Embeddings(G, colors, extender)
+		if err != nil { t.Fatal(err) }
+		for _, emb := range embs {
+			t.Log(emb.Label())
+		}
+		for _, emb := range embs {
+			t.Log(emb)
+		}
+		x.Equal(len(embs), 2, "embs should have 2 embeddings")
 	*/
 }
 
 func TestFromBuilder(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	_, _, expected, _, _ := graph(t)
+	_, _, expected, _ := graph(t)
 	b := Build(6, 6)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -233,7 +236,7 @@ func TestFromBuilder(t *testing.T) {
 func TestFromExtension(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	_, _, expected, _, _ := graph(t)
+	_, _, expected, _ := graph(t)
 	b := Build(6, 6)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -243,7 +246,7 @@ func TestFromExtension(t *testing.T) {
 	b.AddEdge(n1, n3, 2)
 	b.AddEdge(n1, n4, 2)
 	b.AddEdge(n2, n5, 2)
-	_, n6, _ := b.Extend(NewExt(*n2, Vertex{Idx:5, Color:1}, 2))
+	_, n6, _ := b.Extend(NewExt(*n2, Vertex{Idx: 5, Color: 1}, 2))
 	b.Extend(NewExt(*n4, *n6, 2))
 	b.Extend(NewExt(*n5, *n3, 2))
 	sg := b.Build()
@@ -257,7 +260,7 @@ func TestFromExtension(t *testing.T) {
 func TestBuilderRemoveEdge(t *testing.T) {
 	x := assert.New(t)
 	t.Logf("%T %v", x, x)
-	_, _, expected, _, _ := graph(t)
+	_, _, expected, _ := graph(t)
 	b := Build(6, 6)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
@@ -276,7 +279,7 @@ func TestBuilderRemoveEdge(t *testing.T) {
 	t.Log(wrong)
 	t.Log(expected)
 	x.NotEqual(wrong.String(), expected.String())
-	b = Build(6,6).From(wrong)
+	b = Build(6, 6).From(wrong)
 	err := b.RemoveEdge(6)
 	if err != nil {
 		t.Fatal(err)
@@ -289,7 +292,7 @@ func TestBuilderRemoveEdge(t *testing.T) {
 
 func TestBuilderConnected(t *testing.T) {
 	x := assert.New(t)
-	b := Build(5,5)
+	b := Build(5, 5)
 	n1 := b.AddVertex(0)
 	n2 := b.AddVertex(0)
 	n3 := b.AddVertex(1)
@@ -306,4 +309,3 @@ func TestBuilderConnected(t *testing.T) {
 	_ = b.AddVertex(2)
 	x.False(b.Connected())
 }
-

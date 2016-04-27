@@ -15,9 +15,9 @@ import (
 import ()
 
 type SubGraph struct {
-	V   Vertices
-	E   Edges
-	Adj [][]int
+	V          Vertices
+	E          Edges
+	Adj        [][]int
 	labelCache []byte
 }
 
@@ -33,11 +33,10 @@ type Edge struct {
 	Src, Targ, Color int
 }
 
-
 func EmptySubGraph() *SubGraph {
 	return &SubGraph{
-		V: make(Vertices, 0),
-		E: make(Edges, 0),
+		V:   make(Vertices, 0),
+		E:   make(Edges, 0),
 		Adj: make([][]int, 0),
 	}
 }
@@ -237,4 +236,3 @@ func (sg *SubGraph) Pretty(colors []string) string {
 	}
 	return fmt.Sprintf("{%v:%v}%v%v", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
 }
-

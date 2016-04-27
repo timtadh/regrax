@@ -4,7 +4,6 @@ import (
 	"github.com/timtadh/data-structures/errors"
 )
 
-
 type EmbeddingBuilder struct {
 	*Builder
 	Ids []int // Idx vertices in the graph
@@ -61,7 +60,7 @@ func (b *EmbeddingBuilder) Copy() *EmbeddingBuilder {
 	copy(ids, b.Ids)
 	return &EmbeddingBuilder{
 		Builder: b.Builder.Copy(),
-		Ids: ids,
+		Ids:     ids,
 	}
 }
 
@@ -143,4 +142,3 @@ func (b *FillableEmbeddingBuilder) Ctx(do func(*FillableEmbeddingBuilder)) *Fill
 	do(b)
 	return b
 }
-

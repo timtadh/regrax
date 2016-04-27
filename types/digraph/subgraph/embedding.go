@@ -11,12 +11,10 @@ import (
 	"github.com/timtadh/goiso"
 )
 
-
 type Embedding struct {
-	SG *SubGraph
+	SG  *SubGraph
 	Ids []int // Idx vertices in the graph
 }
-
 
 func LoadEmbedding(bytes []byte) (*Embedding, error) {
 	emb := new(Embedding)
@@ -126,8 +124,8 @@ func (emb *Embedding) UnmarshalBinary(bytes []byte) error {
 	}
 	ids := make([]int, lenV)
 	sg := &SubGraph{
-		V: make([]Vertex, lenV),
-		E: make([]Edge, lenE),
+		V:   make([]Vertex, lenV),
+		E:   make([]Edge, lenE),
 		Adj: make([][]int, lenV),
 	}
 	for i := 0; i < lenV; i++ {

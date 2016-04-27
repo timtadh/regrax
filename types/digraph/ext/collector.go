@@ -54,4 +54,3 @@ func (c *Collector) Wait(till int) Embeddings {
 	c.stopped = true
 	return c.collection
 }
-

@@ -130,7 +130,7 @@ func (b *Builder) removeVertexAndEdge(dropVertex bool, vertexIdx, edgeIdx int) (
 		if dropVertex && vertexIdx == idx {
 			continue
 		}
-		V = append(V, Vertex{Idx:adjustIdx(idx), Color:b.V[idx].Color})
+		V = append(V, Vertex{Idx: adjustIdx(idx), Color: b.V[idx].Color})
 	}
 	E := make([]Edge, 0, len(b.E)-1)
 	for idx := range b.E {
@@ -138,9 +138,9 @@ func (b *Builder) removeVertexAndEdge(dropVertex bool, vertexIdx, edgeIdx int) (
 			continue
 		}
 		E = append(E, Edge{
-			Src:adjustIdx(b.E[idx].Src),
-			Targ:adjustIdx(b.E[idx].Targ),
-			Color:b.E[idx].Color,
+			Src:   adjustIdx(b.E[idx].Src),
+			Targ:  adjustIdx(b.E[idx].Targ),
+			Color: b.E[idx].Color,
 		})
 	}
 	return V, E

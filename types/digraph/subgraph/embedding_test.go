@@ -6,7 +6,7 @@ import (
 	"bytes"
 )
 
-func embedding(t *testing.T) (*Embedding) {
+func embedding(t *testing.T) *Embedding {
 	b := BuildEmbedding(6, 6)
 	n1 := b.AddVertex(0, 1)
 	n2 := b.AddVertex(0, 2)
@@ -24,10 +24,9 @@ func embedding(t *testing.T) (*Embedding) {
 	return emb
 }
 
-
 func TestBuildEmb(t *testing.T) {
 	emb := embedding(t)
-	_, _, sg, _, _ := graph(t)
+	_, _, sg, _ := graph(t)
 	t.Log(emb)
 	t.Log(emb.SG)
 	t.Log(sg)
@@ -39,7 +38,7 @@ func TestBuildEmb(t *testing.T) {
 func TestSerializeEmb(t *testing.T) {
 	emb1 := embedding(t)
 	emb2 := embedding(t)
-	_, _, sg, _, _ := graph(t)
+	_, _, sg, _ := graph(t)
 	if !bytes.Equal(emb1.Label(), sg.Label()) {
 		t.Errorf("\n emb1 %v !=\n   sg %v", emb1.SG, sg)
 	}
@@ -111,4 +110,3 @@ func TestEmbBuildRmEdge(t *testing.T) {
 		t.Errorf("emb3 != b3 \n   b3 %v %v\n emb3 %v", b3.Builder, b2.Ids, emb3)
 	}
 }
-

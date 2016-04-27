@@ -80,4 +80,3 @@ func (emb *Embedding) Less(o types.Sortable) bool {
 func (emb *Embedding) Hash() int {
 	return types.ByteSlice(emb.Serialize()).Hash()
 }
-
