@@ -7,6 +7,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/linked"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 )
@@ -23,14 +24,13 @@ func (sg *SubGraph) FindVertexEmbeddings(indices *Indices, minSupport int) (*Ove
 	})
 	for _, e := range chain {
 		errors.Logf("VE-DEBUG", "edge %v", e)
-		dirty := sg.extendOverlap(indices, b, e)
-		errors.Logf("VE-DEBUG", "dirty %v", dirty)
+		sg.pruneVertices(minSupport, indices, b, sg.extendOverlap(indices, b, e))
 		errors.Logf("VE-DEBUG", "so far %v", b)
 	}
 	return nil, errors.Errorf("unfinished")
 }
 
-func (sg *SubGraph) extendOverlap(indices *Indices, b *FillableOverlapBuilder, e *Edge) (dirty *set.SortedSet) {
+func (sg *SubGraph) extendOverlap(indices *Indices, b *FillableOverlapBuilder, e *Edge) (dirty *linked.UniqueDeque) {
 	src := b.V[e.Src].Idx
 	targ := b.V[e.Targ].Idx
 
@@ -59,13 +59,83 @@ func (sg *SubGraph) extendOverlap(indices *Indices, b *FillableOverlapBuilder, e
 	} else {
 		panic("unreachable")
 	}
-	return set.FromSlice([]types.Hashable{types.Int(e.Src), types.Int(e.Targ)})
+	dirty = linked.NewUniqueDeque()
+	dirty.Push(types.Int(e.Src))
+	dirty.Push(types.Int(e.Targ))
+	return dirty
 }
 
-func (sg *SubGraph) pruneOverlap(idx int) (dirty []int) {
+func (sg *SubGraph) pruneVertices(minSupport int, indices *Indices, b *FillableOverlapBuilder, dirty *linked.UniqueDeque) (unsup bool) {
+	for dirty.Size() > 0 {
+		idx, err := dirty.DequeBack()
+		if err != nil {
+			panic(errors.Errorf("should not be possible").(*errors.Error).Chain(err))
+		}
+		unsup = sg.pruneVertex(int(idx.(types.Int)), minSupport, indices, b, dirty)
+		if unsup {
+			return true
+		}
+	}
+	return false
+}
+
+func (sg *SubGraph) pruneVertex(idx, minSupport int, indices *Indices, b *FillableOverlapBuilder, dirty *linked.UniqueDeque) (unsup bool) {
 	// todo next
-	// probably want to implement a linked hash set to implement the dirty work list
-	panic("unimplemented")
+	if b.Ids[idx].Size() < minSupport {
+		return true
+	}
+	changed := false
+	for id, next := b.Ids[idx].Copy().Items()(); next != nil; id, next = next() {
+		if !sg.hasEveryEdge(idx, int(id.(types.Int)), indices, b) {
+			b.Ids[idx].Delete(id)
+			changed = true
+		}
+		if b.Ids[idx].Size() < minSupport {
+			return true
+		}
+	}
+	if changed {
+		for _, eidx := range b.Adj[idx] {
+			e := &b.E[eidx]
+			if e.Src != idx {
+				dirty.EnqueFront(types.Int(e.Src))
+			}
+			if e.Targ != idx {
+				dirty.EnqueFront(types.Int(e.Targ))
+			}
+		}
+	}
+	return false
+}
+
+func (sg *SubGraph) hasEveryEdge(idx, id int, indices *Indices, b *FillableOverlapBuilder) (bool) {
+	for _, eidx := range b.Adj[idx] {
+		e := &b.E[eidx]
+		found := false
+		if e.Src == idx {
+			srcId := id
+			for tid, next := b.Ids[e.Targ].Items()(); next != nil; tid, next = next() {
+				targId := int(tid.(types.Int))
+				if indices.HasEdge(srcId, targId, e.Color) {
+					found = true
+					break
+				}
+			}
+		} else {
+			targId := id
+			for sid, next := b.Ids[e.Src].Items()(); next != nil; sid, next = next() {
+				srcId := int(sid.(types.Int))
+				if indices.HasEdge(srcId, targId, e.Color) {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 func (o *Overlap) String() string {
