@@ -6,10 +6,7 @@ func TestOverlap(t *testing.T) {
 	G, _, sg, indices := graph(t)
 	t.Log(sg.Pretty(G.Colors))
 
-	o, err := sg.FindVertexEmbeddings(indices, 2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	o := sg.FindVertexEmbeddings(indices, 2)
 	if o == nil {
 		t.Fatal("did not find a supported vertex embedding")
 	}
@@ -24,10 +21,7 @@ func TestOverlapEmbeddings(t *testing.T) {
 	G, _, sg, indices := graph(t)
 	t.Log(sg.Pretty(G.Colors))
 
-	o, err := sg.FindVertexEmbeddings(indices, 2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	o := sg.FindVertexEmbeddings(indices, 2)
 	if o == nil {
 		t.Fatal("did not find a supported vertex embedding")
 	}

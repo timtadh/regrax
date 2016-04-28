@@ -67,10 +67,6 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 	if err != nil {
 		return nil, err
 	}
-	colorMap, err := config.IntIntMultiMap("digraph-color-map")
-	if err != nil {
-		return nil, err
-	}
 	embeddings, err := config.SubgraphEmbeddingMultiMap("digraph-embeddings")
 	if err != nil {
 		return nil, err
@@ -100,10 +96,10 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		CanonKidCount: canonKidCount,
 		Frequency:     frequency,
 		Indices: &subgraph.Indices{
-			ColorMap:  colorMap,
+			ColorIndex:  make(map[int][]int),
 			SrcIndex:  make(map[subgraph.IdColorColor][]int),
 			TargIndex: make(map[subgraph.IdColorColor][]int),
-			EdgeIndex: make(map[subgraph.Edge][]int),
+			EdgeIndex: make(map[subgraph.Edge]*goiso.Edge),
 		},
 		config: config,
 	}
@@ -116,10 +112,7 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 
 	for i := range G.V {
 		u := &G.V[i]
-		err = dt.Indices.ColorMap.Add(int32(u.Color), int32(u.Idx))
-		if err != nil {
-			return err
-		}
+		dt.Indices.ColorIndex[u.Color] = append(dt.Indices.ColorIndex[u.Color], u.Idx)
 		if G.ColorFrequency(u.Color) >= dt.config.Support {
 			emb := subgraph.BuildEmbedding(1, 0).FromVertex(u.Color, u.Idx).Build()
 			err := dt.Embeddings.Add(emb.SG, emb)
@@ -214,7 +207,6 @@ func (g *Digraph) Close() error {
 	g.Embeddings.Close()
 	g.Extensions.Close()
 	g.NodeAttrs.Close()
-	g.Indices.ColorMap.Close()
 	g.Frequency.Close()
 	return nil
 }

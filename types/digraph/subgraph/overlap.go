@@ -21,24 +21,31 @@ type Overlap struct {
 	Ids []*set.SortedSet // the embeddings for each vertex
 }
 
-func (sg *SubGraph) FindVertexEmbeddings(indices *Indices, minSupport int) (*Overlap, error) {
+func (sg *SubGraph) FindVertexEmbeddings(indices *Indices, minSupport int) *Overlap {
 	startIdx := 0
 	chain := sg.edgeChain(startIdx)
 	b := BuildOverlap(len(sg.V), len(sg.E)).Fillable().Ctx(func(b *FillableOverlapBuilder) {
 		b.SetVertex(startIdx, sg.V[0].Color, indices.IdSet(sg.V[0].Color))
 	})
 	for _, e := range chain {
-		errors.Logf("VE-DEBUG", "edge %v", e)
+		// errors.Logf("VE-DEBUG", "edge %v", e)
 		unsupported := sg.pruneVertices(minSupport, indices, b, sg.extendOverlap(indices, b, e))
 		if unsupported {
-			return nil, nil
+			return nil
 		}
-		errors.Logf("VE-DEBUG", "so far %v", b)
+		// errors.Logf("VE-DEBUG", "so far %v", b)
 	}
-	return b.Build(), nil
+	return b.Build()
 }
 
 func (o *Overlap) SupportedEmbeddings(indices *Indices) []*Embedding {
+	type entry struct {
+		b *FillableEmbeddingBuilder
+		eid int
+	}
+	pop := func(stack []entry) (entry, []entry) {
+		return stack[len(stack)-1], stack[0 : len(stack)-1]
+	}
 	support, idxs := o.MinSupported()
 	startIdx := idxs[0]
 	chain := o.SG.edgeChain(startIdx)
@@ -50,20 +57,24 @@ func (o *Overlap) SupportedEmbeddings(indices *Indices) []*Embedding {
 				Ctx(func(b *FillableEmbeddingBuilder) {
 					b.SetVertex(startIdx, color, id)
 				})
-		cur := []*FillableEmbeddingBuilder{b}
-		for _, e := range chain {
-			next := make([]*FillableEmbeddingBuilder, 0, len(cur))
-			for _, b := range cur {
-				exts, addedIdx := o.SG.extendEmbedding(indices, b, e)
-				for _, ext := range exts {
-					if addedIdx < 0 || o.Ids[addedIdx].Has(types.Int(ext.Ids[addedIdx])) {
-						next = append(next, ext)
-					}
+		stack := make([]entry, 0, len(chain))
+		stack = append(stack, entry{b, 0})
+		for len(stack) > 0 {
+			var item entry
+			item, stack = pop(stack)
+			if item.eid >= len(chain) {
+				embs = append(embs, item.b.Build())
+				break
+			}
+			b := item.b
+			e := chain[item.eid]
+			exts, addedIdx := o.SG.extendEmbedding(indices, b, e)
+			for _, ext := range exts {
+				if addedIdx < 0 || o.Ids[addedIdx].Has(types.Int(ext.Ids[addedIdx])) {
+					stack = append(stack, entry{ext, item.eid+1})
 				}
 			}
-			cur = next
 		}
-		embs = append(embs, cur[0].Build())
 	}
 	return embs
 }

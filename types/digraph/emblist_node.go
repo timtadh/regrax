@@ -72,7 +72,7 @@ func (n *EmbListNode) Embeddings() ([]*subgraph.Embedding, error) {
 }
 
 func (n *EmbListNode) String() string {
-	return fmt.Sprintf("<EmbListNode %v>", n.Pat.Pretty(n.Dt.G.Colors))
+	return fmt.Sprintf("<Node %v %v %v>", len(n.embeddings), len(n.extensions), n.Pat.Pretty(n.Dt.G.Colors))
 }
 
 func (n *EmbListNode) Parents() ([]lattice.Node, error) {

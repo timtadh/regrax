@@ -71,7 +71,7 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 // unique extensions
 func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, error) {
 	// compute the embeddings
-	ei, err := pattern.IterEmbeddings(dt.G, dt.Indices, nil)
+	ei, err := pattern.IterEmbeddings(dt.Indices, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -115,10 +115,12 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	}
 	// errors.Logf("DEBUG", "----   extsAndEmbs pattern %v", pattern)
 	// compute the embeddings
-	ei, err := pattern.IterEmbeddings(dt.G, dt.Indices, nil)
-	if err != nil {
-		return nil, nil, err
+	o := pattern.FindVertexEmbeddings(dt.Indices, dt.Support())
+	if o == nil {
+		// not supported!
+		return nil, nil, cacheExtsEmbs(dt, pattern, nil, nil)
 	}
+
 	exts := hashtable.NewLinearHash()
 	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
 		exts.Put(ext, nil)
@@ -131,7 +133,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	// errors.Logf("DEBUG", "parent %v", parent)
 	// errors.Logf("DEBUG", "computing embeddings %v", pattern.Pretty(dt.G.Colors))
 	// errors.Logf("DEBUG", "computing embeddings %v", pattern)
-	for emb, next := ei(); next != nil; emb, next = next() {
+	for _, emb := range o.SupportedEmbeddings(dt.Indices) {
 		// errors.Logf("DEBUG", "emb %v", emb)
 		for idx, id := range emb.Ids {
 			if sets[idx] == nil {
@@ -180,10 +182,10 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension
 	// errors.Logf("DEBUG", "pat %v total-embeddings %v supported %v unique-ext %v", pattern, total, len(embeddings), len(extensions))
 
 	// return it all
-	if true {
+	if false {
 		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.G.Colors))
 	}
-	err = cacheExtsEmbs(dt, pattern, extensions, embeddings)
+	err := cacheExtsEmbs(dt, pattern, extensions, embeddings)
 	if err != nil {
 		return nil, nil, err
 	}
