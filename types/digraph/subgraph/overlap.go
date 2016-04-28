@@ -12,22 +12,75 @@ import (
 	"github.com/timtadh/data-structures/types"
 )
 
+// Tim You are Here
+// TODO: Construct the supported Embeddings of the Overlap.
+// I then need to port ../extensions.go to use the Overlap graph.
+
 type Overlap struct {
 	SG  *SubGraph
 	Ids []*set.SortedSet // the embeddings for each vertex
 }
 
 func (sg *SubGraph) FindVertexEmbeddings(indices *Indices, minSupport int) (*Overlap, error) {
-	chain := sg.edgeChain()
+	startIdx := 0
+	chain := sg.edgeChain(startIdx)
 	b := BuildOverlap(len(sg.V), len(sg.E)).Fillable().Ctx(func(b *FillableOverlapBuilder) {
-		b.SetVertex(0, sg.V[0].Color, indices.IdSet(sg.V[0].Color))
+		b.SetVertex(startIdx, sg.V[0].Color, indices.IdSet(sg.V[0].Color))
 	})
 	for _, e := range chain {
 		errors.Logf("VE-DEBUG", "edge %v", e)
-		sg.pruneVertices(minSupport, indices, b, sg.extendOverlap(indices, b, e))
+		unsupported := sg.pruneVertices(minSupport, indices, b, sg.extendOverlap(indices, b, e))
+		if unsupported {
+			return nil, nil
+		}
 		errors.Logf("VE-DEBUG", "so far %v", b)
 	}
 	return b.Build(), nil
+}
+
+func (o *Overlap) SupportedEmbeddings(indices *Indices) []*Embedding {
+	support, idxs := o.MinSupported()
+	startIdx := idxs[0]
+	chain := o.SG.edgeChain(startIdx)
+	embs := make([]*Embedding, 0, support)
+	for x, next := o.Ids[startIdx].Items()(); next != nil; x, next = next() {
+		id := int(x.(types.Int))
+		color := o.SG.V[startIdx].Color
+		b := BuildEmbedding(len(o.SG.V), len(o.SG.E)).Fillable().
+				Ctx(func(b *FillableEmbeddingBuilder) {
+					b.SetVertex(startIdx, color, id)
+				})
+		cur := []*FillableEmbeddingBuilder{b}
+		for _, e := range chain {
+			next := make([]*FillableEmbeddingBuilder, 0, len(cur))
+			for _, b := range cur {
+				exts, addedIdx := o.SG.extendEmbedding(indices, b, e)
+				for _, ext := range exts {
+					if addedIdx < 0 || o.Ids[addedIdx].Has(types.Int(ext.Ids[addedIdx])) {
+						next = append(next, ext)
+					}
+				}
+			}
+			cur = next
+		}
+		embs = append(embs, cur[0].Build())
+	}
+	return embs
+}
+
+func (o *Overlap) MinSupported() (support int, vIdxs []int) {
+	idxs := make([]int, 0, len(o.Ids))
+	min := -1
+	for idx, ids := range o.Ids {
+		if min < 0 || min > ids.Size() {
+			min = ids.Size()
+			idxs = idxs[:0]
+		}
+		if min == ids.Size() {
+			idxs = append(idxs, idx)
+		}
+	}
+	return min, idxs
 }
 
 func (sg *SubGraph) extendOverlap(indices *Indices, b *FillableOverlapBuilder, e *Edge) (dirty *linked.UniqueDeque) {
