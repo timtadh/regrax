@@ -169,7 +169,7 @@ func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*FillableE
 	return embs
 }
 
-// this is really a depth first search from the given idx
+// this is really a breadth first search from the given idx
 func (sg *SubGraph) edgeChain(startIdx int) []*Edge {
 	edges := make([]*Edge, 0, len(sg.E))
 	added := make(map[int]bool, len(sg.E))
