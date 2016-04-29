@@ -6,6 +6,7 @@ import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/linked"
 	"github.com/timtadh/data-structures/types"
 )
 
@@ -91,7 +92,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 		}
 		return ei, nil
 	}
-	startIdx := 0
+	startIdx := sg.leastFrequentVertex(indices)
 	chain := sg.edgeChain(startIdx)
 	vembs := sg.startEmbeddings(indices, startIdx)
 
@@ -142,6 +143,19 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 	return ei, nil
 }
 
+func (sg *SubGraph) leastFrequentVertex(indices *Indices) int {
+	minFreq := -1
+	minIdx := -1
+	for idx := range sg.V {
+		freq := indices.G.ColorFrequency(sg.V[idx].Color)
+		if minIdx < 0 || minFreq > freq {
+			minFreq = freq
+			minIdx = idx
+		}
+	}
+	return minIdx
+}
+
 func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*FillableEmbeddingBuilder {
 	color := sg.V[startIdx].Color
 	embs := make([]*FillableEmbeddingBuilder, 0, indices.G.ColorFrequency(color))
@@ -160,14 +174,18 @@ func (sg *SubGraph) edgeChain(startIdx int) []*Edge {
 	edges := make([]*Edge, 0, len(sg.E))
 	added := make(map[int]bool, len(sg.E))
 	seen := make(map[int]bool, len(sg.V))
-	var visit func(int)
-	var tryVisit func(int)
-	tryVisit = func(u int) {
-		if !seen[u] {
-			visit(u)
+	queue := linked.NewUniqueDeque()
+	queue.EnqueFront(types.Int(startIdx))
+	for queue.Size() > 0 {
+		x, err := queue.DequeBack()
+		if err != nil {
+			errors.Logf("ERROR", "UniqueDeque should never error on Deque\n%v", err)
+			panic(err)
 		}
-	}
-	visit = func(u int) {
+		u := int(x.(types.Int))
+		if seen[u] {
+			continue
+		}
 		seen[u] = true
 		for _, e := range sg.Adj[u] {
 			if !added[e] {
@@ -175,17 +193,11 @@ func (sg *SubGraph) edgeChain(startIdx int) []*Edge {
 				edges = append(edges, &sg.E[e])
 			}
 		}
-		toTry := set.NewSortedSet(len(sg.Adj[u]) * 2)
 		for _, e := range sg.Adj[u] {
-			toTry.Add(types.Int(sg.E[e].Src))
-			toTry.Add(types.Int(sg.E[e].Targ))
-		}
-		// errors.Logf("EDGE-CHAIN-DEBUG", "%v toTry %v", u, toTry)
-		for x, next := toTry.Items()(); next != nil; x, next = next() {
-			tryVisit(int(x.(types.Int)))
+			queue.EnqueFront(types.Int(sg.E[e].Src))
+			queue.EnqueFront(types.Int(sg.E[e].Targ))
 		}
 	}
-	visit(startIdx)
 	if len(edges) != len(sg.E) {
 		panic("assert-fail: len(edges) != len(sg.E)")
 	}
