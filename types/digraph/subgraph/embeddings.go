@@ -198,7 +198,7 @@ func (sg *SubGraph) edgeChain(startIdx int) []*Edge {
 func (sg *SubGraph) extendEmbedding(indices *Indices, cur *FillableEmbeddingBuilder, e *Edge) (exts []*FillableEmbeddingBuilder, addedIdx int) {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	// exts := ext.NewCollector(-1)
-	exts = make([]*FillableEmbeddingBuilder, 0, 10)
+	// exts = make([]*FillableEmbeddingBuilder, 0, 10)
 	addedIdx = -1
 
 	src := cur.V[e.Src].Idx

@@ -44,7 +44,30 @@ func (e *Extension) Equals(o types.Equatable) bool {
 func (e *Extension) Less(o types.Sortable) bool {
 	switch x := o.(type) {
 	case *Extension:
-		return e.list().Less(x.list())
+		if e.Source.Idx < x.Source.Idx {
+			return true
+		} else if e.Source.Idx > x.Source.Idx {
+			return false
+		}
+		if e.Source.Color < x.Source.Color {
+			return true
+		} else if e.Source.Color > x.Source.Color {
+			return false
+		}
+		if e.Target.Idx < x.Target.Idx {
+			return true
+		} else if e.Target.Idx > x.Target.Idx {
+			return false
+		}
+		if e.Target.Color < x.Target.Color {
+			return true
+		} else if e.Target.Color > x.Target.Color {
+			return false
+		}
+		if e.Color < x.Color {
+			return true
+		}
+		return false
 	}
 	return false
 }

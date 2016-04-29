@@ -1,6 +1,7 @@
 package subgraph
 
 import (
+	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
@@ -20,8 +21,8 @@ type Indices struct {
 	EdgeIndex  map[Edge]*goiso.Edge
 }
 
-func intSet(ints []int) *set.SortedSet {
-	s := set.NewSortedSet(len(ints))
+func intSet(ints []int) types.Set {
+	s := set.NewSetMap(hashtable.NewLinearHash())
 	for _, i := range ints {
 		s.Add(types.Int(i))
 	}
@@ -61,23 +62,33 @@ func (indices *Indices) HasEdge(srcId, targId, color int) bool {
 }
 
 func (indices *Indices) TargsFromSrc(srcId, edgeColor, targColor int, excludeIds []int) []int {
-	exclude := intSet(excludeIds)
+	// exclude := intSet(excludeIds)
 	targs := make([]int, 0, 10)
+outer:
 	for _, targId := range indices.SrcIndex[IdColorColor{srcId, edgeColor, targColor}] {
-		if !exclude.Has(types.Int(targId)) {
-			targs = append(targs, targId)
+		for _, eid := range excludeIds {
+			if eid == targId {
+				continue outer
+			}
 		}
+		// if !exclude.Has(types.Int(targId)) {
+		targs = append(targs, targId)
 	}
 	return targs
 }
 
 func (indices *Indices) SrcsToTarg(targId, edgeColor, srcColor int, excludeIds []int) []int {
-	exclude := intSet(excludeIds)
+	// exclude := intSet(excludeIds)
 	srcs := make([]int, 0, 10)
+outer:
 	for _, srcId := range indices.TargIndex[IdColorColor{targId, edgeColor, srcColor}] {
-		if !exclude.Has(types.Int(srcId)) {
-			srcs = append(srcs, srcId)
+		for _, eid := range excludeIds {
+			if eid == srcId {
+				continue outer
+			}
 		}
+		// if !exclude.Has(types.Int(srcId)) {
+		srcs = append(srcs, srcId)
 	}
 	return srcs
 }
