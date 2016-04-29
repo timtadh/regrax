@@ -29,15 +29,15 @@ func (emb *Embedding) Builder() *EmbeddingBuilder {
 	return BuildEmbedding(len(emb.SG.V), len(emb.SG.E)).From(emb)
 }
 
-func (emb *Embedding) HasExtension(ext *Extension) bool {
-	if ext.Source.Idx >= len(emb.SG.V) || ext.Source.Color != emb.SG.V[ext.Source.Idx].Color {
+func (sg *SubGraph) HasExtension(ext *Extension) bool {
+	if ext.Source.Idx >= len(sg.V) || ext.Source.Color != sg.V[ext.Source.Idx].Color {
 		return false
 	}
-	if ext.Target.Idx >= len(emb.SG.V) || ext.Target.Color != emb.SG.V[ext.Target.Idx].Color {
+	if ext.Target.Idx >= len(sg.V) || ext.Target.Color != sg.V[ext.Target.Idx].Color {
 		return false
 	}
-	for _, eidx := range emb.SG.Adj[ext.Source.Idx] {
-		e := &emb.SG.E[eidx]
+	for _, eidx := range sg.Adj[ext.Source.Idx] {
+		e := &sg.E[eidx]
 		if e.Src == ext.Source.Idx && e.Targ == ext.Target.Idx && e.Color == ext.Color {
 			return true
 		}

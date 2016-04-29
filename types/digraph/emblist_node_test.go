@@ -84,6 +84,7 @@ func TestEmbChildren(t *testing.T) {
 	}
 	x.Equal(len(kids), 1, "should have 1 kids {1:2}(black)(red)[0->1:] got %v", kids)
 	cur = kids[0].(*EmbListNode)
+	t.Logf("cur %v", cur)
 	kids, err = cur.Children()
 	if err != nil {
 		t.Log(err)
@@ -91,7 +92,9 @@ func TestEmbChildren(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	x.Equal(len(kids), 3, "should have 3 kids got %v", kids)
+	if len(kids) != 3 {
+		t.Fatalf("should have 3 kids got %v", kids)
+	}
 	for _, k := range kids {
 		kid := k.(*EmbListNode)
 		switch kid.String() {

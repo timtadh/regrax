@@ -68,11 +68,11 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 		} else if !canonized {
 			continue
 		}
-		exts, embs, err := extsAndEmbs(dt, extPat)
+		support, exts, embs, err := extsAndEmbs(dt, extPat)
 		if err != nil {
 			return nil, err
 		}
-		if len(embs) >= dt.Support() {
+		if support >= dt.Support() {
 			nodes = append(nodes, n.New(extPat, exts, embs))
 		}
 	}
@@ -100,12 +100,12 @@ func children(n Node) (nodes []lattice.Node, err error) {
 	}
 	for i, next := patterns.Items()(); next != nil; i, next = next() {
 		pattern := i.(*subgraph.SubGraph)
-		exts, embs, err := extsAndEmbs(dt, pattern)
+		support, exts, embs, err := extsAndEmbs(dt, pattern)
 		if err != nil {
 			return nil, err
 		}
 		// errors.Logf("DEBUG", "pattern %v support %v exts %v", pattern, len(embs), len(exts))
-		if len(embs) >= dt.Support() {
+		if support >= dt.Support() {
 			nodes = append(nodes, n.New(pattern, exts, embs))
 		}
 	}

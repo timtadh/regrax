@@ -7,6 +7,7 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/types"
 )
 
 type OverlapBuilder struct {
@@ -120,7 +121,7 @@ func (b *OverlapBuilder) Extend(e *Extension) (newe *Edge, newv *Vertex, err err
 func (b *OverlapBuilder) Build() *Overlap {
 	vord, eord := b.canonicalPermutation()
 	sg := b.build(vord, eord)
-	ids := make([]*set.SortedSet, len(sg.V))
+	ids := make([]types.Set, len(sg.V))
 	for i, p := range vord {
 		ids[p] = b.Ids[i]
 	}

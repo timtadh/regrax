@@ -18,7 +18,7 @@ import (
 
 type Overlap struct {
 	SG  *SubGraph
-	Ids []*set.SortedSet // the embeddings for each vertex
+	Ids []types.Set // the embeddings for each vertex
 }
 
 func (sg *SubGraph) FindVertexEmbeddings(indices *Indices, minSupport int) *Overlap {

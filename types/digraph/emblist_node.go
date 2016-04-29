@@ -25,7 +25,7 @@ type Embedding struct {
 }
 
 func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding) *EmbListNode {
-	if len(embs) > 0 {
+	if embs != nil {
 		if exts == nil {
 			panic("nil exts")
 		}
@@ -43,7 +43,7 @@ func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	has, exts, embs, err := loadCachedExtsEmbs(dt, sg)
+	has, _, exts, embs, err := loadCachedExtsEmbs(dt, sg)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,8 @@ func (n *EmbListNode) Embeddings() ([]*subgraph.Embedding, error) {
 }
 
 func (n *EmbListNode) String() string {
-	return fmt.Sprintf("<Node %v %v %v>", len(n.embeddings), len(n.extensions), n.Pat.Pretty(n.Dt.G.Colors))
+	return fmt.Sprintf("<EmbListNode %v>", n.Pat.Pretty(n.Dt.G.Colors))
+	//return fmt.Sprintf("<Node %v %v %v>", len(n.embeddings), len(n.extensions), n.Pat.Pretty(n.Dt.G.Colors))
 }
 
 func (n *EmbListNode) Parents() ([]lattice.Node, error) {
