@@ -263,7 +263,7 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Ex
 	// errors.Logf("DEBUG", "pat %v total-embeddings %v supported %v unique-ext %v", pattern, total, len(embeddings), len(extensions))
 
 	// return it all
-	if false {
+	if true {
 		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.G.Colors))
 	}
 	err = cacheExtsEmbs(dt, pattern, len(embeddings), extensions, embeddings)
