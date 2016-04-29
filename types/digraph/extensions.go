@@ -3,11 +3,13 @@ package digraph
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
+	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
 
 import (
+	"github.com/timtadh/sfp/stats"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
@@ -23,7 +25,50 @@ import (
 // 4. Instead of the full Embeddings we could work in overlap space. (todo)
 //    Investigate.
 
-func extensionPoints(G *goiso.Graph, o *subgraph.Overlap, e *goiso.Edge, src, targ int) []*subgraph.Extension {
+func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge) *subgraph.Extension {
+	hasTarg := false
+	hasSrc := false
+	var srcIdx int = len(emb.SG.V)
+	var targIdx int = len(emb.SG.V)
+	for idx, id := range emb.Ids {
+		if e.Src == id {
+			hasSrc = true
+			srcIdx = idx
+		}
+		if e.Targ == id {
+			hasTarg = true
+			targIdx = idx
+		}
+	}
+	if !hasTarg && !hasSrc {
+		srcIdx = len(emb.SG.V)
+		targIdx = len(emb.SG.V) + 1
+	}
+	src := subgraph.Vertex{Idx: srcIdx, Color: G.V[e.Src].Color}
+	targ := subgraph.Vertex{Idx: targIdx, Color: G.V[e.Targ].Color}
+	ext := subgraph.NewExt(src, targ, e.Color)
+	return ext
+}
+
+func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extension)) func(*subgraph.Embedding, *goiso.Edge) int {
+	return func(emb *subgraph.Embedding, e *goiso.Edge) int {
+		if dt.G.ColorFrequency(e.Color) < dt.Support() {
+			return 0
+		} else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {
+			return 0
+		} else if dt.G.ColorFrequency(dt.G.V[e.Targ].Color) < dt.Support() {
+			return 0
+		}
+		ep := extensionPoint(dt.G, emb, e)
+		if !emb.SG.HasExtension(ep) {
+			do(emb, ep)
+			return 1
+		}
+		return 0
+	}
+}
+
+func overlapExtensionPoints(G *goiso.Graph, o *subgraph.Overlap, e *goiso.Edge, src, targ int) []*subgraph.Extension {
 	exts := make([]*subgraph.Extension, 0, 10)
 	if src >= 0 {
 		srcIdx := src
@@ -75,7 +120,7 @@ func extensionPoints(G *goiso.Graph, o *subgraph.Overlap, e *goiso.Edge, src, ta
 	return exts
 }
 
-func validExtChecker(dt *Digraph, do func(*subgraph.Overlap, *subgraph.Extension)) func(*subgraph.Overlap, *goiso.Edge, int, int) {
+func overlapValidExtChecker(dt *Digraph, do func(*subgraph.Overlap, *subgraph.Extension)) func(*subgraph.Overlap, *goiso.Edge, int, int) {
 	return func(o *subgraph.Overlap, e *goiso.Edge, src, targ int) {
 		if dt.G.ColorFrequency(e.Color) < dt.Support() {
 			return
@@ -84,7 +129,7 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Overlap, *subgraph.Extension
 		} else if dt.G.ColorFrequency(dt.G.V[e.Targ].Color) < dt.Support() {
 			return
 		}
-		for _, ep := range extensionPoints(dt.G, o, e, src, targ) {
+		for _, ep := range overlapExtensionPoints(dt.G, o, e, src, targ) {
 			if !o.SG.HasExtension(ep) {
 				do(o, ep)
 			}
@@ -94,6 +139,130 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Overlap, *subgraph.Extension
 
 // unique extensions
 func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, error) {
+	// compute the embeddings
+	ei, err := pattern.IterEmbeddings(dt.Indices, nil)
+	if err != nil {
+		return nil, err
+	}
+	exts := set.NewSortedSet(10)
+	add := validExtChecker(dt, func(emb *subgraph.Embedding, ep *subgraph.Extension) {
+		exts.Add(ep)
+	})
+
+	// add the extensions to the extensions set
+	for emb, next := ei(); next != nil; emb, next = next() {
+		for i := range emb.SG.V {
+			id := emb.Ids[i]
+			for _, e := range dt.G.Kids[id] {
+				add(emb, e)
+			}
+			for _, e := range dt.G.Parents[id] {
+				add(emb, e)
+			}
+		}
+	}
+
+	// construct the extensions output slice
+	extensions := make([]*subgraph.Extension, 0, exts.Size())
+	for i, next := exts.Items()(); next != nil; i, next = next() {
+		ext := i.(*subgraph.Extension)
+		extensions = append(extensions, ext)
+	}
+
+	return extensions, nil
+}
+
+var extsAndEmbs func(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Extension, []*subgraph.Embedding, error) = extsAndEmbs_1
+
+// unique extensions and supported embeddings
+func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
+	if has, support, exts, embs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
+		return 0, nil, nil, err
+	} else if has {
+		if false {
+			errors.Logf("LOAD-DEBUG", "Loaded cached %v exts %v embs %v", pattern, len(exts), len(embs))
+		}
+		return support, exts, embs, nil
+	}
+	// errors.Logf("DEBUG", "----   extsAndEmbs pattern %v", pattern)
+	// compute the embeddings
+	ei, err := pattern.IterEmbeddings(dt.Indices, nil)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	exts := hashtable.NewLinearHash()
+	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
+		exts.Put(ext, nil)
+	})
+	sets := make([]*set.MapSet, len(pattern.V))
+
+	total := 0
+	// add the supported embeddings to the vertex sets
+	// add the extensions to the extensions set
+	// errors.Logf("DEBUG", "parent %v", parent)
+	// errors.Logf("DEBUG", "computing embeddings %v", pattern.Pretty(dt.G.Colors))
+	// errors.Logf("DEBUG", "computing embeddings %v", pattern)
+	for emb, next := ei(); next != nil; emb, next = next() {
+		// errors.Logf("DEBUG", "emb %v", emb)
+		for idx, id := range emb.Ids {
+			if sets[idx] == nil {
+				sets[idx] = set.NewMapSet(set.NewSortedSet(10))
+			}
+			set := sets[idx]
+			if !set.Has(types.Int(id)) {
+				set.Put(types.Int(id), emb)
+			}
+			for _, e := range dt.G.Kids[id] {
+				add(emb, e)
+			}
+			for _, e := range dt.G.Parents[id] {
+				add(emb, e)
+			}
+		}
+		total++
+	}
+
+	if total == 0 {
+		return 0, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
+	}
+
+	// construct the extensions output slice
+	extensions := make([]*subgraph.Extension, 0, exts.Size())
+	for i, next := exts.Keys()(); next != nil; i, next = next() {
+		ext := i.(*subgraph.Extension)
+		extensions = append(extensions, ext)
+	}
+	// errors.Logf("DEBUG", "----   exts %v", exts)
+
+	// errors.Logf("DEBUG", "pattern %v len sets %v sets %v", pattern, len(sets), sets)
+	// compute the minimally supported vertex
+	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
+		return float64(sets[i].Size())
+	})
+	// errors.Logf("DEBUG", "----   support %v", size)
+
+	// construct the embeddings output slice
+	embeddings := make([]*subgraph.Embedding, 0, int(size)+1)
+	for i, next := sets[arg].Values()(); next != nil; i, next = next() {
+		emb := i.(*subgraph.Embedding)
+		embeddings = append(embeddings, emb)
+	}
+
+	// errors.Logf("DEBUG", "pat %v total-embeddings %v supported %v unique-ext %v", pattern, total, len(embeddings), len(extensions))
+
+	// return it all
+	if true {
+		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.G.Colors))
+	}
+	err = cacheExtsEmbs(dt, pattern, len(embeddings), extensions, embeddings)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	return len(embeddings), extensions, embeddings, nil
+}
+
+// unique extensions
+func extensions_2(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, error) {
 	o := pattern.FindVertexEmbeddings(dt.Indices, dt.Support())
 	if o == nil {
 		// not supported!
@@ -101,7 +270,7 @@ func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension,
 	}
 
 	exts := hashtable.NewLinearHash()
-	add := validExtChecker(dt, func(o *subgraph.Overlap, ext *subgraph.Extension) {
+	add := overlapValidExtChecker(dt, func(o *subgraph.Overlap, ext *subgraph.Extension) {
 		exts.Put(ext, nil)
 	})
 
@@ -128,7 +297,7 @@ func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension,
 }
 
 // unique extensions and supported embeddings
-func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
+func extsAndEmbs_2(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
 	if has, sup, exts, embs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
 		return 0, nil, nil, err
 	} else if has {
@@ -146,7 +315,7 @@ func extsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Exte
 	}
 
 	exts := hashtable.NewLinearHash()
-	add := validExtChecker(dt, func(o *subgraph.Overlap, ext *subgraph.Extension) {
+	add := overlapValidExtChecker(dt, func(o *subgraph.Overlap, ext *subgraph.Extension) {
 		exts.Put(ext, nil)
 	})
 
