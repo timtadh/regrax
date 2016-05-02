@@ -7,7 +7,7 @@ import (
 )
 
 func Srange(size int) []int {
-	sample := make([]int, 0, size)
+	sample := make([]int, 0, size+1)
 	for i := 0; i < size; i++ {
 		sample = append(sample, i)
 	}
@@ -25,7 +25,7 @@ func Sample(size, populationSize int) (sample []int) {
 		return items[:len(items)-1], item
 	}
 	items := Srange(populationSize)
-	sample = make([]int, 0, size)
+	sample = make([]int, 0, size+1)
 	for i := 0; i < size; i++ {
 		var item int
 		items, item = pop(items)
@@ -35,7 +35,7 @@ func Sample(size, populationSize int) (sample []int) {
 }
 
 func ReplacingSample(size, populationSize int) (sample []int) {
-	sample = make([]int, 0, size)
+	sample = make([]int, 0, size+1)
 	for i := 0; i < size; i++ {
 		j := rand.Intn(populationSize)
 		sample = append(sample, j)
