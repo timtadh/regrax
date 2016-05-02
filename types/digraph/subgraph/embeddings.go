@@ -86,7 +86,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 	}
 	seen := set.NewSetMap(hashtable.NewLinearHash())
 	pop := func(stack []entry) (entry, []entry) {
-		idx, _ := stats.Max(stats.Sample(10, len(stack)), func(idx int) float64 {
+		idx, _ := stats.Max(append(stats.Sample(10, len(stack)), len(stack)-1), func(idx int) float64 {
 			emb := stack[idx].emb
 			total := 0.0
 			for _, id := range emb.Ids {
@@ -98,9 +98,6 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 		})
 		e := stack[idx]
 		copy(stack[idx : len(stack)-1], stack[idx+1 : len(stack)])
-		for _, id := range e.emb.Ids {
-			seen.Add(types.Int(id))
-		}
 		return e, stack[0 : len(stack)-1]
 	}
 
@@ -140,6 +137,9 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 					errors.Logf("FOUND", "NOT EXISTS\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
 
 					panic("wat")
+				}
+				for _, id := range emb.Ids {
+					seen.Add(types.Int(id))
 				}
 				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
