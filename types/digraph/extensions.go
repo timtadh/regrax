@@ -194,7 +194,24 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 	}
 	// errors.Logf("DEBUG", "----   extsAndEmbs pattern %v", pattern)
 	// compute the embeddings
-	ei, err := subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, nil))
+	seen := make(map[int]bool)
+	ei, err := subgraph.FilterAutomorphs(pattern.IterEmbeddings(
+		dt.Indices,
+		func(lcv int, chain []*subgraph.Edge) func(b *subgraph.FillableEmbeddingBuilder) bool {
+			return func(b *subgraph.FillableEmbeddingBuilder) bool {
+				all := true
+				for _, id := range b.Ids {
+					if _, has := seen[id]; !has {
+						all = false
+					}
+				}
+				if all {
+					// errors.Logf("DEBUG", "pruning %v", b.Build())
+					return true
+				}
+				return false
+			}
+	}))
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -216,6 +233,7 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 	for emb, next := ei(); next != nil; emb, next = next() {
 		// errors.Logf("DEBUG", "emb %v", emb)
 		for idx, id := range emb.Ids {
+			seen[id] = true
 			if sets[idx] == nil {
 				sets[idx] = hashtable.NewLinearHash()
 			}
