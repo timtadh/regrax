@@ -5,7 +5,7 @@ import ()
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
-	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/list"
 	"github.com/timtadh/data-structures/linked"
 	"github.com/timtadh/data-structures/types"
 )
@@ -55,9 +55,9 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 	if err != nil {
 		return nil, err
 	}
-	idSet := func(emb *Embedding) *set.SortedSet {
-		ids := set.NewSortedSet(len(emb.Ids))
-		for id := range emb.Ids {
+	idSet := func(emb *Embedding) *list.Sorted {
+		ids := list.NewSorted(len(emb.Ids), true)
+		for _, id := range emb.Ids {
 			ids.Add(types.Int(id))
 		}
 		return ids
@@ -69,6 +69,7 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 		}
 		for emb, it = it(); it != nil; emb, it = it() {
 			ids := idSet(emb)
+			// errors.Logf("AUTOMORPH-DEBUG", "emb %v ids %v has %v", emb, ids, seen.Has(ids))
 			if !seen.Has(ids) {
 				seen.Put(ids, nil)
 				return emb, ei
@@ -150,11 +151,11 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 				// check that this is the subgraph we sought
 				emb := i.emb.Build()
 				// errors.Logf("FOUND", "\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
-				if !emb.Exists(indices.G) {
-					errors.Logf("FOUND", "NOT EXISTS\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
+				// if !emb.Exists(indices.G) {
+				// 	errors.Logf("FOUND", "NOT EXISTS\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
 
-					panic("wat")
-				}
+				// 	panic("wat")
+				// }
 				for _, id := range emb.Ids {
 					seen[id] = true
 				}

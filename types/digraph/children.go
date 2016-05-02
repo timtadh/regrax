@@ -113,7 +113,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error)) (nodes [
 		i := v.(*extInfo)
 		ep := i.ep
 		vord := i.vord
-		tu := set.NewSortedSet(unsupported.Size())
+		tu := set.NewSetMap(hashtable.NewLinearHash())
 		for i, next := unsupported.Items()(); next != nil; i, next = next() {
 			tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
 		}
