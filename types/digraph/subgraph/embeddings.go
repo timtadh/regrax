@@ -86,7 +86,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 	}
 	seen := set.NewSetMap(hashtable.NewLinearHash())
 	pop := func(stack []entry) (entry, []entry) {
-		idx, _ := stats.Max(append(stats.Sample(10, len(stack)), len(stack)-1), func(idx int) float64 {
+		idx, _ := stats.Max(append(stats.Sample(9, len(stack)-1), len(stack)-1), func(idx int) float64 {
 			emb := stack[idx].emb
 			total := 0.0
 			for _, id := range emb.Ids {
