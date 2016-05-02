@@ -200,6 +200,9 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 		func(lcv int, chain []*subgraph.Edge) func(b *subgraph.FillableEmbeddingBuilder) bool {
 			return func(b *subgraph.FillableEmbeddingBuilder) bool {
 				for _, id := range b.Ids {
+					if id < 0 {
+						continue
+					}
 					if _, has := seen[id]; !has {
 						return false
 					}
