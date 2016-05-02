@@ -27,6 +27,7 @@ type Digraph struct {
 	NodeAttrs                int_json.MultiMap
 	Embeddings               subgraph_embedding.MultiMap
 	Extensions               bytes_extension.MultiMap
+	UnsupExts                bytes_extension.MultiMap
 	Parents                  bytes_bytes.MultiMap
 	ParentCount              bytes_int.MultiMap
 	Children                 bytes_bytes.MultiMap
@@ -75,6 +76,10 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 	if err != nil {
 		return nil, err
 	}
+	unexts, err := config.BytesExtensionMultiMap("digraph-unsupported-extensions")
+	if err != nil {
+		return nil, err
+	}
 	frequency, err := config.BytesIntMultiMap("digraph-pattern-frequency")
 	if err != nil {
 		return nil, err
@@ -88,6 +93,7 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		NodeAttrs:     nodeAttrs,
 		Embeddings:    embeddings,
 		Extensions:    exts,
+		UnsupExts:     unexts,
 		Parents:       parents,
 		ParentCount:   parentCount,
 		Children:      children,
@@ -206,6 +212,7 @@ func (g *Digraph) Close() error {
 	g.CanonKidCount.Close()
 	g.Embeddings.Close()
 	g.Extensions.Close()
+	g.UnsupExts.Close()
 	g.NodeAttrs.Close()
 	g.Frequency.Close()
 	return nil

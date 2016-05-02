@@ -4,6 +4,7 @@ import ()
 
 import (
 	// "github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
 )
 
@@ -20,6 +21,8 @@ type Node interface {
 	Label() []byte
 	Extensions() ([]*subgraph.Extension, error)
 	Embeddings() ([]*subgraph.Embedding, error)
+	UnsupportedExts() (*set.SortedSet, error)
+	SaveUnsupported(int, []int, *set.SortedSet) error
 	SubGraph() *subgraph.SubGraph
 	loadFrequentVertices() ([]lattice.Node, error)
 	isRoot() bool
@@ -57,25 +60,10 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 		// errors.Logf("DEBUG", "got from precheck %v", n)
 		return nodes, nil
 	}
-	patterns, err := extendNode(n)
-	if err != nil {
-		return nil, err
-	}
-	for i, next := patterns.Items()(); next != nil; i, next = next() {
-		extPat := i.(*subgraph.SubGraph)
-		if canonized, err := isCanonicalExtension(n.SubGraph(), extPat); err != nil {
-			return nil, err
-		} else if !canonized {
-			continue
-		}
-		support, exts, embs, err := extsAndEmbs(dt, extPat)
-		if err != nil {
-			return nil, err
-		}
-		if support >= dt.Support() {
-			nodes = append(nodes, n.New(extPat, exts, embs))
-		}
-	}
+	sg := n.SubGraph()
+	nodes, err = findChildren(n, func(pattern *subgraph.SubGraph) (bool, error) {
+		return isCanonicalExtension(sg, pattern)
+	})
 	// errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
 	return nodes, cacheAdj(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
@@ -93,29 +81,71 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		// errors.Logf("DEBUG", "got from precheck %v", n)
 		return nodes, nil
 	}
+	nodes, err = findChildren(n, nil)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, cacheAdj(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
+}
 
+func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error)) (nodes []lattice.Node, err error) {
+	// errors.Logf("DEBUG", "")
+	dt := n.dt()
+	sg := n.SubGraph()
 	patterns, err := extendNode(n)
 	if err != nil {
 		return nil, err
 	}
-	for i, next := patterns.Items()(); next != nil; i, next = next() {
-		pattern := i.(*subgraph.SubGraph)
-		support, exts, embs, err := extsAndEmbs(dt, pattern)
+	unsupported, err := n.UnsupportedExts()
+	if err != nil {
+		return nil, err
+	}
+	vords := make([][]int, 0, 10)
+	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
+		pattern := k.(*subgraph.SubGraph)
+		if allow != nil {
+			if allowed, err := allow(pattern); err != nil {
+				return nil, err
+			} else if !allowed {
+				continue
+			}
+		}
+		i := v.(*extInfo)
+		ep := i.ep
+		vord := i.vord
+		tu := set.NewSortedSet(unsupported.Size())
+		for i, next := unsupported.Items()(); next != nil; i, next = next() {
+			tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
+		}
+		support, exts, embs, err := extsAndEmbs(dt, pattern, tu)
 		if err != nil {
 			return nil, err
 		}
 		// errors.Logf("DEBUG", "pattern %v support %v exts %v", pattern, len(embs), len(exts))
 		if support >= dt.Support() {
 			nodes = append(nodes, n.New(pattern, exts, embs))
+			vords = append(vords, vord)
+		} else {
+			unsupported.Add(ep)
 		}
 	}
 
-	// errors.Logf("DEBUG", "n %v kids %v", n, len(nodes))
+	for i, newNode := range nodes {
+		err := newNode.(Node).SaveUnsupported(len(sg.V), vords[i], unsupported)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return nodes, cacheAdj(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
+	return nodes, nil
 }
 
-func extendNode(n Node) (*set.SortedSet, error) {
+type extInfo struct {
+	ep  *subgraph.Extension
+	vord []int
+}
+
+func extendNode(n Node) (*hashtable.LinearHash, error) {
 	// errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
 	sg := n.SubGraph()
 	b := subgraph.Build(len(sg.V), len(sg.E)).From(sg)
@@ -123,13 +153,16 @@ func extendNode(n Node) (*set.SortedSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	patterns := set.NewSortedSet(len(extPoints))
+	patterns := hashtable.NewLinearHash()
 	for _, ep := range extPoints {
 		// errors.Logf("DEBUG", "  ext point %v", ep)
 		bc := b.Copy()
 		bc.Extend(ep)
-		ext := bc.Build()
-		patterns.Add(ext)
+		vord, eord := bc.CanonicalPermutation()
+		ext := bc.BuildFromPermutation(vord, eord)
+		if !patterns.Has(ext) {
+			patterns.Put(ext, &extInfo{ep, vord})
+		}
 		// errors.Logf("DEBUG", "    ext %v", ext)
 	}
 

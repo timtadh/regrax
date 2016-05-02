@@ -179,10 +179,10 @@ func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension,
 	return extensions, nil
 }
 
-var extsAndEmbs func(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Extension, []*subgraph.Embedding, error) = extsAndEmbs_1
+var extsAndEmbs func(dt *Digraph, pattern *subgraph.SubGraph, unsupported *set.SortedSet) (int, []*subgraph.Extension, []*subgraph.Embedding, error) = extsAndEmbs_1
 
 // unique extensions and supported embeddings
-func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
+func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported *set.SortedSet) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
 	if has, support, exts, embs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
 		return 0, nil, nil, err
 	} else if has {
@@ -199,6 +199,9 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph) (int, []*subgraph.Ex
 	}
 	exts := set.NewSetMap(hashtable.NewLinearHash())
 	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
+		if unsupported.Has(ext) {
+			return
+		}
 		exts.Add(ext)
 	})
 	sets := make([]*set.MapSet, len(pattern.V))

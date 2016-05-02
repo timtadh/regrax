@@ -1,7 +1,6 @@
 package subgraph
 
 import (
-	"github.com/timtadh/data-structures/list"
 	"github.com/timtadh/data-structures/types"
 )
 
@@ -19,14 +18,32 @@ func NewExt(src, targ Vertex, color int) *Extension {
 	}
 }
 
-func (e *Extension) list() *list.List {
-	l := list.New(5)
-	l.Append(types.Int(e.Source.Idx))
-	l.Append(types.Int(e.Source.Color))
-	l.Append(types.Int(e.Target.Idx))
-	l.Append(types.Int(e.Target.Color))
-	l.Append(types.Int(e.Color))
-	return l
+func (e *Extension) Translate(orgLen int, vord []int) *Extension {
+	srcIdx := e.Source.Idx
+	targIdx := e.Target.Idx
+	if srcIdx >= orgLen {
+		srcIdx = len(vord) + (srcIdx - orgLen)
+	}
+	if targIdx >= orgLen {
+		targIdx = len(vord) + (targIdx - orgLen)
+	}
+	if srcIdx < len(vord) {
+		srcIdx = vord[srcIdx]
+	}
+	if targIdx < len(vord) {
+		targIdx = vord[targIdx]
+	}
+	return &Extension{
+		Source: Vertex{
+			Idx: srcIdx,
+			Color: e.Source.Color,
+		},
+		Target: Vertex{
+			Idx: targIdx,
+			Color: e.Target.Color,
+		},
+		Color: e.Color,
+	}
 }
 
 func (e *Extension) Equals(o types.Equatable) bool {

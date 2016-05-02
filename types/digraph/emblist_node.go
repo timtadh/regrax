@@ -6,6 +6,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/goiso"
 )
 
@@ -69,6 +70,31 @@ func (n *EmbListNode) Extensions() ([]*subgraph.Extension, error) {
 
 func (n *EmbListNode) Embeddings() ([]*subgraph.Embedding, error) {
 	return n.embeddings, nil
+}
+
+func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
+	label := n.Label()
+	u := set.NewSortedSet(10)
+	err := n.Dt.UnsupExts.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
+		return u.Add(ext)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet) error {
+	label := n.Label()
+	for x, next := eps.Items()(); next != nil; x, next = next() {
+		ep := x.(*subgraph.Extension)
+		ept := ep.Translate(orgLen, vord)
+		err := n.Dt.UnsupExts.Add(label, ept)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (n *EmbListNode) String() string {

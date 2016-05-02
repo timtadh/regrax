@@ -119,8 +119,8 @@ func (b *OverlapBuilder) Extend(e *Extension) (newe *Edge, newv *Vertex, err err
 }
 
 func (b *OverlapBuilder) Build() *Overlap {
-	vord, eord := b.canonicalPermutation()
-	sg := b.build(vord, eord)
+	vord, eord := b.CanonicalPermutation()
+	sg := b.BuildFromPermutation(vord, eord)
 	ids := make([]types.Set, len(sg.V))
 	for i, p := range vord {
 		ids[p] = b.Ids[i]

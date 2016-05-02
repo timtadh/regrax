@@ -119,8 +119,8 @@ func (b *EmbeddingBuilder) Extend(e *Extension) (newe *Edge, newv *Vertex, err e
 }
 
 func (b *EmbeddingBuilder) Build() *Embedding {
-	vord, eord := b.canonicalPermutation()
-	sg := b.build(vord, eord)
+	vord, eord := b.CanonicalPermutation()
+	sg := b.BuildFromPermutation(vord, eord)
 	ids := make([]int, len(sg.V))
 	for i, p := range vord {
 		ids[p] = b.Ids[i]

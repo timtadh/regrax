@@ -225,10 +225,10 @@ func (b *Builder) Connected() bool {
 }
 
 func (b *Builder) Build() *SubGraph {
-	return b.build(b.canonicalPermutation())
+	return b.BuildFromPermutation(b.CanonicalPermutation())
 }
 
-func (b *Builder) build(vord, eord []int) *SubGraph {
+func (b *Builder) BuildFromPermutation(vord, eord []int) *SubGraph {
 	pat := &SubGraph{
 		V:   make([]Vertex, len(b.V)),
 		E:   make([]Edge, len(b.E)),
@@ -249,7 +249,7 @@ func (b *Builder) build(vord, eord []int) *SubGraph {
 	return pat
 }
 
-func (b *Builder) canonicalPermutation() (vord, eord []int) {
+func (b *Builder) CanonicalPermutation() (vord, eord []int) {
 	bMap := bliss.NewMap(len(b.V), len(b.E), b.V.Iterate(), b.E.Iterate())
 	vord, eord, _ = bMap.CanonicalPermutation()
 	return vord, eord
