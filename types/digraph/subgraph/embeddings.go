@@ -88,6 +88,9 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 	// seen := set.NewSetMap(hashtable.NewLinearHash())
 	seen := make(map[int]bool)
 	pop := func(stack []entry) (entry, []entry) {
+		// remove to enable information maximization stack pop
+		return stack[len(stack)-1], stack[0 : len(stack)-1]
+		// 
 		sampleSize := 5
 		maxIter := 25
 		unseenCount := func(ids []int) float64 {
