@@ -84,20 +84,22 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 		emb *FillableEmbeddingBuilder
 		eid int
 	}
-	seen := set.NewSetMap(hashtable.NewLinearHash())
+	// seen := set.NewSetMap(hashtable.NewLinearHash())
+	seen := make(map[int]bool)
 	pop := func(stack []entry) (entry, []entry) {
 		sampleSize := 5
+		maxIter := 25
 		unseenCount := func(ids []int) float64 {
 			total := 0.0
 			for _, id := range ids {
-				if !seen.Has(types.Int(id)) {
+				if _, has := seen[id]; !has {
 					total += 1.0
 				}
 			}
 			return total
 		}
 		var idx int
-		if len(stack) <= sampleSize {
+		if len(stack) <= maxIter {
 			max := -1.0
 			for i, e := range stack {
 				c := unseenCount(e.emb.Ids)
@@ -154,7 +156,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 					panic("wat")
 				}
 				for _, id := range emb.Ids {
-					seen.Add(types.Int(id))
+					seen[id] = true
 				}
 				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
