@@ -249,11 +249,11 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 			}
 		}
 		total++
-		// const limit = 10000
-		// if total > limit {
-		// 	errors.Logf("WARNING", "skipping the rest of the embeddings for %v (over %v)", pattern, limit)
-		// 	break
-		// }
+		const limit = 10000
+		if total > limit {
+			errors.Logf("WARNING", "skipping the rest of the embeddings for %v (over %v)", pattern, limit)
+			break
+		}
 	}
 
 	if total == 0 {
