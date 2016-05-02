@@ -199,17 +199,12 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 		dt.Indices,
 		func(lcv int, chain []*subgraph.Edge) func(b *subgraph.FillableEmbeddingBuilder) bool {
 			return func(b *subgraph.FillableEmbeddingBuilder) bool {
-				all := true
 				for _, id := range b.Ids {
 					if _, has := seen[id]; !has {
-						all = false
+						return false
 					}
 				}
-				if all {
-					// errors.Logf("DEBUG", "pruning %v", b.Build())
-					return true
-				}
-				return false
+				return true
 			}
 	}))
 	if err != nil {
@@ -249,11 +244,11 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 			}
 		}
 		total++
-		const limit = 10000
-		if total > limit {
-			errors.Logf("WARNING", "skipping the rest of the embeddings for %v (over %v)", pattern, limit)
-			break
-		}
+		// const limit = 10000
+		// if total > limit {
+		// 	errors.Logf("WARNING", "skipping the rest of the embeddings for %v (over %v)", pattern, limit)
+		// 	break
+		// }
 	}
 
 	if total == 0 {
