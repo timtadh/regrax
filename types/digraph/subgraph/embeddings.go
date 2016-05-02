@@ -10,7 +10,9 @@ import (
 	"github.com/timtadh/data-structures/types"
 )
 
-import ()
+import (
+	"github.com/timtadh/sfp/stats"
+)
 
 // Tim You Are Here:
 // You just ran %s/\*goiso.SubGraph/*Embedding/g
@@ -82,8 +84,24 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 		emb *FillableEmbeddingBuilder
 		eid int
 	}
+	seen := set.NewSetMap(hashtable.NewLinearHash())
 	pop := func(stack []entry) (entry, []entry) {
-		return stack[len(stack)-1], stack[0 : len(stack)-1]
+		idx, _ := stats.Max(stats.Sample(10, len(stack)), func(idx int) float64 {
+			emb := stack[idx].emb
+			total := 0.0
+			for _, id := range emb.Ids {
+				if !seen.Has(types.Int(id)) {
+					total += 1.0
+				}
+			}
+			return total
+		})
+		e := stack[idx]
+		copy(stack[idx : len(stack)-1], stack[idx+1 : len(stack)])
+		for _, id := range e.emb.Ids {
+			seen.Add(types.Int(id))
+		}
+		return e, stack[0 : len(stack)-1]
 	}
 
 	if len(sg.V) == 0 {
