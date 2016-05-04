@@ -180,7 +180,7 @@ func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension,
 	return extensions, nil
 }
 
-var extsAndEmbs func(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set) (int, []*subgraph.Extension, []*subgraph.Embedding, error) = extsAndEmbs_1
+var ExtsAndEmbs func(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set) (int, []*subgraph.Extension, []*subgraph.Embedding, error) = extsAndEmbs_1
 
 // unique extensions and supported embeddings
 func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {

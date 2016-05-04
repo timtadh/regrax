@@ -40,7 +40,7 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 			continue
 		}
 		seen.Add(parent)
-		_, pexts, pembs, err := extsAndEmbs(dt, parent, set.NewSortedSet(0))
+		_, pexts, pembs, err := ExtsAndEmbs(dt, parent, set.NewSortedSet(0))
 		if err != nil {
 			return nil, err
 		}

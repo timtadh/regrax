@@ -89,7 +89,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 	seen := make(map[int]bool)
 	pop := func(stack []entry) (entry, []entry) {
 		// remove to enable information maximization stack pop
-		// return stack[len(stack)-1], stack[0 : len(stack)-1]
+		return stack[len(stack)-1], stack[0 : len(stack)-1]
 		// 
 		sampleSize := 5
 		maxIter := 25

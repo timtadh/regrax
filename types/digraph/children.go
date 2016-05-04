@@ -117,7 +117,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error)) (nodes [
 		for i, next := unsupported.Items()(); next != nil; i, next = next() {
 			tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
 		}
-		support, exts, embs, err := extsAndEmbs(dt, pattern, tu)
+		support, exts, embs, err := ExtsAndEmbs(dt, pattern, tu)
 		if err != nil {
 			return nil, err
 		}

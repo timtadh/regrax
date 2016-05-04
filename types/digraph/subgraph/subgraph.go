@@ -3,6 +3,8 @@ package subgraph
 import (
 	"encoding/binary"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -106,6 +108,79 @@ func LoadSubGraph(label []byte) (*SubGraph, error) {
 	if err != nil {
 		return nil, err
 	}
+	return sg, nil
+}
+
+func ParsePretty(str string, labels map[string]int) (*SubGraph, error) {
+	size := regexp.MustCompile(`^\{([0-9]+):([0-9]+)\}`)
+	edge := regexp.MustCompile(`^\[([0-9]+)->([0-9]+):`)
+	matches := size.FindStringSubmatch(str)
+	E, err := strconv.ParseInt(matches[1], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	V, err := strconv.ParseInt(matches[2], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	idx := len(matches[0])
+	vertices := make(Vertices, V)
+	for i := range vertices {
+		if str[idx] != '(' {
+			return nil, errors.Errorf("expected ( got %v", str[idx:idx+1])
+		}
+		idx++
+		labelc := make([]byte, 0, 10)
+		for ; idx < len(str); idx++ {
+			if str[idx] == '\\' {
+				continue
+			} else if str[idx-1] == '\\' {
+				labelc = append(labelc, str[idx])
+			} else if str[idx] == ')' {
+				idx++
+				break
+			} else {
+				labelc = append(labelc, str[idx])
+			}
+		}
+		label := string(labelc)
+		vertices[i].Idx = i
+		vertices[i].Color = labels[label]
+	}
+	edges := make(Edges, E)
+	adj := make([][]int, V)
+	for i := range edges {
+		matches := edge.FindStringSubmatch(str[idx:])
+		src, err := strconv.ParseInt(matches[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		targ, err := strconv.ParseInt(matches[2], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		labelc := make([]byte, 0, 10)
+		idx += len(matches[0])
+		for ; idx < len(str); idx++ {
+			if str[idx] == '\\' {
+				continue
+			} else if str[idx-1] == '\\' {
+				labelc = append(labelc, str[idx])
+			} else if str[idx] == ']' {
+				idx++
+				break
+			} else {
+				labelc = append(labelc, str[idx])
+			}
+		}
+		label := string(labelc)
+		edges[i].Src = int(src)
+		edges[i].Targ = int(targ)
+		edges[i].Color = labels[label]
+		adj[src] = append(adj[src], i)
+		adj[targ] = append(adj[targ], i)
+	}
+	sg := &SubGraph{V: vertices, E: edges, Adj: adj}
 	return sg, nil
 }
 
