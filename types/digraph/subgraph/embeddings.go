@@ -11,7 +11,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stats"
+	// "github.com/timtadh/sfp/stats"
 )
 
 // Tim You Are Here:
@@ -87,39 +87,51 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 	}
 	// seen := set.NewSetMap(hashtable.NewLinearHash())
 	seen := make(map[int]bool)
+	// clean := func(stack []entry, prune func(*FillableEmbeddingBuilder) bool) ([]entry) {
+	// 	if prune == nil {
+	// 		return stack
+	// 	}
+	// 	cleaned := make([]entry, 0, len(stack))
+	// 	for _, e := range stack {
+	// 		if !prune(e.emb) {
+	// 			cleaned = append(cleaned, e)
+	// 		}
+	// 	}
+	// 	return cleaned
+	// }
 	pop := func(stack []entry) (entry, []entry) {
 		// remove to enable information maximization stack pop
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
-		// 
-		sampleSize := 5
-		maxIter := 25
-		unseenCount := func(ids []int) float64 {
-			total := 0.0
-			for _, id := range ids {
-				if _, has := seen[id]; !has {
-					total += 1.0
-				}
-			}
-			return total
-		}
-		var idx int
-		if len(stack) <= maxIter {
-			max := -1.0
-			for i, e := range stack {
-				c := unseenCount(e.emb.Ids)
-				if c > max {
-					idx = i
-					max = c
-				}
-			}
-		} else {
-			idx, _ = stats.Max(append(stats.ReplacingSample(sampleSize + 1, len(stack)-1), len(stack)-1), func(i int) float64 {
-				return unseenCount(stack[i].emb.Ids)
-			})
-		}
-		e := stack[idx]
-		copy(stack[idx : len(stack)-1], stack[idx+1 : len(stack)])
-		return e, stack[0 : len(stack)-1]
+		// is super slow because of copy (consider swap delete)
+		// sampleSize := 5
+		// maxIter := 25
+		// unseenCount := func(ids []int) float64 {
+		// 	total := 0.0
+		// 	for _, id := range ids {
+		// 		if _, has := seen[id]; !has {
+		// 			total += 1.0
+		// 		}
+		// 	}
+		// 	return total
+		// }
+		// var idx int
+		// if len(stack) <= maxIter {
+		// 	max := -1.0
+		// 	for i, e := range stack {
+		// 		c := unseenCount(e.emb.Ids)
+		// 		if c > max {
+		// 			idx = i
+		// 			max = c
+		// 		}
+		// 	}
+		// } else {
+		// 	idx, _ = stats.Max(append(stats.ReplacingSample(sampleSize + 1, len(stack)-1), len(stack)-1), func(i int) float64 {
+		// 		return unseenCount(stack[i].emb.Ids)
+		// 	})
+		// }
+		// e := stack[idx]
+		// copy(stack[idx : len(stack)-1], stack[idx+1 : len(stack)])
+		// return e, stack[0 : len(stack)-1]
 	}
 
 	if len(sg.V) == 0 {
@@ -164,6 +176,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 				}
 				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
+					stack = clean(stack, prune)
 					return emb, ei
 				}
 				// nope wasn't an embedding drop it
