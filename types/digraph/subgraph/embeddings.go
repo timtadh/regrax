@@ -22,7 +22,6 @@ import (
 // Then it is time to transition types/digraph to *Embeddings
 
 type EmbIterator func() (*Embedding, EmbIterator)
-type Pruner func(leastCommonVertex int, chain []*Edge) func(emb *FillableEmbeddingBuilder) bool
 
 func (sg *SubGraph) Embeddings(indices *Indices) ([]*Embedding, error) {
 	embeddings := make([]*Embedding, 0, 10)
@@ -80,9 +79,23 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 	return ei, nil
 }
 
-func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbIterator, err error) {
+type IdNode struct {
+	Id  int
+	Idx int
+	Prev *IdNode
+}
+
+func (ids *IdNode) list(length int) []int {
+	l := make([]int, length)
+	for c := ids; c != nil; c = c.Prev {
+		l[c.Idx] = c.Id
+	}
+	return l
+}
+
+func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (ei EmbIterator, err error) {
 	type entry struct {
-		emb *FillableEmbeddingBuilder
+		ids *IdNode
 		eid int
 	}
 	// seen := set.NewSetMap(hashtable.NewLinearHash())
@@ -144,11 +157,6 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 	chain := sg.edgeChain(startIdx)
 	vembs := sg.startEmbeddings(indices, startIdx)
 
-	var prune func(*FillableEmbeddingBuilder) bool = nil
-	if pruner != nil {
-		prune = pruner(0, chain)
-	}
-
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
 		stack = append(stack, entry{vemb, 0})
@@ -158,17 +166,19 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 		for len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)
-			if prune != nil && prune(i.emb) {
+			if prune != nil && prune(i.ids) {
 				continue
 			}
 			// otherwise success we have an embedding we haven't seen
 			if i.eid >= len(chain) {
 				// check that this is the subgraph we sought
-				emb := i.emb.Build()
+				emb := &Embedding{
+					SG: sg,
+					Ids: i.ids.list(len(sg.V)),
+				}
 				// errors.Logf("FOUND", "\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
 				// if !emb.Exists(indices.G) {
 				// 	errors.Logf("FOUND", "NOT EXISTS\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
-
 				// 	panic("wat")
 				// }
 				for _, id := range emb.Ids {
@@ -176,14 +186,14 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, pruner Pruner) (ei EmbItera
 				}
 				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
-					stack = clean(stack, prune)
+					// stack = clean(stack, prune)
 					return emb, ei
 				}
 				// nope wasn't an embedding drop it
 			} else {
 				// ok extend the embedding
 				// errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
-				exts, _ := sg.extendEmbedding(indices, i.emb, chain[i.eid])
+				exts, _ := sg.extendEmbedding(indices, i.ids, chain[i.eid])
 				for _, ext := range exts {
 					stack = append(stack, entry{ext, i.eid + 1})
 				}
@@ -208,15 +218,16 @@ func (sg *SubGraph) leastFrequentVertex(indices *Indices) int {
 	return minIdx
 }
 
-func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*FillableEmbeddingBuilder {
+func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 	color := sg.V[startIdx].Color
-	embs := make([]*FillableEmbeddingBuilder, 0, indices.G.ColorFrequency(color))
+	embs := make([]*IdNode, 0, indices.G.ColorFrequency(color))
 	for _, gIdx := range indices.ColorIndex[color] {
-		embs = append(embs,
-			BuildEmbedding(len(sg.V), len(sg.E)).Fillable().
-				Ctx(func(b *FillableEmbeddingBuilder) {
-					b.SetVertex(startIdx, color, gIdx)
-				}))
+		embs = append(embs, &IdNode{Id: gIdx, Idx: startIdx})
+		// embs = append(embs,
+		// 	BuildEmbedding(len(sg.V), len(sg.E)).Fillable().
+		// 		Ctx(func(b *FillableEmbeddingBuilder) {
+		// 			b.SetVertex(startIdx, color, gIdx)
+		// 		}))
 	}
 	return embs
 }
@@ -259,60 +270,63 @@ func (sg *SubGraph) edgeChain(startIdx int) []*Edge {
 	return edges
 }
 
-func (sg *SubGraph) extendEmbedding(indices *Indices, cur *FillableEmbeddingBuilder, e *Edge) (exts []*FillableEmbeddingBuilder, addedIdx int) {
+func (ids *IdNode) ids(srcIdx, targIdx int) (srcId, targId int) {
+	srcId = -1
+	targId = -1
+	for c := ids; c != nil; c = c.Prev {
+		if c.Idx == srcIdx {
+			srcId = c.Id
+		}
+		if c.Idx == targIdx {
+			targId = c.Id
+		}
+	}
+	return srcId, targId
+}
+
+func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge) (exts []*IdNode, addedIdx int) {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	// exts := ext.NewCollector(-1)
 	// exts = make([]*FillableEmbeddingBuilder, 0, 10)
 	addedIdx = -1
 
-	src := cur.V[e.Src].Idx
-	targ := cur.V[e.Targ].Idx
+	// src := cur.V[e.Src].Idx
+	// targ := cur.V[e.Targ].Idx
+	srcId, targId := cur.ids(e.Src, e.Targ)
 
-	if src == -1 && targ == -1 {
+	if srcId == -1 && targId == -1 {
 		panic("src and targ == -1. Which means the edge chain was not connected.")
-	} else if src != -1 && targ != -1 {
+	} else if srcId != -1 && targId != -1 {
 		// both src and targ are in the builder so we can just add this edge
 		// errors.Logf("EMB-DEBUG", "    add existing %v", e)
-		if indices.HasEdge(cur.Ids[src], cur.Ids[targ], e.Color) {
-			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
-				b.AddEdge(&cur.V[e.Src], &cur.V[e.Targ], e.Color)
-			}))
+		// if indices.HasEdge(cur.Ids[src], cur.Ids[targ], e.Color) {
+		if indices.HasEdge(srcId, targId, e.Color) {
+			exts = append(exts, cur)
+			// exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
+			// 	b.AddEdge(&cur.V[e.Src], &cur.V[e.Targ], e.Color)
+			// }))
 		}
-	} else if src != -1 {
+	} else if srcId != -1 {
 		addedIdx = e.Targ
-		targs := indices.TargsFromSrc(cur.Ids[src], e.Color, sg.V[e.Targ].Color, cur.Ids)
-		if len(targs) == 1 {
-			targ := targs[0]
-			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
-				b.SetVertex(e.Targ, sg.V[e.Targ].Color, targ)
-				b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
-			}))
-		} else {
-			for _, targ := range targs {
-				// errors.Logf("EMB-DEBUG", "    add targ vertex, %v ke %v", e, ke)
-				exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
-					b.SetVertex(e.Targ, sg.V[e.Targ].Color, targ)
-					b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
-				}))
-			}
+		targs := indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur)
+		for _, targId := range targs {
+			// errors.Logf("EMB-DEBUG", "    add targ vertex, %v ke %v", e, ke)
+			exts = append(exts, &IdNode{Id: targId, Idx: e.Targ, Prev: cur})
+			//exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
+			//	b.SetVertex(e.Targ, sg.V[e.Targ].Color, targ)
+			//	b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
+			//}))
 		}
-	} else if targ != -1 {
+	} else if targId != -1 {
 		addedIdx = e.Src
-		srcs := indices.SrcsToTarg(cur.Ids[targ], e.Color, sg.V[e.Src].Color, cur.Ids)
-		if len(srcs) == 1 {
-			src := srcs[0]
-			exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
-				b.SetVertex(e.Src, sg.V[e.Src].Color, src)
-				b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
-			}))
-		} else {
-			for _, src := range srcs {
-				// errors.Logf("EMB-DEBUG", "    add src vertex, %v pe %v", e, pe)
-				exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
-					b.SetVertex(e.Src, sg.V[e.Src].Color, src)
-					b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
-				}))
-			}
+		srcs := indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur)
+		for _, srcId := range srcs {
+			exts = append(exts, &IdNode{Id: srcId, Idx: e.Src, Prev: cur})
+			// errors.Logf("EMB-DEBUG", "    add src vertex, %v pe %v", e, pe)
+			//exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
+			//	b.SetVertex(e.Src, sg.V[e.Src].Color, src)
+			//	b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
+			//}))
 		}
 	} else {
 		panic("unreachable")

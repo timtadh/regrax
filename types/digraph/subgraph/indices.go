@@ -61,13 +61,13 @@ func (indices *Indices) HasEdge(srcId, targId, color int) bool {
 	return has
 }
 
-func (indices *Indices) TargsFromSrc(srcId, edgeColor, targColor int, excludeIds []int) []int {
+func (indices *Indices) TargsFromSrc(srcId, edgeColor, targColor int, excludeIds *IdNode) []int {
 	// exclude := intSet(excludeIds)
 	targs := make([]int, 0, 10)
 outer:
 	for _, targId := range indices.SrcIndex[IdColorColor{srcId, edgeColor, targColor}] {
-		for _, eid := range excludeIds {
-			if eid == targId {
+		for c := excludeIds; c != nil; c = c.Prev {
+			if targId == c.Id {
 				continue outer
 			}
 		}
@@ -77,13 +77,13 @@ outer:
 	return targs
 }
 
-func (indices *Indices) SrcsToTarg(targId, edgeColor, srcColor int, excludeIds []int) []int {
+func (indices *Indices) SrcsToTarg(targId, edgeColor, srcColor int, excludeIds *IdNode) []int {
 	// exclude := intSet(excludeIds)
 	srcs := make([]int, 0, 10)
 outer:
 	for _, srcId := range indices.TargIndex[IdColorColor{targId, edgeColor, srcColor}] {
-		for _, eid := range excludeIds {
-			if eid == srcId {
+		for c := excludeIds; c != nil; c = c.Prev {
+			if srcId == c.Id {
 				continue outer
 			}
 		}

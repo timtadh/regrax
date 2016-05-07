@@ -66,14 +66,14 @@ func (o *Overlap) SupportedEmbeddings(indices *Indices) []*Embedding {
 				embs = append(embs, item.b.Build())
 				break
 			}
-			b := item.b
-			e := chain[item.eid]
-			exts, addedIdx := o.SG.extendEmbedding(indices, b, e)
-			for _, ext := range exts {
-				if addedIdx < 0 || o.Ids[addedIdx].Has(types.Int(ext.Ids[addedIdx])) {
-					stack = append(stack, entry{ext, item.eid+1})
-				}
-			}
+			// b := item.b
+			// e := chain[item.eid]
+			// exts, addedIdx := o.SG.extendEmbedding(indices, b, e)
+			// for _, ext := range exts {
+			// 	if addedIdx < 0 || o.Ids[addedIdx].Has(types.Int(ext.Ids[addedIdx])) {
+			// 		stack = append(stack, entry{ext, item.eid+1})
+			// 	}
+			// }
 		}
 	}
 	return embs

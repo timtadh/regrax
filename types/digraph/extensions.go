@@ -197,18 +197,13 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 	seen := make(map[int]bool)
 	ei, err := subgraph.FilterAutomorphs(pattern.IterEmbeddings(
 		dt.Indices,
-		func(lcv int, chain []*subgraph.Edge) func(b *subgraph.FillableEmbeddingBuilder) bool {
-			return func(b *subgraph.FillableEmbeddingBuilder) bool {
-				for _, id := range b.Ids {
-					if id < 0 {
-						continue
-					}
-					if _, has := seen[id]; !has {
-						return false
-					}
+		func(ids *subgraph.IdNode) bool {
+			for c := ids; c != nil; c = c.Prev {
+				if _, has := seen[c.Id]; !has {
+					return false
 				}
-				return true
 			}
+			return true
 	}))
 	if err != nil {
 		return 0, nil, nil, err
