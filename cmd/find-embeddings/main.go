@@ -157,17 +157,24 @@ func run() int {
 		}()
 	}
 
-	
+	prune := 0
 	seen := make(map[int]bool)
 	ei, err := subgraph.FilterAutomorphs(sg.IterEmbeddings(
 		graph.Indices,
 		func(ids *subgraph.IdNode) bool {
-			for c := ids; c != nil; c = c.Prev {
-				if _, has := seen[c.Id]; !has {
-					return false
+			res := func(ids *subgraph.IdNode) bool {
+				for c := ids; c != nil; c = c.Prev {
+					if _, has := seen[c.Id]; !has {
+						return false
+					}
 				}
+				return true
+			}(ids)
+			if prune % 1000000 == 0 {
+				errors.Logf("INFO", "prune %v %v %v", prune, res, ids)
 			}
-			return true
+			prune++
+			return res
 	}))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error constructing the embedding iterator\n")

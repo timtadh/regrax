@@ -1,6 +1,9 @@
 package subgraph
 
-import ()
+import (
+	"fmt"
+	"strings"
+)
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -118,20 +121,20 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 		// is super slow because of copy (consider swap delete)
 		// sampleSize := 5
 		// maxIter := 25
-		// unseenCount := func(ids []int) float64 {
-		// 	total := 0.0
-		// 	for _, id := range ids {
-		// 		if _, has := seen[id]; !has {
-		// 			total += 1.0
+		// unseenCount := func(ids *IdNode) int {
+		// 	total := 0
+		// 	for c := ids; c != nil; c = c.Prev {
+		// 		if _, has := seen[c.Id]; !has {
+		// 			total += 1
 		// 		}
 		// 	}
 		// 	return total
 		// }
 		// var idx int
 		// if len(stack) <= maxIter {
-		// 	max := -1.0
+		// 	max := -1
 		// 	for i, e := range stack {
-		// 		c := unseenCount(e.emb.Ids)
+		// 		c := unseenCount(e.ids)
 		// 		if c > max {
 		// 			idx = i
 		// 			max = c
@@ -139,12 +142,12 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 		// 	}
 		// } else {
 		// 	idx, _ = stats.Max(append(stats.ReplacingSample(sampleSize + 1, len(stack)-1), len(stack)-1), func(i int) float64 {
-		// 		return unseenCount(stack[i].emb.Ids)
+		// 		return float64(unseenCount(stack[i].ids))
 		// 	})
 		// }
 		// e := stack[idx]
-		// copy(stack[idx : len(stack)-1], stack[idx+1 : len(stack)])
-		// return e, stack[0 : len(stack)-1]
+		// stack[idx] = stack[len(stack) - 1]
+		// return e, stack[0 : len(stack) - 1]
 	}
 
 	if len(sg.V) == 0 {
@@ -165,6 +168,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 	ei = func() (*Embedding, EmbIterator) {
 		for len(stack) > 0 {
 			var i entry
+			// errors.Logf("DEBUG", "stack %v", len(stack))
 			i, stack = pop(stack)
 			if prune != nil && prune(i.ids) {
 				continue
@@ -193,10 +197,9 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 			} else {
 				// ok extend the embedding
 				// errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
-				exts, _ := sg.extendEmbedding(indices, i.ids, chain[i.eid])
-				for _, ext := range exts {
+				sg.extendEmbedding(indices, i.ids, chain[i.eid], func(ext *IdNode) {
 					stack = append(stack, entry{ext, i.eid + 1})
-				}
+				})
 				// errors.Logf("DEBUG", "stack len %v", len(stack))
 			}
 		}
@@ -284,11 +287,24 @@ func (ids *IdNode) ids(srcIdx, targIdx int) (srcId, targId int) {
 	return srcId, targId
 }
 
-func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge) (exts []*IdNode, addedIdx int) {
+func (ids *IdNode) String() string {
+	items := make([]string, 0, 10)
+	for c := ids; c != nil; c = c.Prev {
+		items = append(items, fmt.Sprintf("<id: %v, idx: %v>", c.Id, c.Idx))
+	}
+	ritems := make([]string, len(items))
+	idx := len(items)-1
+	for _, item := range items {
+		ritems[idx] = item
+		idx--
+	}
+	return "{" + strings.Join(ritems, ", ") + "}"
+}
+
+func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, do func(*IdNode)) {
 	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
 	// exts := ext.NewCollector(-1)
 	// exts = make([]*FillableEmbeddingBuilder, 0, 10)
-	addedIdx = -1
 
 	// src := cur.V[e.Src].Idx
 	// targ := cur.V[e.Targ].Idx
@@ -301,35 +317,30 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge) (ext
 		// errors.Logf("EMB-DEBUG", "    add existing %v", e)
 		// if indices.HasEdge(cur.Ids[src], cur.Ids[targ], e.Color) {
 		if indices.HasEdge(srcId, targId, e.Color) {
-			exts = append(exts, cur)
+			do(cur)
 			// exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
 			// 	b.AddEdge(&cur.V[e.Src], &cur.V[e.Targ], e.Color)
 			// }))
 		}
 	} else if srcId != -1 {
-		addedIdx = e.Targ
-		targs := indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur)
-		for _, targId := range targs {
+		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur, func(targId int) {
 			// errors.Logf("EMB-DEBUG", "    add targ vertex, %v ke %v", e, ke)
-			exts = append(exts, &IdNode{Id: targId, Idx: e.Targ, Prev: cur})
+			do(&IdNode{Id: targId, Idx: e.Targ, Prev: cur})
 			//exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
 			//	b.SetVertex(e.Targ, sg.V[e.Targ].Color, targ)
 			//	b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 			//}))
-		}
+		})
 	} else if targId != -1 {
-		addedIdx = e.Src
-		srcs := indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur)
-		for _, srcId := range srcs {
-			exts = append(exts, &IdNode{Id: srcId, Idx: e.Src, Prev: cur})
+		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur, func(srcId int) {
+			do(&IdNode{Id: srcId, Idx: e.Src, Prev: cur})
 			// errors.Logf("EMB-DEBUG", "    add src vertex, %v pe %v", e, pe)
 			//exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
 			//	b.SetVertex(e.Src, sg.V[e.Src].Color, src)
 			//	b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 			//}))
-		}
+		})
 	} else {
 		panic("unreachable")
 	}
-	return exts, addedIdx
 }

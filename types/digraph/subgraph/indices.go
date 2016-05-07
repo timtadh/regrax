@@ -61,34 +61,24 @@ func (indices *Indices) HasEdge(srcId, targId, color int) bool {
 	return has
 }
 
-func (indices *Indices) TargsFromSrc(srcId, edgeColor, targColor int, excludeIds *IdNode) []int {
-	// exclude := intSet(excludeIds)
-	targs := make([]int, 0, 10)
-outer:
-	for _, targId := range indices.SrcIndex[IdColorColor{srcId, edgeColor, targColor}] {
+func (indices *Indices) TargsFromSrc(srcId, edgeColor, targColor int, excludeIds *IdNode, do func(int)) {
+outer: for _, targId := range indices.SrcIndex[IdColorColor{srcId, edgeColor, targColor}] {
 		for c := excludeIds; c != nil; c = c.Prev {
 			if targId == c.Id {
 				continue outer
 			}
 		}
-		// if !exclude.Has(types.Int(targId)) {
-		targs = append(targs, targId)
+		do(targId)
 	}
-	return targs
 }
 
-func (indices *Indices) SrcsToTarg(targId, edgeColor, srcColor int, excludeIds *IdNode) []int {
-	// exclude := intSet(excludeIds)
-	srcs := make([]int, 0, 10)
-outer:
-	for _, srcId := range indices.TargIndex[IdColorColor{targId, edgeColor, srcColor}] {
+func (indices *Indices) SrcsToTarg(targId, edgeColor, srcColor int, excludeIds *IdNode, do func(int)) {
+outer: for _, srcId := range indices.TargIndex[IdColorColor{targId, edgeColor, srcColor}] {
 		for c := excludeIds; c != nil; c = c.Prev {
 			if srcId == c.Id {
 				continue outer
 			}
 		}
-		// if !exclude.Has(types.Int(srcId)) {
-		srcs = append(srcs, srcId)
+		do(srcId)
 	}
-	return srcs
 }

@@ -8,7 +8,7 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/linked"
-	"github.com/timtadh/data-structures/set"
+	// "github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 )
 
@@ -95,9 +95,11 @@ func (o *Overlap) MinSupported() (support int, vIdxs []int) {
 }
 
 func (sg *SubGraph) extendOverlap(indices *Indices, b *FillableOverlapBuilder, e *Edge) (dirty *linked.UniqueDeque) {
+	/*
 	src := b.V[e.Src].Idx
 	targ := b.V[e.Targ].Idx
 
+	
 	if src == -1 && targ == -1 {
 		panic("src and targ == -1. Which means the edge chain was not connected.")
 	} else if src != -1 && targ != -1 {
@@ -105,24 +107,25 @@ func (sg *SubGraph) extendOverlap(indices *Indices, b *FillableOverlapBuilder, e
 	} else if src != -1 {
 		targs := set.NewSortedSet(10)
 		for srcId, next := b.Ids[src].Items()(); next != nil; srcId, next = next() {
-			for _, targ := range indices.TargsFromSrc(int(srcId.(types.Int)), e.Color, sg.V[e.Targ].Color, nil) {
+			indices.TargsFromSrc(int(srcId.(types.Int)), e.Color, sg.V[e.Targ].Color, nil, func(targ int) {
 				targs.Add(types.Int(targ))
-			}
+			})
 		}
 		b.SetVertex(e.Targ, sg.V[e.Targ].Color, targs)
 		b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 	} else if targ != -1 {
 		srcs := set.NewSortedSet(10)
 		for targId, next := b.Ids[targ].Items()(); next != nil; targId, next = next() {
-			for _, targ := range indices.SrcsToTarg(int(targId.(types.Int)), e.Color, sg.V[e.Src].Color, nil) {
-				srcs.Add(types.Int(targ))
-			}
+			indices.SrcsToTarg(int(targId.(types.Int)), e.Color, sg.V[e.Src].Color, nil, func(src int) {
+				srcs.Add(types.Int(src))
+			})
 		}
 		b.SetVertex(e.Src, sg.V[e.Src].Color, srcs)
 		b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
 	} else {
 		panic("unreachable")
 	}
+	*/
 	dirty = linked.NewUniqueDeque()
 	dirty.Push(types.Int(e.Src))
 	dirty.Push(types.Int(e.Targ))
