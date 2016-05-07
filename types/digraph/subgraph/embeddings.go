@@ -2,12 +2,14 @@ package subgraph
 
 import (
 	"fmt"
+	// "math/rand"
 	"strings"
 )
 
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
+	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/list"
 	"github.com/timtadh/data-structures/linked"
 	"github.com/timtadh/data-structures/types"
@@ -96,58 +98,30 @@ func (ids *IdNode) list(length int) []int {
 	return l
 }
 
+func (ids *IdNode) idSet(length int) *set.SortedSet {
+	s := set.NewSortedSet(length)
+	for c := ids; c != nil; c = c.Prev {
+		s.Add(types.Int(c.Id))
+	}
+	return s
+}
+
+func (ids *IdNode) has(id, idx int) bool {
+	for c := ids; c != nil; c = c.Prev {
+		if id == c.Id && idx == c.Idx {
+			return true
+		}
+	}
+	return false
+}
+
 func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (ei EmbIterator, err error) {
 	type entry struct {
 		ids *IdNode
 		eid int
 	}
-	// seen := set.NewSetMap(hashtable.NewLinearHash())
-	seen := make(map[int]bool)
-	// clean := func(stack []entry, prune func(*FillableEmbeddingBuilder) bool) ([]entry) {
-	// 	if prune == nil {
-	// 		return stack
-	// 	}
-	// 	cleaned := make([]entry, 0, len(stack))
-	// 	for _, e := range stack {
-	// 		if !prune(e.emb) {
-	// 			cleaned = append(cleaned, e)
-	// 		}
-	// 	}
-	// 	return cleaned
-	// }
 	pop := func(stack []entry) (entry, []entry) {
-		// remove to enable information maximization stack pop
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
-		// is super slow because of copy (consider swap delete)
-		// sampleSize := 5
-		// maxIter := 25
-		// unseenCount := func(ids *IdNode) int {
-		// 	total := 0
-		// 	for c := ids; c != nil; c = c.Prev {
-		// 		if _, has := seen[c.Id]; !has {
-		// 			total += 1
-		// 		}
-		// 	}
-		// 	return total
-		// }
-		// var idx int
-		// if len(stack) <= maxIter {
-		// 	max := -1
-		// 	for i, e := range stack {
-		// 		c := unseenCount(e.ids)
-		// 		if c > max {
-		// 			idx = i
-		// 			max = c
-		// 		}
-		// 	}
-		// } else {
-		// 	idx, _ = stats.Max(append(stats.ReplacingSample(sampleSize + 1, len(stack)-1), len(stack)-1), func(i int) float64 {
-		// 		return float64(unseenCount(stack[i].ids))
-		// 	})
-		// }
-		// e := stack[idx]
-		// stack[idx] = stack[len(stack) - 1]
-		// return e, stack[0 : len(stack) - 1]
 	}
 
 	if len(sg.V) == 0 {
@@ -156,7 +130,10 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 		}
 		return ei, nil
 	}
-	startIdx := sg.leastFrequentVertex(indices)
+	// startIdx := sg.leastFrequentVertex(indices)
+	// startIdx := rand.Intn(len(sg.V))
+	// startIdx := sg.mostConnected()
+	startIdx := sg.leastConnected()
 	chain := sg.edgeChain(startIdx)
 	vembs := sg.startEmbeddings(indices, startIdx)
 
@@ -164,6 +141,11 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 	for _, vemb := range vembs {
 		stack = append(stack, entry{vemb, 0})
 	}
+
+	type idxId struct {
+		idx, id int
+	}
+
 
 	ei = func() (*Embedding, EmbIterator) {
 		for len(stack) > 0 {
@@ -181,12 +163,9 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 					Ids: i.ids.list(len(sg.V)),
 				}
 				// errors.Logf("FOUND", "\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
-				// if !emb.Exists(indices.G) {
-				// 	errors.Logf("FOUND", "NOT EXISTS\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
-				// 	panic("wat")
-				// }
-				for _, id := range emb.Ids {
-					seen[id] = true
+				if !emb.Exists(indices.G) {
+					errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", i.ids, emb, emb.SG)
+					panic("wat")
 				}
 				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
@@ -221,22 +200,44 @@ func (sg *SubGraph) leastFrequentVertex(indices *Indices) int {
 	return minIdx
 }
 
+func (sg *SubGraph) mostConnected() int {
+	maxAdj := 0
+	maxIdx := 0
+	for idx, adj := range sg.Adj {
+		if maxAdj < len(adj) {
+			maxAdj = len(adj)
+			maxIdx = idx
+		}
+	}
+	return maxIdx
+}
+
+func (sg *SubGraph) leastConnected() int {
+	minAdj := 0
+	minIdx := -1
+	for idx, adj := range sg.Adj {
+		if minIdx < 0 || minAdj > len(adj) {
+			minAdj = len(adj)
+			minIdx = idx
+		}
+	}
+	return minIdx
+}
+
 func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 	color := sg.V[startIdx].Color
 	embs := make([]*IdNode, 0, indices.G.ColorFrequency(color))
 	for _, gIdx := range indices.ColorIndex[color] {
 		embs = append(embs, &IdNode{Id: gIdx, Idx: startIdx})
-		// embs = append(embs,
-		// 	BuildEmbedding(len(sg.V), len(sg.E)).Fillable().
-		// 		Ctx(func(b *FillableEmbeddingBuilder) {
-		// 			b.SetVertex(startIdx, color, gIdx)
-		// 		}))
 	}
 	return embs
 }
 
 // this is really a breadth first search from the given idx
 func (sg *SubGraph) edgeChain(startIdx int) []*Edge {
+	if startIdx >= len(sg.V) {
+		panic("startIdx out of range")
+	}
 	edges := make([]*Edge, 0, len(sg.E))
 	added := make(map[int]bool, len(sg.E))
 	seen := make(map[int]bool, len(sg.V))
@@ -260,8 +261,13 @@ func (sg *SubGraph) edgeChain(startIdx int) []*Edge {
 			}
 		}
 		for _, e := range sg.Adj[u] {
-			queue.EnqueFront(types.Int(sg.E[e].Src))
-			queue.EnqueFront(types.Int(sg.E[e].Targ))
+			if len(sg.Adj[sg.E[e].Src]) < len(sg.Adj[sg.E[e].Targ]) {
+				queue.EnqueFront(types.Int(sg.E[e].Src))
+				queue.EnqueFront(types.Int(sg.E[e].Targ))
+			} else {
+				queue.EnqueFront(types.Int(sg.E[e].Targ))
+				queue.EnqueFront(types.Int(sg.E[e].Src))
+			}
 		}
 	}
 	if len(edges) != len(sg.E) {
@@ -302,43 +308,21 @@ func (ids *IdNode) String() string {
 }
 
 func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, do func(*IdNode)) {
-	// errors.Logf("DEBUG", "extend emb %v with %v", cur.Label(), e)
-	// exts := ext.NewCollector(-1)
-	// exts = make([]*FillableEmbeddingBuilder, 0, 10)
-
-	// src := cur.V[e.Src].Idx
-	// targ := cur.V[e.Targ].Idx
 	srcId, targId := cur.ids(e.Src, e.Targ)
-
 	if srcId == -1 && targId == -1 {
 		panic("src and targ == -1. Which means the edge chain was not connected.")
 	} else if srcId != -1 && targId != -1 {
 		// both src and targ are in the builder so we can just add this edge
-		// errors.Logf("EMB-DEBUG", "    add existing %v", e)
-		// if indices.HasEdge(cur.Ids[src], cur.Ids[targ], e.Color) {
 		if indices.HasEdge(srcId, targId, e.Color) {
 			do(cur)
-			// exts = append(exts, cur.Ctx(func(b *FillableEmbeddingBuilder) {
-			// 	b.AddEdge(&cur.V[e.Src], &cur.V[e.Targ], e.Color)
-			// }))
 		}
 	} else if srcId != -1 {
 		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur, func(targId int) {
-			// errors.Logf("EMB-DEBUG", "    add targ vertex, %v ke %v", e, ke)
 			do(&IdNode{Id: targId, Idx: e.Targ, Prev: cur})
-			//exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
-			//	b.SetVertex(e.Targ, sg.V[e.Targ].Color, targ)
-			//	b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
-			//}))
 		})
 	} else if targId != -1 {
 		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur, func(srcId int) {
 			do(&IdNode{Id: srcId, Idx: e.Src, Prev: cur})
-			// errors.Logf("EMB-DEBUG", "    add src vertex, %v pe %v", e, pe)
-			//exts = append(exts, cur.Copy().Ctx(func(b *FillableEmbeddingBuilder) {
-			//	b.SetVertex(e.Src, sg.V[e.Src].Color, src)
-			//	b.AddEdge(&b.V[e.Src], &b.V[e.Targ], e.Color)
-			//}))
 		})
 	} else {
 		panic("unreachable")

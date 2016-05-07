@@ -140,7 +140,7 @@ func TestEmbChildren(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// x.Equal(2, len(kids),  "should have 2 kids got %v", kids)
+	x.Equal(2, len(kids),  "should have 2 kids got %v", kids)
 	/// stopping this exercise here.
 }
 
