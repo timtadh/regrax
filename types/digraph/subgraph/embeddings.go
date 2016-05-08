@@ -133,7 +133,17 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 	// startIdx := sg.leastFrequentVertex(indices)
 	// startIdx := rand.Intn(len(sg.V))
 	// startIdx := sg.mostConnected()
-	startIdx := sg.leastConnected()
+	startIdx := sg.leastConnectedAndExts(indices)
+	// if len(sg.E) > 0 {
+	// 	errors.Logf("DEBUG", "startIdx %v adj %v freq %v label %v", startIdx, sg.Adj[startIdx], indices.G.ColorFrequency(sg.V[startIdx].Color), indices.G.Colors[sg.V[startIdx].Color])
+	// 	leastFr := sg.leastFrequentVertex(indices)
+	// 	errors.Logf("DEBUG", "leastFr %v adj %v freq %v label %v", leastFr, sg.Adj[leastFr], indices.G.ColorFrequency(sg.V[leastFr].Color), indices.G.Colors[sg.V[leastFr].Color])
+	// 	most := sg.mostConnected()
+	// 	errors.Logf("DEBUG", "most %v adj %v freq %v label %v", most, sg.Adj[most], indices.G.ColorFrequency(sg.V[most].Color), indices.G.Colors[sg.V[most].Color])
+	// 	leastC := sg.leastConnected()[0]
+	// 	errors.Logf("DEBUG", "leastC %v adj %v freq %v label %v", leastC, sg.Adj[leastC], indices.G.ColorFrequency(sg.V[leastC].Color), indices.G.Colors[sg.V[leastC].Color])
+	// }
+
 	chain := sg.edgeChain(startIdx)
 	vembs := sg.startEmbeddings(indices, startIdx)
 
@@ -212,17 +222,53 @@ func (sg *SubGraph) mostConnected() int {
 	return maxIdx
 }
 
-func (sg *SubGraph) leastConnected() int {
+func (sg *SubGraph) leastConnectedAndFrequent(indices *Indices) int {
 	minAdj := 0
 	minIdx := -1
+	minFreq := -1
 	for idx, adj := range sg.Adj {
-		if minIdx < 0 || minAdj > len(adj) {
+		f := indices.G.ColorFrequency(sg.V[idx].Color)
+		if minIdx < 0 || minAdj > len(adj) || (minAdj == len(adj) && minFreq > f) {
 			minAdj = len(adj)
+			minFreq = f
 			minIdx = idx
 		}
 	}
 	return minIdx
 }
+
+func (sg *SubGraph) leastConnected() []int {
+	minAdj := 0
+	minIdx := make([]int, 0, 10)
+	for idx, adj := range sg.Adj {
+		if len(minIdx) == 0 || minAdj > len(adj) {
+			minAdj = len(adj)
+			minIdx = minIdx[:0]
+		}
+		if minAdj == len(adj) {
+			minIdx = append(minIdx, idx)
+		}
+	}
+	return minIdx
+}
+
+func (sg *SubGraph) leastConnectedAndExts(indices *Indices) int {
+	c := sg.leastConnected()
+	if len(c) == 1 {
+		return c[0]
+	}
+	minExts := -1
+	minIdx := -1
+	for _, idx := range c {
+		exts := sg.extensionsFrom(indices, idx)
+		if minIdx == -1 || minExts > exts {
+			minExts = exts
+			minIdx = idx
+		}
+	}
+	return minIdx
+}
+
 
 func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 	color := sg.V[startIdx].Color
@@ -328,3 +374,17 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, do f
 		panic("unreachable")
 	}
 }
+
+func (sg *SubGraph) extensionsFrom(indices *Indices, idx int) int {
+	total := 0
+	for _, eid := range sg.Adj[idx] {
+		e := &sg.E[eid]
+		for _, id := range indices.ColorIndex[sg.V[idx].Color] {
+			sg.extendEmbedding(indices, &IdNode{Id: id, Idx: idx}, e, func(_ *IdNode) {
+				total++
+			})
+		}
+	}
+	return total
+}
+
