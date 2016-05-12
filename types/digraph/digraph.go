@@ -102,10 +102,11 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		CanonKidCount: canonKidCount,
 		Frequency:     frequency,
 		Indices: &subgraph.Indices{
-			ColorIndex:  make(map[int][]int),
-			SrcIndex:  make(map[subgraph.IdColorColor][]int),
-			TargIndex: make(map[subgraph.IdColorColor][]int),
-			EdgeIndex: make(map[subgraph.Edge]*goiso.Edge),
+			ColorIndex: make(map[int][]int),
+			SrcIndex:   make(map[subgraph.IdColorColor][]int),
+			TargIndex:  make(map[subgraph.IdColorColor][]int),
+			EdgeIndex:  make(map[subgraph.Edge]*goiso.Edge),
+			EdgeCounts: make(map[subgraph.Colors]int),
 		},
 		config: config,
 	}

@@ -34,6 +34,7 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices) {
 		SrcIndex:   make(map[IdColorColor][]int),
 		TargIndex:  make(map[IdColorColor][]int),
 		EdgeIndex:  make(map[Edge]*goiso.Edge),
+		EdgeCounts: make(map[Colors]int),
 	}
 
 	indices.InitEdgeIndices(G)

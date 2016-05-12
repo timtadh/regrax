@@ -36,6 +36,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/getopt"
 )
 
@@ -157,6 +158,7 @@ func run() int {
 		}()
 	}
 
+	/*
 	prune := 0
 	seen := make(map[int]bool)
 	ei, err := subgraph.FilterAutomorphs(sg.IterEmbeddings(
@@ -191,6 +193,32 @@ func run() int {
 		total++
 	}
 	errors.Logf("INFO", "total embeddings %v", total)
+	*/
+
+	sup, exts, embs, err := digraph.ExtsAndEmbs(graph, sg, set.NewSortedSet(0))
+	if err != nil {
+		errors.Logf("ERROR", "err: %v", err)
+		return 2
+	}
+	errors.Logf("INFO", "pat %v sup %v exts %v embs %v", sg, sup, len(exts), len(embs))
+	/*
+	errors.Logf("INFO", "")
+	errors.Logf("INFO", "")
+	errors.Logf("INFO", "")
+
+	node := digraph.NewEmbListNode(graph, sg, exts, embs)
+	kids, err := node.Children()
+	if err != nil {
+		errors.Logf("ERROR", "err: %v", err)
+		return 2
+	}
+	errors.Logf("INFO", "kids %v", len(kids))
+
+	for _, kid := range kids {
+		errors.Logf("INFO", "kid %v", kid)
+	}
+	*/
+
 
 	errors.Logf("INFO", "done")
 	return 0

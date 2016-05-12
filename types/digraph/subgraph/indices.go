@@ -13,12 +13,17 @@ type IdColorColor struct {
 	Id, EdgeColor, VertexColor int
 }
 
+type Colors struct {
+	SrcColor, TargColor, EdgeColor int
+}
+
 type Indices struct {
 	G          *goiso.Graph
 	ColorIndex map[int][]int          // Colors -> []Idx in G.V
 	SrcIndex   map[IdColorColor][]int // (SrcIdx, EdgeColor, TargColor) -> TargIdx (where Idx in G.V)
 	TargIndex  map[IdColorColor][]int // (TargIdx, EdgeColor, SrcColor) -> SrcIdx (where Idx in G.V)
 	EdgeIndex  map[Edge]*goiso.Edge
+	EdgeCounts map[Colors]int
 }
 
 func intSet(ints []int) types.Set {
@@ -42,9 +47,11 @@ func (indices *Indices) InitEdgeIndices(G *goiso.Graph) {
 		edge := Edge{Src: e.Src, Targ: e.Targ, Color: e.Color}
 		srcKey := IdColorColor{e.Src, e.Color, G.V[e.Targ].Color}
 		targKey := IdColorColor{e.Targ, e.Color, G.V[e.Src].Color}
+		colorKey := Colors{G.V[e.Src].Color, G.V[e.Targ].Color, e.Color}
 		indices.EdgeIndex[edge] = e
 		indices.SrcIndex[srcKey] = append(indices.SrcIndex[srcKey], e.Targ)
 		indices.TargIndex[targKey] = append(indices.TargIndex[targKey], e.Src)
+		indices.EdgeCounts[colorKey] += 1
 	}
 }
 
