@@ -192,7 +192,7 @@ func extsAndEmbs_1(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Se
 		}
 		return support, exts, embs, nil
 	}
-	if false {
+	if true {
 		errors.Logf("CACHE-DEBUG", "ExtsAndEmbs %v", pattern.Pretty(dt.G.Colors))
 	}
 	// compute the embeddings
