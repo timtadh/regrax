@@ -136,15 +136,15 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 	// startIdx := sg.leastConnectedAndExts(indices)
 	startIdx := sg.leastExts(indices)
 	// startIdx := 0
-	if len(sg.E) > 0 {
-		errors.Logf("DEBUG", "startIdx %v adj %v exts %v freq %v label %v", startIdx, sg.Adj[startIdx], sg.extensionsFrom(indices, startIdx, -1), indices.G.ColorFrequency(sg.V[startIdx].Color), indices.G.Colors[sg.V[startIdx].Color])
-		leastFr := sg.leastFrequentVertex(indices)
-		errors.Logf("DEBUG", "leastFr %v adj %v exts %v freq %v label %v", leastFr, sg.Adj[leastFr], sg.extensionsFrom(indices, leastFr, -1), indices.G.ColorFrequency(sg.V[leastFr].Color), indices.G.Colors[sg.V[leastFr].Color])
-		most := sg.mostConnected()
-		errors.Logf("DEBUG", "most %v adj %v exts %v freq %v label %v", most, sg.Adj[most], sg.extensionsFrom(indices, most, -1), indices.G.ColorFrequency(sg.V[most].Color), indices.G.Colors[sg.V[most].Color])
-		leastC := sg.leastConnected()[0]
-		errors.Logf("DEBUG", "leastC %v adj %v exts %v freq %v label %v", leastC, sg.Adj[leastC], sg.extensionsFrom(indices, leastC, -1), indices.G.ColorFrequency(sg.V[leastC].Color), indices.G.Colors[sg.V[leastC].Color])
-	}
+	// if len(sg.E) > 0 {
+	// 		errors.Logf("DEBUG", "startIdx %v adj %v exts %v freq %v label %v", startIdx, sg.Adj[startIdx], sg.extensionsFrom(indices, startIdx, -1), indices.G.ColorFrequency(sg.V[startIdx].Color), indices.G.Colors[sg.V[startIdx].Color])
+	// 		leastFr := sg.leastFrequentVertex(indices)
+	// 		errors.Logf("DEBUG", "leastFr %v adj %v exts %v freq %v label %v", leastFr, sg.Adj[leastFr], sg.extensionsFrom(indices, leastFr, -1), indices.G.ColorFrequency(sg.V[leastFr].Color), indices.G.Colors[sg.V[leastFr].Color])
+	// 		most := sg.mostConnected()
+	// 		errors.Logf("DEBUG", "most %v adj %v exts %v freq %v label %v", most, sg.Adj[most], sg.extensionsFrom(indices, most, -1), indices.G.ColorFrequency(sg.V[most].Color), indices.G.Colors[sg.V[most].Color])
+	// 		leastC := sg.leastConnected()[0]
+	// 		errors.Logf("DEBUG", "leastC %v adj %v exts %v freq %v label %v", leastC, sg.Adj[leastC], sg.extensionsFrom(indices, leastC, -1), indices.G.ColorFrequency(sg.V[leastC].Color), indices.G.Colors[sg.V[leastC].Color])
+	// 	}
 
 	chain := sg.edgeChain(indices, startIdx)
 	vembs := sg.startEmbeddings(indices, startIdx)
@@ -164,12 +164,12 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 			var i entry
 			i, stack = pop(stack)
 			if prune != nil && prune(i.ids) {
-				errors.Logf("PRUNE", "ids %v", i.ids)
+				// errors.Logf("PRUNE", "ids %v", i.ids)
 				continue
 			}
-			if len(sg.E) > 0 && i.eid < 9 {
-				errors.Logf("DEBUG", "stack %v %v", len(stack), i.ids)
-			}
+			// if len(sg.E) > 0 && i.eid < 9 {
+			// 	errors.Logf("DEBUG", "stack %v %v", len(stack), i.ids)
+			// }
 			// otherwise success we have an embedding we haven't seen
 			if i.eid >= len(chain) {
 				// check that this is the subgraph we sought
@@ -177,9 +177,9 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 					SG: sg,
 					Ids: i.ids.list(len(sg.V)),
 				}
-				if len(sg.E) > 0 {
-					errors.Logf("FOUND-DEBUG", "ids %v", i.ids)
-				}
+				// if len(sg.E) > 0 {
+				// 	errors.Logf("FOUND-DEBUG", "ids %v", i.ids)
+				// }
 				// errors.Logf("FOUND", "\n  builder %v %v\n    built %v\n  pattern %v", i.emb.Builder, i.emb.Ids, emb, emb.SG)
 				if !emb.Exists(indices.G) {
 					errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", i.ids, emb, emb.SG)
@@ -343,9 +343,9 @@ func (sg *SubGraph) edgeChain(indices *Indices, startIdx int) []*Edge {
 				}
 			}
 		}
-		if len(sg.E) > 0 {
-			errors.Logf("DEBUG", "vertex %v", u)
-		}
+		// if len(sg.E) > 0 {
+		// 	errors.Logf("DEBUG", "vertex %v", u)
+		// }
 		seen[u] = true
 		for i, e := range sg.Adj[u] {
 			v := other(u, e)
@@ -374,9 +374,9 @@ func (sg *SubGraph) edgeChain(indices *Indices, startIdx int) []*Edge {
 					// p += indices.EdgeCounts[Colors{SrcColor: s, TargColor: t, EdgeColor: a.Color}]
 				}
 			}
-			if len(sg.E) > 0 {
-				errors.Logf("DEBUG", "add p %v vertex %v", p, v)
-			}
+			// if len(sg.E) > 0 {
+			// 	errors.Logf("DEBUG", "add p %v vertex %v", p, v)
+			// }
 			queue.Add(p, types.Int(v))
 		}
 		prevs = append(prevs, u)
@@ -391,14 +391,14 @@ func (sg *SubGraph) edgeChain(indices *Indices, startIdx int) []*Edge {
 		panic("assert-fail: len(edges) != len(sg.E)")
 	}
 
-	if len(sg.E) > 0 {
-		errors.Logf("DEBUG", "edge chain seen %v", seen)
-		errors.Logf("DEBUG", "edge chain added %v", added)
-		for _, e := range edges {
-			errors.Logf("DEBUG", "edge %v", e)
-		}
-		// panic("wat")
-	}
+	// if len(sg.E) > 0 {
+	// 	errors.Logf("DEBUG", "edge chain seen %v", seen)
+	// 	errors.Logf("DEBUG", "edge chain added %v", added)
+	// 	for _, e := range edges {
+	// 		errors.Logf("DEBUG", "edge %v", e)
+	// 	}
+	// 	// panic("wat")
+	// }
 	return edges
 }
 
