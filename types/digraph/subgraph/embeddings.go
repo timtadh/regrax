@@ -134,8 +134,8 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 	// startIdx := rand.Intn(len(sg.V))
 	// startIdx := sg.mostConnected()
 	// startIdx := sg.leastConnectedAndExts(indices)
-	// startIdx := sg.leastExts(indices)
-	startIdx := sg.mostExts(indices)
+	startIdx := sg.leastExts(indices)
+	// startIdx := sg.mostExts(indices)
 	// startIdx := sg.mostCard(indices)
 	// startIdx := 0
 	// if len(sg.E) > 0 {
