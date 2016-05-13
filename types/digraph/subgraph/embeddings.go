@@ -139,7 +139,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 	// startIdx := sg.mostCard(indices)
 	// startIdx := 0
 	// if len(sg.E) > 0 {
-	// 	// startIdx = 8
+	// 	// startIdx = 2
 	// 	errors.Logf("DEBUG", "startIdx %v adj %v exts %v freq %v label %v", startIdx, sg.Adj[startIdx], sg.extensionsFrom(indices, startIdx, -1), indices.G.ColorFrequency(sg.V[startIdx].Color), indices.G.Colors[sg.V[startIdx].Color])
 	// 	leastFr := sg.leastFrequentVertex(indices)
 	// 	errors.Logf("DEBUG", "leastFr %v adj %v exts %v freq %v label %v", leastFr, sg.Adj[leastFr], sg.extensionsFrom(indices, leastFr, -1), indices.G.ColorFrequency(sg.V[leastFr].Color), indices.G.Colors[sg.V[leastFr].Color])
@@ -295,11 +295,14 @@ func (sg *SubGraph) leastConnectedAndExts(indices *Indices) int {
 
 func (sg *SubGraph) leastExts(indices *Indices) int {
 	minExts := -1
+	minFreq := -1
 	minIdx := -1
 	for idx := range sg.V {
+		freq := indices.G.ColorFrequency(sg.V[idx].Color)
 		exts := sg.extensionsFrom(indices, idx)
-		if minIdx == -1 || minExts > exts {
+		if minIdx == -1 || minExts > exts || (minExts == exts && minFreq > freq) {
 			minExts = exts
+			minFreq = freq
 			minIdx = idx
 		}
 	}
