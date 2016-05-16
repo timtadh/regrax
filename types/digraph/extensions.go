@@ -135,6 +135,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 	if CACHE_DEBUG || debug {
 		errors.Logf("CACHE-DEBUG", "ExtsAndEmbs %v", pattern.Pretty(dt.G.Colors))
 	}
+
 	// compute the embeddings
 	var seen map[int]bool = nil
 	var err error
@@ -160,8 +161,9 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 		return 0, nil, nil, errors.Errorf("Unknown mode %v", mode)
 	}
 	if err != nil {
-			return 0, nil, nil, err
+		return 0, nil, nil, err
 	}
+
 	exts := set.NewSetMap(hashtable.NewLinearHash())
 	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
 		if unsupported.Has(ext) {
@@ -171,14 +173,10 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 	})
 	sets := make([]*hashtable.LinearHash, len(pattern.V))
 
-	total := 0
 	// add the supported embeddings to the vertex sets
 	// add the extensions to the extensions set
-	// errors.Logf("DEBUG", "parent %v", parent)
-	// errors.Logf("DEBUG", "computing embeddings %v", pattern.Pretty(dt.G.Colors))
-	// errors.Logf("DEBUG", "computing embeddings %v", pattern)
+	total := 0
 	for emb, next := ei(); next != nil; emb, next = next() {
-		// errors.Logf("DEBUG", "emb %v", emb)
 		for idx, id := range emb.Ids {
 			if seen != nil {
 				seen[id] = true
@@ -198,11 +196,6 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 			}
 		}
 		total++
-		// const limit = 10000
-		// if total > limit {
-		// 	errors.Logf("WARNING", "skipping the rest of the embeddings for %v (over %v)", pattern, limit)
-		// 	break
-		// }
 	}
 
 	if total == 0 {
@@ -215,14 +208,11 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 		ext := i.(*subgraph.Extension)
 		extensions = append(extensions, ext)
 	}
-	// errors.Logf("DEBUG", "----   exts %v", exts)
 
-	// errors.Logf("DEBUG", "pattern %v len sets %v sets %v", pattern, len(sets), sets)
 	// compute the minimally supported vertex
 	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
 		return float64(sets[i].Size())
 	})
-	// errors.Logf("DEBUG", "----   support %v", size)
 
 	// construct the embeddings output slice
 	embeddings := make([]*subgraph.Embedding, 0, int(size)+1)
@@ -231,9 +221,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 		embeddings = append(embeddings, emb)
 	}
 
-	// errors.Logf("DEBUG", "pat %v total-embeddings %v supported %v unique-ext %v", pattern, total, len(embeddings), len(extensions))
 
-	// return it all
 	if CACHE_DEBUG || debug {
 		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.G.Colors))
 	}
