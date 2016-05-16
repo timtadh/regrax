@@ -15,12 +15,13 @@ import (
 
 const CACHE_DEBUG = false
 
-type Mode uint8
+type Mode uint64
 
 const (
-	Automorphs = iota
+	Automorphs = 1 << iota
 	NoAutomorphs
 	OptimisticPruning
+	OverlapPruning
 )
 
 // YOU ARE HERE:
@@ -86,15 +87,15 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 }
 
 // unique extensions and supported embeddings
-func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
+func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[int]bool, unsupported types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
 	if !debug {
-		if has, support, exts, embs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
-			return 0, nil, nil, err
+		if has, support, exts, embs, overlap, err := loadCachedExtsEmbs(dt, pattern); err != nil {
+			return 0, nil, nil, nil, err
 		} else if has {
 			if false {
 				errors.Logf("LOAD-DEBUG", "Loaded cached %v exts %v embs %v", pattern, len(exts), len(embs))
 			}
-			return support, exts, embs, nil
+			return support, exts, embs, overlap, nil
 		}
 	}
 	if CACHE_DEBUG || debug {
@@ -105,15 +106,16 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 	var seen map[int]bool = nil
 	var err error
 	var ei subgraph.EmbIterator
-	switch mode {
-	case Automorphs:
-		ei, err = pattern.IterEmbeddings(dt.Indices, nil)
-	case NoAutomorphs:
-		ei, err = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, nil))
-	case OptimisticPruning:
+	switch {
+	case mode & Automorphs == Automorphs:
+		ei, err = pattern.IterEmbeddings(dt.Indices, patternOverlap, nil)
+	case mode & NoAutomorphs == NoAutomorphs:
+		ei, err = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, patternOverlap, nil))
+	case mode & OptimisticPruning == OptimisticPruning:
 		seen = make(map[int]bool)
 		ei, err = pattern.IterEmbeddings(
 			dt.Indices,
+			patternOverlap,
 			func(ids *subgraph.IdNode) bool {
 				for c := ids; c != nil; c = c.Prev {
 					if _, has := seen[c.Id]; !has {
@@ -123,10 +125,10 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 				return true
 		})
 	default:
-		return 0, nil, nil, errors.Errorf("Unknown mode %v", mode)
+		return 0, nil, nil, nil, errors.Errorf("Unknown mode %v", mode)
 	}
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, nil, nil, nil, err
 	}
 
 	exts := set.NewSetMap(hashtable.NewLinearHash())
@@ -164,7 +166,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 	}
 
 	if total == 0 {
-		return 0, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
+		return 0, nil, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
 	}
 
 	// construct the extensions output slice
@@ -172,6 +174,19 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 	for i, next := exts.Items()(); next != nil; i, next = next() {
 		ext := i.(*subgraph.Extension)
 		extensions = append(extensions, ext)
+	}
+
+	// construct the overlap
+	var overlap []map[int]bool = nil
+	if dt.Overlap != nil {
+		overlap = make([]map[int]bool, 0, len(pattern.V))
+		for _, s := range sets {
+			o := make(map[int]bool, s.Size())
+			for x, next := s.Keys()(); next != nil; x, next = next() {
+				o[int(x.(types.Int))] = true
+			}
+			overlap = append(overlap, o)
+		}
 	}
 
 	// compute the minimally supported vertex
@@ -186,20 +201,19 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 		embeddings = append(embeddings, emb)
 	}
 
-
 	if CACHE_DEBUG || debug {
 		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.G.Colors))
 	}
 	if !debug {
-		err = cacheExtsEmbs(dt, pattern, len(embeddings), extensions, embeddings)
+		err = cacheExtsEmbs(dt, pattern, len(embeddings), extensions, embeddings, overlap)
 		if err != nil {
-			return 0, nil, nil, err
+			return 0, nil, nil, nil, err
 		}
 	}
-	return len(embeddings), extensions, embeddings, nil
+	return len(embeddings), extensions, embeddings, overlap, nil
 }
 
-func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding) error {
+func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return err
@@ -226,15 +240,21 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 			return err
 		}
 	}
+	if dt.Overlap != nil {
+		err = dt.Overlap.Add(pattern, overlap)
+		if err != nil {
+			return nil
+		}
+	}
 	return nil
 }
 
-func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, error) {
+func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
-		return false, 0, nil, nil, err
+		return false, 0, nil, nil, nil, err
 	} else if !has {
-		return false, 0, nil, nil, nil
+		return false, 0, nil, nil, nil, nil
 	}
 
 	support := 0
@@ -243,7 +263,7 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*
 		return nil
 	})
 	if err != nil {
-		return false, 0, nil, nil, err
+		return false, 0, nil, nil, nil, err
 	}
 
 	exts := make([]*subgraph.Extension, 0, 10)
@@ -252,7 +272,7 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*
 		return nil
 	})
 	if err != nil {
-		return false, 0, nil, nil, err
+		return false, 0, nil, nil, nil, err
 	}
 
 	embs := make([]*subgraph.Embedding, 0, 10)
@@ -261,8 +281,18 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*
 		return nil
 	})
 	if err != nil {
-		return false, 0, nil, nil, err
+		return false, 0, nil, nil, nil, err
+	}
+	var overlap []map[int]bool = nil
+	if dt.Overlap != nil {
+		err = dt.Overlap.DoFind(pattern, func(_ *subgraph.SubGraph, o []map[int]bool) error {
+			overlap = o
+			return nil
+		})
+		if err != nil {
+			return false, 0, nil, nil, nil, err
+		}
 	}
 
-	return true, support, exts, embs, nil
+	return true, support, exts, embs, overlap, nil
 }

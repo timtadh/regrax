@@ -42,7 +42,7 @@ func (sg *SubGraph) Embeddings(indices *Indices) ([]*Embedding, error) {
 }
 
 func (sg *SubGraph) DoEmbeddings(indices *Indices, do func(*Embedding) error) error {
-	ei, err := sg.IterEmbeddings(indices, nil)
+	ei, err := sg.IterEmbeddings(indices, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (ids *IdNode) has(id, idx int) bool {
 	return false
 }
 
-func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (ei EmbIterator, err error) {
+func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, err error) {
 	type entry struct {
 		ids *IdNode
 		eid int
@@ -134,22 +134,23 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 	// startIdx := rand.Intn(len(sg.V))
 	// startIdx := sg.mostConnected()
 	// startIdx := sg.leastConnectedAndExts(indices)
-	startIdx := sg.leastExts(indices)
-	// startIdx := sg.mostExts(indices)
+	startIdx := sg.leastExts(indices, overlap)
+	// startIdx := sg.mostExts(indices, overlap)
 	// startIdx := sg.mostCard(indices)
 	// startIdx := 0
 	// if len(sg.E) > 0 {
 	// 	// startIdx = 2
-	// 	errors.Logf("DEBUG", "startIdx %v adj %v exts %v freq %v label %v", startIdx, sg.Adj[startIdx], sg.extensionsFrom(indices, startIdx, -1), indices.G.ColorFrequency(sg.V[startIdx].Color), indices.G.Colors[sg.V[startIdx].Color])
+	// 	errors.Logf("DEBUG", "overlap %v", overlap)
+	// 	errors.Logf("DEBUG", "startIdx %v adj %v exts %v freq %v label %v", startIdx, sg.Adj[startIdx], sg.extensionsFrom(indices, overlap, startIdx, -1), indices.G.ColorFrequency(sg.V[startIdx].Color), indices.G.Colors[sg.V[startIdx].Color])
 	// 	leastFr := sg.leastFrequentVertex(indices)
-	// 	errors.Logf("DEBUG", "leastFr %v adj %v exts %v freq %v label %v", leastFr, sg.Adj[leastFr], sg.extensionsFrom(indices, leastFr, -1), indices.G.ColorFrequency(sg.V[leastFr].Color), indices.G.Colors[sg.V[leastFr].Color])
+	// 	errors.Logf("DEBUG", "leastFr %v adj %v exts %v freq %v label %v", leastFr, sg.Adj[leastFr], sg.extensionsFrom(indices, overlap, leastFr, -1), indices.G.ColorFrequency(sg.V[leastFr].Color), indices.G.Colors[sg.V[leastFr].Color])
 	// 	most := sg.mostConnected()
-	// 	errors.Logf("DEBUG", "most %v adj %v exts %v freq %v label %v", most, sg.Adj[most], sg.extensionsFrom(indices, most, -1), indices.G.ColorFrequency(sg.V[most].Color), indices.G.Colors[sg.V[most].Color])
+	// 	errors.Logf("DEBUG", "most %v adj %v exts %v freq %v label %v", most, sg.Adj[most], sg.extensionsFrom(indices, overlap, most, -1), indices.G.ColorFrequency(sg.V[most].Color), indices.G.Colors[sg.V[most].Color])
 	// 	leastC := sg.leastConnected()[0]
-	// 	errors.Logf("DEBUG", "leastC %v adj %v exts %v freq %v label %v", leastC, sg.Adj[leastC], sg.extensionsFrom(indices, leastC, -1), indices.G.ColorFrequency(sg.V[leastC].Color), indices.G.Colors[sg.V[leastC].Color])
+	// 	errors.Logf("DEBUG", "leastC %v adj %v exts %v freq %v label %v", leastC, sg.Adj[leastC], sg.extensionsFrom(indices, overlap, leastC, -1), indices.G.ColorFrequency(sg.V[leastC].Color), indices.G.Colors[sg.V[leastC].Color])
 	// }
 
-	chain := sg.edgeChain(indices, startIdx)
+	chain := sg.edgeChain(indices, overlap, startIdx)
 	vembs := sg.startEmbeddings(indices, startIdx)
 
 	stack := make([]entry, 0, len(vembs)*2)
@@ -197,7 +198,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prune func(*IdNode) bool) (
 			} else {
 				// ok extend the embedding
 				// errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
-				sg.extendEmbedding(indices, i.ids, chain[i.eid], func(ext *IdNode) {
+				sg.extendEmbedding(indices, i.ids, chain[i.eid], overlap, func(ext *IdNode) {
 					stack = append(stack, entry{ext, i.eid + 1})
 				})
 				// errors.Logf("DEBUG", "stack len %v", len(stack))
@@ -276,7 +277,7 @@ func (sg *SubGraph) leastConnected() []int {
 	return minIdx
 }
 
-func (sg *SubGraph) leastConnectedAndExts(indices *Indices) int {
+func (sg *SubGraph) leastConnectedAndExts(indices *Indices, overlap []map[int]bool) int {
 	c := sg.leastConnected()
 	if len(c) == 1 {
 		return c[0]
@@ -284,7 +285,7 @@ func (sg *SubGraph) leastConnectedAndExts(indices *Indices) int {
 	minExts := -1
 	minIdx := -1
 	for _, idx := range c {
-		exts := sg.extensionsFrom(indices, idx)
+		exts := sg.extensionsFrom(indices, overlap, idx)
 		if minIdx == -1 || minExts > exts {
 			minExts = exts
 			minIdx = idx
@@ -293,13 +294,13 @@ func (sg *SubGraph) leastConnectedAndExts(indices *Indices) int {
 	return minIdx
 }
 
-func (sg *SubGraph) leastExts(indices *Indices) int {
+func (sg *SubGraph) leastExts(indices *Indices, overlap []map[int]bool) int {
 	minExts := -1
 	minFreq := -1
 	minIdx := -1
 	for idx := range sg.V {
 		freq := indices.G.ColorFrequency(sg.V[idx].Color)
-		exts := sg.extensionsFrom(indices, idx)
+		exts := sg.extensionsFrom(indices, overlap, idx)
 		if minIdx == -1 || minExts > exts || (minExts == exts && minFreq > freq) {
 			minExts = exts
 			minFreq = freq
@@ -309,11 +310,11 @@ func (sg *SubGraph) leastExts(indices *Indices) int {
 	return minIdx
 }
 
-func (sg *SubGraph) mostExts(indices *Indices) int {
+func (sg *SubGraph) mostExts(indices *Indices, overlap []map[int]bool) int {
 	maxExts := -1
 	maxIdx := -1
 	for idx := range sg.V {
-		exts := sg.extensionsFrom(indices, idx)
+		exts := sg.extensionsFrom(indices, overlap, idx)
 		if maxIdx == -1 || maxExts < exts {
 			maxExts = exts
 			maxIdx = idx
@@ -332,7 +333,7 @@ func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 }
 
 // this is really a breadth first search from the given idx
-func (sg *SubGraph) edgeChain(indices *Indices, startIdx int) []*Edge {
+func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx int) []*Edge {
 	other := func(u int, e int) int {
 		s := sg.E[e].Src
 		t := sg.E[e].Targ
@@ -389,13 +390,13 @@ func (sg *SubGraph) edgeChain(indices *Indices, startIdx int) []*Edge {
 			// p = sg.vertexCard(indices, v)
 			// p = indices.G.ColorFrequency(sg.V[v].Color)
 			// p = len(sg.Adj[v]) - 1
-			extsFrom := sg.extensionsFrom(indices, v, u)
+			extsFrom := sg.extensionsFrom(indices, overlap, v, u)
 			p = extsFrom // +  + indices.G.ColorFrequency(sg.V[v].Color)
 			// p = extsFrom + len(sg.Adj[v]) - 1 + indices.G.ColorFrequency(sg.V[v].Color)
 			if extsFrom == 0 {
 				// p = // indices.G.ColorFrequency(sg.V[v].Color) // * sg.vertexCard(indices, v)
 				// p = sg.vertexCard(indices, v)
-				p = sg.extensionsFrom(indices, v)*4 // penalty for all targets being known
+				p = sg.extensionsFrom(indices, overlap, v)*4 // penalty for all targets being known
 			}
 			if !colors[v] {
 				p /= 2
@@ -403,7 +404,7 @@ func (sg *SubGraph) edgeChain(indices *Indices, startIdx int) []*Edge {
 			for _, aid := range sg.Adj[v] {
 				n := other(v, aid)
 				if !seen[n] {
-					p -= sg.extensionsFrom(indices, n, v, u)
+					p -= sg.extensionsFrom(indices, overlap, n, v, u)
 					// p += sg.vertexCard(indices, n)
 					// a := &sg.E[aid]
 					// s := sg.V[a.Src].Color
@@ -467,7 +468,14 @@ func (ids *IdNode) String() string {
 	return "{" + strings.Join(ritems, ", ") + "}"
 }
 
-func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, do func(*IdNode)) {
+func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []map[int]bool, do func(*IdNode)) {
+	doNew := func(newIdx, newId int) {
+		if o == nil || len(o[newIdx]) == 0 {
+			do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
+		} else if o[newIdx] != nil && o[newIdx][newId] {
+			do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
+		}
+	}
 	srcId, targId := cur.ids(e.Src, e.Targ)
 	if srcId == -1 && targId == -1 {
 		panic("src and targ == -1. Which means the edge chain was not connected.")
@@ -478,18 +486,18 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, do f
 		}
 	} else if srcId != -1 {
 		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur, func(targId int) {
-			do(&IdNode{Id: targId, Idx: e.Targ, Prev: cur})
+			doNew(e.Targ, targId)
 		})
 	} else if targId != -1 {
 		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur, func(srcId int) {
-			do(&IdNode{Id: srcId, Idx: e.Src, Prev: cur})
+			doNew(e.Src, srcId)
 		})
 	} else {
 		panic("unreachable")
 	}
 }
 
-func (sg *SubGraph) extensionsFrom(indices *Indices, idx int, excludeIdxs ...int) int {
+func (sg *SubGraph) extensionsFrom(indices *Indices, overlap []map[int]bool, idx int, excludeIdxs ...int) int {
 	total := 0
 outer:
 	for _, eid := range sg.Adj[idx] {
@@ -500,7 +508,7 @@ outer:
 			}
 		}
 		for _, id := range indices.ColorIndex[sg.V[idx].Color] {
-			sg.extendEmbedding(indices, &IdNode{Id: id, Idx: idx}, e, func(_ *IdNode) {
+			sg.extendEmbedding(indices, &IdNode{Id: id, Idx: idx}, e, overlap, func(_ *IdNode) {
 				total++
 			})
 		}
