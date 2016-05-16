@@ -19,14 +19,14 @@ type EmbListNode struct {
 	SubgraphPattern
 	extensions []*subgraph.Extension
 	embeddings []*subgraph.Embedding
-	overlap    [][]int
+	overlap    []map[int]bool
 }
 
 type Embedding struct {
 	sg *goiso.SubGraph
 }
 
-func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap [][]int) *EmbListNode {
+func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) *EmbListNode {
 	if embs != nil {
 		if exts == nil {
 			panic("nil exts")
@@ -36,7 +36,7 @@ func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Ex
 	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil}
 }
 
-func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap [][]int) Node {
+func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) Node {
 	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap)
 }
 
@@ -74,7 +74,7 @@ func (n *EmbListNode) Embeddings() ([]*subgraph.Embedding, error) {
 	return n.embeddings, nil
 }
 
-func (n *EmbListNode) Overlap() ([][]int, error) {
+func (n *EmbListNode) Overlap() ([]map[int]bool, error) {
 	return n.overlap, nil
 }
 

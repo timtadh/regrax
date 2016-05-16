@@ -87,7 +87,7 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 }
 
 // unique extensions and supported embeddings
-func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap [][]int, unsupported types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, [][]int, error) {
+func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[int]bool, unsupported types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
 	if !debug {
 		if has, support, exts, embs, overlap, err := loadCachedExtsEmbs(dt, pattern); err != nil {
 			return 0, nil, nil, nil, err
@@ -177,13 +177,13 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap [][]int
 	}
 
 	// construct the overlap
-	var overlap [][]int = nil
+	var overlap []map[int]bool = nil
 	if dt.Overlap != nil {
-		overlap = make([][]int, 0, len(pattern.V))
+		overlap = make([]map[int]bool, 0, len(pattern.V))
 		for _, s := range sets {
-			o := make([]int, 0, s.Size())
+			o := make(map[int]bool, s.Size())
 			for x, next := s.Keys()(); next != nil; x, next = next() {
-				o = append(o, int(x.(types.Int)))
+				o[int(x.(types.Int))] = true
 			}
 			overlap = append(overlap, o)
 		}
@@ -213,7 +213,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap [][]int
 	return len(embeddings), extensions, embeddings, overlap, nil
 }
 
-func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap [][]int) error {
+func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return err
@@ -249,7 +249,7 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 	return nil
 }
 
-func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, [][]int, error) {
+func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return false, 0, nil, nil, nil, err
@@ -283,9 +283,9 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*
 	if err != nil {
 		return false, 0, nil, nil, nil, err
 	}
-	var overlap [][]int = nil
+	var overlap []map[int]bool = nil
 	if dt.Overlap != nil {
-		err = dt.Overlap.DoFind(pattern, func(_ *subgraph.SubGraph, o [][]int) error {
+		err = dt.Overlap.DoFind(pattern, func(_ *subgraph.SubGraph, o []map[int]bool) error {
 			overlap = o
 			return nil
 		})

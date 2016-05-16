@@ -17,11 +17,11 @@ import (
 
 type Node interface {
 	lattice.Node
-	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, [][]int) Node
+	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool) Node
 	Label() []byte
 	Extensions() ([]*subgraph.Extension, error)
 	Embeddings() ([]*subgraph.Embedding, error)
-	Overlap() ([][]int, error)
+	Overlap() ([]map[int]bool, error)
 	UnsupportedExts() (*set.SortedSet, error)
 	SaveUnsupported(int, []int, *set.SortedSet) error
 	SubGraph() *subgraph.SubGraph
@@ -185,11 +185,11 @@ func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
 	return patterns, nil
 }
 
-func translateOverlap(org [][]int, vord []int) [][]int {
+func translateOverlap(org []map[int]bool, vord []int) []map[int]bool {
 	if org == nil {
 		return nil
 	}
-	neo := make([][]int, len(vord))
+	neo := make([]map[int]bool, len(vord))
 	for idx, o := range org {
 		neo[vord[idx]] = o
 	}

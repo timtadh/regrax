@@ -16,7 +16,7 @@ package subgraph_overlap
 *     --key-type=*github.com/timtadh/sfp/types/digraph/subgraph/SubGraph \
 *     --key-serializer=github.com/timtadh/sfp/stores/subgraph_embedding/SerializeSubGraph \
 *     --key-deserializer=github.com/timtadh/sfp/stores/subgraph_embedding/DeserializeSubGraph \
-*     --value-type=[][]int \
+*     --value-type=[]map[int]bool \
 *     --value-serializer=SerializeOverlap \
 *     --value-deserializer=DeserializeOverlap
 *
@@ -65,29 +65,29 @@ type MultiMap interface {
 	Iterate() (Iterator, error)
 	Backward() (Iterator, error)
 	Find(key *subgraph.SubGraph) (Iterator, error)
-	DoFind(key *subgraph.SubGraph, do func(*subgraph.SubGraph, [][]int) error) error
+	DoFind(key *subgraph.SubGraph, do func(*subgraph.SubGraph, []map[int]bool) error) error
 	Range(from, to *subgraph.SubGraph) (Iterator, error)
-	DoRange(from, to *subgraph.SubGraph, do func(*subgraph.SubGraph, [][]int) error) error
+	DoRange(from, to *subgraph.SubGraph, do func(*subgraph.SubGraph, []map[int]bool) error) error
 	Has(key *subgraph.SubGraph) (bool, error)
 	Count(key *subgraph.SubGraph) (int, error)
-	Add(key *subgraph.SubGraph, value [][]int) error
-	Remove(key *subgraph.SubGraph, where func([][]int) bool) error
+	Add(key *subgraph.SubGraph, value []map[int]bool) error
+	Remove(key *subgraph.SubGraph, where func([]map[int]bool) bool) error
 	Size() int
 	Close() error
 	Delete() error
 }
 
-type Iterator func() (*subgraph.SubGraph, [][]int, error, Iterator)
+type Iterator func() (*subgraph.SubGraph, []map[int]bool, error, Iterator)
 type KeyIterator func() (*subgraph.SubGraph, error, KeyIterator)
-type ValueIterator func() ([][]int, error, ValueIterator)
+type ValueIterator func() ([]map[int]bool, error, ValueIterator)
 
-func Do(run func() (Iterator, error), do func(key *subgraph.SubGraph, value [][]int) error) error {
+func Do(run func() (Iterator, error), do func(key *subgraph.SubGraph, value []map[int]bool) error) error {
 	kvi, err := run()
 	if err != nil {
 		return err
 	}
 	var key *subgraph.SubGraph
-	var value [][]int
+	var value []map[int]bool
 	for key, value, err, kvi = kvi(); kvi != nil; key, value, err, kvi = kvi() {
 		e := do(key, value)
 		if e != nil {
@@ -112,12 +112,12 @@ func DoKey(run func() (KeyIterator, error), do func(*subgraph.SubGraph) error) e
 	return err
 }
 
-func DoValue(run func() (ValueIterator, error), do func([][]int) error) error {
+func DoValue(run func() (ValueIterator, error), do func([]map[int]bool) error) error {
 	it, err := run()
 	if err != nil {
 		return err
 	}
-	var item [][]int
+	var item []map[int]bool
 	for item, err, it = it(); it != nil; item, err, it = it() {
 		e := do(item)
 		if e != nil {
@@ -200,7 +200,7 @@ func (b *BpTree) Size() int {
 	return b.bpt.Size()
 }
 
-func (b *BpTree) Add(key *subgraph.SubGraph, val [][]int) error {
+func (b *BpTree) Add(key *subgraph.SubGraph, val []map[int]bool) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	return b.bpt.Add(subgraph_embedding.SerializeSubGraph(key), SerializeOverlap(val))
@@ -219,7 +219,7 @@ func (b *BpTree) Has(key *subgraph.SubGraph) (bool, error) {
 }
 
 func (b *BpTree) kvIter(kvi fs2.Iterator) (it Iterator) {
-	it = func() (key *subgraph.SubGraph, value [][]int, err error, _ Iterator) {
+	it = func() (key *subgraph.SubGraph, value []map[int]bool, err error, _ Iterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
 		var k, v []byte
@@ -256,7 +256,7 @@ func (b *BpTree) keyIter(raw fs2.ItemIterator) (it KeyIterator) {
 }
 
 func (b *BpTree) valueIter(raw fs2.ItemIterator) (it ValueIterator) {
-	it = func() (value [][]int, err error, _ ValueIterator) {
+	it = func() (value []map[int]bool, err error, _ ValueIterator) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
 		var i []byte
@@ -303,7 +303,7 @@ func (b *BpTree) Find(key *subgraph.SubGraph) (it Iterator, err error) {
 	return b.kvIter(raw), nil
 }
 
-func (b *BpTree) DoFind(key *subgraph.SubGraph, do func(*subgraph.SubGraph, [][]int) error) error {
+func (b *BpTree) DoFind(key *subgraph.SubGraph, do func(*subgraph.SubGraph, []map[int]bool) error) error {
 	return Do(func() (Iterator, error) { return b.Find(key) }, do)
 }
 
@@ -327,7 +327,7 @@ func (b *BpTree) Range(from, to *subgraph.SubGraph) (it Iterator, err error) {
 	return b.kvIter(raw), nil
 }
 
-func (b *BpTree) DoRange(from, to *subgraph.SubGraph, do func(*subgraph.SubGraph, [][]int) error) error {
+func (b *BpTree) DoRange(from, to *subgraph.SubGraph, do func(*subgraph.SubGraph, []map[int]bool) error) error {
 	return Do(func() (Iterator, error) { return b.Range(from, to) }, do)
 }
 
@@ -341,7 +341,7 @@ func (b *BpTree) Backward() (it Iterator, err error) {
 	return b.kvIter(raw), nil
 }
 
-func (b *BpTree) Remove(key *subgraph.SubGraph, where func([][]int) bool) error {
+func (b *BpTree) Remove(key *subgraph.SubGraph, where func([]map[int]bool) bool) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	return b.bpt.Remove(subgraph_embedding.SerializeSubGraph(key), func(bytes []byte) bool {

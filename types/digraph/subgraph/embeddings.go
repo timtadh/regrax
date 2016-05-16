@@ -115,7 +115,7 @@ func (ids *IdNode) has(id, idx int) bool {
 	return false
 }
 
-func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap [][]int, prune func(*IdNode) bool) (ei EmbIterator, err error) {
+func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, err error) {
 	type entry struct {
 		ids *IdNode
 		eid int
@@ -277,7 +277,7 @@ func (sg *SubGraph) leastConnected() []int {
 	return minIdx
 }
 
-func (sg *SubGraph) leastConnectedAndExts(indices *Indices, overlap [][]int) int {
+func (sg *SubGraph) leastConnectedAndExts(indices *Indices, overlap []map[int]bool) int {
 	c := sg.leastConnected()
 	if len(c) == 1 {
 		return c[0]
@@ -294,7 +294,7 @@ func (sg *SubGraph) leastConnectedAndExts(indices *Indices, overlap [][]int) int
 	return minIdx
 }
 
-func (sg *SubGraph) leastExts(indices *Indices, overlap [][]int) int {
+func (sg *SubGraph) leastExts(indices *Indices, overlap []map[int]bool) int {
 	minExts := -1
 	minFreq := -1
 	minIdx := -1
@@ -310,7 +310,7 @@ func (sg *SubGraph) leastExts(indices *Indices, overlap [][]int) int {
 	return minIdx
 }
 
-func (sg *SubGraph) mostExts(indices *Indices, overlap [][]int) int {
+func (sg *SubGraph) mostExts(indices *Indices, overlap []map[int]bool) int {
 	maxExts := -1
 	maxIdx := -1
 	for idx := range sg.V {
@@ -333,7 +333,7 @@ func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 }
 
 // this is really a breadth first search from the given idx
-func (sg *SubGraph) edgeChain(indices *Indices, overlap [][]int, startIdx int) []*Edge {
+func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx int) []*Edge {
 	other := func(u int, e int) int {
 		s := sg.E[e].Src
 		t := sg.E[e].Targ
@@ -468,17 +468,12 @@ func (ids *IdNode) String() string {
 	return "{" + strings.Join(ritems, ", ") + "}"
 }
 
-func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o [][]int, do func(*IdNode)) {
+func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []map[int]bool, do func(*IdNode)) {
 	doNew := func(newIdx, newId int) {
 		if o == nil || len(o[newIdx]) == 0 {
 			do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
-		} else {
-			for _, id := range o[newIdx] {
-				if newId == id {
-					do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
-					break
-				}
-			}
+		} else if o[newIdx] != nil && o[newIdx][newId] {
+			do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
 		}
 	}
 	srcId, targId := cur.ids(e.Src, e.Targ)
@@ -502,7 +497,7 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 	}
 }
 
-func (sg *SubGraph) extensionsFrom(indices *Indices, overlap [][]int, idx int, excludeIdxs ...int) int {
+func (sg *SubGraph) extensionsFrom(indices *Indices, overlap []map[int]bool, idx int, excludeIdxs ...int) int {
 	total := 0
 outer:
 	for _, eid := range sg.Adj[idx] {
