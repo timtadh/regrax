@@ -11,6 +11,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/stats"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 func VertexMapSets(sgs []*goiso.SubGraph) []*set.MapSet {
@@ -31,15 +32,15 @@ func VertexMapSets(sgs []*goiso.SubGraph) []*set.MapSet {
 	return sets
 }
 
-func subgraphVertexSets(sgs []*goiso.SubGraph) []*set.SortedSet {
-	if len(sgs) == 0 {
+func subgraphVertexSets(embs []*subgraph.Embedding) []*set.SortedSet {
+	if len(embs) == 0 {
 		return make([]*set.SortedSet, 0)
 	}
-	sets := make([]*set.SortedSet, 0, len(sgs))
-	for _, sg := range sgs {
-		s := set.NewSortedSet(len(sgs[0].V))
-		for i := range sg.V {
-			s.Add(types.Int(sg.V[i].Id))
+	sets := make([]*set.SortedSet, 0, len(embs))
+	for _, emb := range embs {
+		s := set.NewSortedSet(len(emb.Ids))
+		for _, id := range emb.Ids {
+			s.Add(types.Int(id))
 		}
 		sets = append(sets, s)
 	}
@@ -79,15 +80,15 @@ func Dedup(sgs []*goiso.SubGraph) []*goiso.SubGraph {
 	return graphs
 }
 
-func MaxIndepSupported(sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error) {
-	sgs, err := MinImgSupported(sgs)
-	if err != nil {
-		return nil, err
+func MaxIndepSupported(embs []*subgraph.Embedding) ([]*subgraph.Embedding, error) {
+	// sgs, err := MinImgSupported(sgs)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	if len(embs) <= 1 {
+		return embs, nil
 	}
-	if len(sgs) <= 1 {
-		return sgs, nil
-	}
-	sets := subgraphVertexSets(sgs)
+	sets := subgraphVertexSets(embs)
 	// errors.Logf("MAX-INDEP", "sets: %v", sets)
 	max := -1
 	var maxPerm []int = nil
@@ -100,15 +101,15 @@ func MaxIndepSupported(sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error) {
 			maxPerm = perm
 			maxNonOverlap = nonOverlap
 		}
-		if size == len(sgs) {
+		if size == len(embs) {
 			return true
 		}
 		// errors.Logf("MAX-INDEP", "perm %v %v %v :: max: %v %v %v", perm, size, nonOverlap, maxPerm, max, maxNonOverlap)
 		return false
 	})
-	nonOverlapping := make([]*goiso.SubGraph, 0, len(maxNonOverlap))
+	nonOverlapping := make([]*subgraph.Embedding, 0, len(maxNonOverlap))
 	for _, idx := range maxNonOverlap {
-		nonOverlapping = append(nonOverlapping, sgs[idx])
+		nonOverlapping = append(nonOverlapping, embs[idx])
 	}
 	return nonOverlapping, nil
 }

@@ -3,7 +3,7 @@ package digraph
 import ()
 
 import (
-	// "github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
 )
@@ -63,7 +63,7 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	sg := n.SubGraph()
 	nodes, err = findChildren(n, func(pattern *subgraph.SubGraph) (bool, error) {
 		return isCanonicalExtension(sg, pattern)
-	})
+	}, false)
 	// errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
 	return nodes, cacheAdj(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
@@ -81,18 +81,21 @@ func children(n Node) (nodes []lattice.Node, err error) {
 		// errors.Logf("DEBUG", "got from precheck %v", n)
 		return nodes, nil
 	}
-	nodes, err = findChildren(n, nil)
+	nodes, err = findChildren(n, nil, false)
 	if err != nil {
 		return nil, err
 	}
 	return nodes, cacheAdj(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
 }
 
-func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error)) (nodes []lattice.Node, err error) {
+func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bool) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "")
+	if debug {
+		errors.Logf("CHILDREN-DEBUG", "node %v", n)
+	}
 	dt := n.dt()
 	sg := n.SubGraph()
-	patterns, err := extendNode(n)
+	patterns, err := extendNode(n, debug)
 	if err != nil {
 		return nil, err
 	}
@@ -117,11 +120,13 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error)) (nodes [
 		for i, next := unsupported.Items()(); next != nil; i, next = next() {
 			tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
 		}
-		support, exts, embs, err := ExtsAndEmbs(dt, pattern, tu)
+		support, exts, embs, err := ExtsAndEmbs(dt, pattern, tu, debug)
 		if err != nil {
 			return nil, err
 		}
-		// errors.Logf("DEBUG", "pattern %v support %v exts %v", pattern, len(embs), len(exts))
+		if debug {
+			errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
+		}
 		if support >= dt.Support() {
 			nodes = append(nodes, n.New(pattern, exts, embs))
 			vords = append(vords, vord)
@@ -145,14 +150,19 @@ type extInfo struct {
 	vord []int
 }
 
-func extendNode(n Node) (*hashtable.LinearHash, error) {
-	// errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
+func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
+	if debug {
+		errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
+	}
 	sg := n.SubGraph()
 	b := subgraph.Build(len(sg.V), len(sg.E)).From(sg)
 	extPoints, err := n.Extensions()
 	if err != nil {
 		return nil, err
 	}
+	// if debug {
+	// 	_, extPoints, _, err = ExtsAndEmbs(n.dt(), sg, set.NewSortedSet(0), debug, false)
+	// }
 	patterns := hashtable.NewLinearHash()
 	for _, ep := range extPoints {
 		// errors.Logf("DEBUG", "  ext point %v", ep)
@@ -168,45 +178,3 @@ func extendNode(n Node) (*hashtable.LinearHash, error) {
 
 	return patterns, nil
 }
-
-/*
-func children(n Node) (nodes []lattice.Node, err error) {
-	dt := n.dt()
-	if nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
-		return nil, err
-	} else if nodes != nil {
-		return nodes, nil
-	}
-	// errors.Logf("DEBUG", "Children of %v", n)
-	exts := ext.NewCollector(dt.MaxVertices)
-	add := validExtChecker(dt, func(sg *goiso.SubGraph, e *goiso.Edge) {
-		dt.Extender.Extend(sg, e, exts.Ch())
-	})
-	embeddings, err := n.Embeddings()
-	if err != nil {
-		return nil, err
-	}
-	added := 0
-	sup, err := dt.Supported(dt, embeddings)
-	if err != nil {
-		return nil, err
-	}
-	sizes := set.NewSortedSet(len(embeddings[0].V))
-	for _, set := range support.VertexMapSets(embeddings) {
-		sizes.Add(types.Int(set.Size()))
-	}
-	errors.Logf("EMBEDDINGS", "len(V) %v len(embeddings) %v supported %v unique-vertex-embeddings %v", len(embeddings[0].V), len(embeddings), len(sup), sizes)
-	for _, sg := range embeddings {
-		for i := range sg.V {
-			u := &sg.V[i]
-			for _, e := range dt.G.Kids[u.Id] {
-				added += add(sg, e)
-			}
-			for _, e := range dt.G.Parents[u.Id] {
-				added += add(sg, e)
-			}
-		}
-	}
-	return nodesFromEmbeddings(n, exts.Wait(added))
-}
-*/

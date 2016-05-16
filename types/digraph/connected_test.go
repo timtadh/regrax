@@ -169,7 +169,9 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		}
 	}
 	if !found {
-		t.Fatalf("parent %v kids %v did not have %v", parent, pkids, kid)
+		t.Errorf("parent %v kids %v did not have %v", parent, pkids, kid)
+		findChildren(parent, nil, true)
+		t.Fatalf("assert-fail")
 	}
 	kparents, err := kid.Parents()
 	if err != nil {

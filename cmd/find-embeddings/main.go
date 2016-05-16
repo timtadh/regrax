@@ -195,7 +195,7 @@ func run() int {
 	errors.Logf("INFO", "total embeddings %v", total)
 	*/
 
-	sup, exts, embs, err := digraph.ExtsAndEmbs(graph, sg, set.NewSortedSet(0))
+	sup, exts, embs, err := digraph.ExtsAndEmbs(graph, sg, set.NewSortedSet(0), true)
 	if err != nil {
 		errors.Logf("ERROR", "err: %v", err)
 		return 2

@@ -40,11 +40,20 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 			continue
 		}
 		seen.Add(parent)
-		_, pexts, pembs, err := ExtsAndEmbs(dt, parent, set.NewSortedSet(0))
+		support, pexts, pembs, err := ExtsAndEmbs(dt, parent, set.NewSortedSet(0), false)
 		if err != nil {
 			return nil, err
 		}
-		nodes = append(nodes, n.New(parent, pexts, pembs))
+		if support < dt.Support() {
+			// this means this parent support comes from automorphism
+			// it isn't truly supported, and its children may be spurious as well
+			// log and skip?
+			ExtsAndEmbs(dt, parent, set.NewSortedSet(0), true)
+
+			errors.Logf("WARN", "for node %v parent %v had support %v less than required %v due to automorphism", n, parent.Pretty(dt.G.Colors), support, dt.Support())
+		} else {
+			nodes = append(nodes, n.New(parent, pexts, pembs))
+		}
 	}
 	if len(nodes) == 0 {
 		return nil, errors.Errorf("Found no parents!!\n    node %v", n)

@@ -21,10 +21,6 @@ func MinImgSupported(dt *Digraph, sgs []*goiso.SubGraph) ([]*goiso.SubGraph, err
 	return support.MinImgSupported(sgs)
 }
 
-func MaxIndepSupported(dt *Digraph, sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error) {
-	return support.MaxIndepSupported(sgs)
-}
-
 func MakeTxSupported(attrName string) Supported {
 	return func(dt *Digraph, sgs []*goiso.SubGraph) ([]*goiso.SubGraph, error) {
 		sgs, err := support.MinImgSupported(sgs)

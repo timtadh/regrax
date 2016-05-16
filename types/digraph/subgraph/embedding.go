@@ -66,6 +66,7 @@ func (emb *Embedding) Exists(G *goiso.Graph) bool {
 				continue
 			}
 			found = true
+			break
 		}
 		if !found {
 			return false
