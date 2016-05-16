@@ -85,41 +85,6 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 	}
 }
 
-// unique extensions
-func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension, error) {
-	// compute the embeddings
-	ei, err := pattern.IterEmbeddings(dt.Indices, nil)
-	if err != nil {
-		return nil, err
-	}
-	exts := set.NewSortedSet(10)
-	add := validExtChecker(dt, func(emb *subgraph.Embedding, ep *subgraph.Extension) {
-		exts.Add(ep)
-	})
-
-	// add the extensions to the extensions set
-	for emb, next := ei(); next != nil; emb, next = next() {
-		for idx := range emb.SG.V {
-			id := emb.Ids[idx]
-			for _, e := range dt.G.Kids[id] {
-				add(emb, e, idx, -1)
-			}
-			for _, e := range dt.G.Parents[id] {
-				add(emb, e, -1, idx)
-			}
-		}
-	}
-
-	// construct the extensions output slice
-	extensions := make([]*subgraph.Extension, 0, exts.Size())
-	for i, next := exts.Items()(); next != nil; i, next = next() {
-		ext := i.(*subgraph.Extension)
-		extensions = append(extensions, ext)
-	}
-
-	return extensions, nil
-}
-
 // unique extensions and supported embeddings
 func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
 	if !debug {
@@ -166,7 +131,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 
 	exts := set.NewSetMap(hashtable.NewLinearHash())
 	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
-		if unsupported.Has(ext) {
+		if unsupported != nil && unsupported.Has(ext) {
 			return
 		}
 		exts.Add(ext)

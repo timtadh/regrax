@@ -117,41 +117,19 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 	dt.G = G
 	dt.Indices.G = G
 
-	for i := range G.V {
-		u := &G.V[i]
-		dt.Indices.ColorIndex[u.Color] = append(dt.Indices.ColorIndex[u.Color], u.Idx)
-		if G.ColorFrequency(u.Color) >= dt.config.Support {
-			emb := subgraph.BuildEmbedding(1, 0).FromVertex(u.Color, u.Idx).Build()
-			err := dt.Embeddings.Add(emb.SG, emb)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
+	dt.Indices.InitColorMap(G)
 	dt.Indices.InitEdgeIndices(G)
 
-	err = subgraph_embedding.DoKey(dt.Embeddings.Keys, func(sg *subgraph.SubGraph) error {
+	for color := range dt.Indices.ColorIndex {
+		if G.ColorFrequency(color) < dt.config.Support {
+			continue
+		}
+		sg := subgraph.Build(1, 0).FromVertex(color).Build()
 		dt.FrequentVertices = append(dt.FrequentVertices, sg.Label())
-		exts, err := extensions(dt, sg)
+		_, _, _, err := ExtsAndEmbs(dt, sg, nil, dt.Mode, false)
 		if err != nil {
 			return err
 		}
-		color := sg.V[0].Color
-		err = dt.Frequency.Add(sg.Label(), int32(G.ColorFrequency(color)))
-		if err != nil {
-			return err
-		}
-		for _, ext := range exts {
-			err := dt.Extensions.Add(sg.Label(), ext)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 	return nil
 }
