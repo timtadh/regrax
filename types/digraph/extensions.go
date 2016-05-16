@@ -15,6 +15,14 @@ import (
 
 const CACHE_DEBUG = false
 
+type Mode uint8
+
+const (
+	Automorphs = iota
+	NoAutomorphs
+	OptimisticPruning
+)
+
 // YOU ARE HERE:
 //
 // 1. The embeddings and extensions are being computed multiple times for the
@@ -113,7 +121,7 @@ func extensions(dt *Digraph, pattern *subgraph.SubGraph) ([]*subgraph.Extension,
 }
 
 // unique extensions and supported embeddings
-func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
+func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, error) {
 	if !debug {
 		if has, support, exts, embs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
 			return 0, nil, nil, err
@@ -128,21 +136,31 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 		errors.Logf("CACHE-DEBUG", "ExtsAndEmbs %v", pattern.Pretty(dt.G.Colors))
 	}
 	// compute the embeddings
+	var seen map[int]bool = nil
 	var err error
 	var ei subgraph.EmbIterator
-	seen := make(map[int]bool)
-	ei, err = pattern.IterEmbeddings(
-		dt.Indices,
-		func(ids *subgraph.IdNode) bool {
-			for c := ids; c != nil; c = c.Prev {
-				if _, has := seen[c.Id]; !has {
-					return false
+	switch mode {
+	case Automorphs:
+		ei, err = pattern.IterEmbeddings(dt.Indices, nil)
+	case NoAutomorphs:
+		ei, err = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, nil))
+	case OptimisticPruning:
+		seen = make(map[int]bool)
+		ei, err = pattern.IterEmbeddings(
+			dt.Indices,
+			func(ids *subgraph.IdNode) bool {
+				for c := ids; c != nil; c = c.Prev {
+					if _, has := seen[c.Id]; !has {
+						return false
+					}
 				}
-			}
-			return true
-	})
+				return true
+		})
+	default:
+		return 0, nil, nil, errors.Errorf("Unknown mode %v", mode)
+	}
 	if err != nil {
-		return 0, nil, nil, err
+			return 0, nil, nil, err
 	}
 	exts := set.NewSetMap(hashtable.NewLinearHash())
 	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
@@ -162,7 +180,9 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, unsupported types.Set,
 	for emb, next := ei(); next != nil; emb, next = next() {
 		// errors.Logf("DEBUG", "emb %v", emb)
 		for idx, id := range emb.Ids {
-			seen[id] = true
+			if seen != nil {
+				seen[id] = true
+			}
 			if sets[idx] == nil {
 				sets[idx] = hashtable.NewLinearHash()
 			}

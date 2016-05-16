@@ -34,8 +34,8 @@ type VegLoader struct {
 	dt *Digraph
 }
 
-func NewVegLoader(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (lattice.Loader, error) {
-	g, err := NewDigraph(config, sup, minE, maxE, minV, maxV)
+func NewVegLoader(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (lattice.Loader, error) {
+	g, err := NewDigraph(config, mode, minE, maxE, minV, maxV)
 	if err != nil {
 		return nil, err
 	}

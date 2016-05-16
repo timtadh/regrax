@@ -120,7 +120,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		for i, next := unsupported.Items()(); next != nil; i, next = next() {
 			tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
 		}
-		support, exts, embs, err := ExtsAndEmbs(dt, pattern, tu, debug)
+		support, exts, embs, err := ExtsAndEmbs(dt, pattern, tu, dt.Mode, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
 		return nil, err
 	}
 	// if debug {
-	// 	_, extPoints, _, err = ExtsAndEmbs(n.dt(), sg, set.NewSortedSet(0), debug, false)
+	// 	_, extPoints, _, err = ExtsAndEmbs(n.dt(), sg, set.NewSortedSet(0), dt.Mode, debug)
 	// }
 	patterns := hashtable.NewLinearHash()
 	for _, ep := range extPoints {

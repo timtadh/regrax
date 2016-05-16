@@ -21,9 +21,9 @@ import (
 type Digraph struct {
 	MinEdges, MaxEdges       int
 	MinVertices, MaxVertices int
+	Mode                     Mode
 	G                        *goiso.Graph
 	FrequentVertices         [][]byte
-	Supported                Supported
 	NodeAttrs                int_json.MultiMap
 	Embeddings               subgraph_embedding.MultiMap
 	Extensions               bytes_extension.MultiMap
@@ -39,7 +39,7 @@ type Digraph struct {
 	config                   *config.Config
 }
 
-func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int) (g *Digraph, err error) {
+func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g *Digraph, err error) {
 	nodeAttrs, err := config.IntJsonMultiMap("digraph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -85,11 +85,11 @@ func NewDigraph(config *config.Config, sup Supported, minE, maxE, minV, maxV int
 		return nil, err
 	}
 	g = &Digraph{
-		Supported:     sup,
 		MinEdges:      minE,
 		MaxEdges:      maxE,
 		MinVertices:   minV,
 		MaxVertices:   maxV,
+		Mode:          mode,
 		NodeAttrs:     nodeAttrs,
 		Embeddings:    embeddings,
 		Extensions:    exts,

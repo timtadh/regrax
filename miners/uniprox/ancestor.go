@@ -87,7 +87,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	}
 
 	// init the datatype (we are now ready to mine)
-	dt, err := digraph.NewDigraph(conf, digraph.MakeTxSupported("gid"), 0, maxE, 0, maxV)
+	dt, err := digraph.NewDigraph(conf, digraph.OptimisticPruning, 0, maxE, 0, maxV)
 	if err != nil {
 		return nil, err
 	}
