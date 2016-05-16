@@ -74,9 +74,12 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 	if err != nil {
 		return nil, err
 	}
-	overlap, err := config.SubgraphOverlapMultiMap("digraph-overlap")
-	if err != nil {
-		return nil, err
+	var overlap subgraph_overlap.MultiMap = nil
+	if mode & OverlapPruning == OverlapPruning {
+		overlap, err = config.SubgraphOverlapMultiMap("digraph-overlap")
+		if err != nil {
+			return nil, err
+		}
 	}
 	exts, err := config.BytesExtensionMultiMap("digraph-extensions")
 	if err != nil {
@@ -198,7 +201,9 @@ func (g *Digraph) Close() error {
 	g.CanonKids.Close()
 	g.CanonKidCount.Close()
 	g.Embeddings.Close()
-	g.Overlap.Close()
+	if g.Overlap != nil {
+		g.Overlap.Close()
+	}
 	g.Extensions.Close()
 	g.UnsupExts.Close()
 	g.NodeAttrs.Close()

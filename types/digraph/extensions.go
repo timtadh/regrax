@@ -15,12 +15,13 @@ import (
 
 const CACHE_DEBUG = false
 
-type Mode uint8
+type Mode uint64
 
 const (
-	Automorphs = iota
+	Automorphs = 1 << iota
 	NoAutomorphs
 	OptimisticPruning
+	OverlapPruning
 )
 
 // YOU ARE HERE:
@@ -105,12 +106,12 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap [][]int
 	var seen map[int]bool = nil
 	var err error
 	var ei subgraph.EmbIterator
-	switch mode {
-	case Automorphs:
+	switch {
+	case mode & Automorphs == Automorphs:
 		ei, err = pattern.IterEmbeddings(dt.Indices, patternOverlap, nil)
-	case NoAutomorphs:
+	case mode & NoAutomorphs == NoAutomorphs:
 		ei, err = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, patternOverlap, nil))
-	case OptimisticPruning:
+	case mode & OptimisticPruning == OptimisticPruning:
 		seen = make(map[int]bool)
 		ei, err = pattern.IterEmbeddings(
 			dt.Indices,
@@ -176,13 +177,16 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap [][]int
 	}
 
 	// construct the overlap
-	overlap := make([][]int, 0, len(pattern.V))
-	for _, s := range sets {
-		o := make([]int, 0, s.Size())
-		for x, next := s.Keys()(); next != nil; x, next = next() {
-			o = append(o, int(x.(types.Int)))
+	var overlap [][]int = nil
+	if dt.Overlap != nil {
+		overlap = make([][]int, 0, len(pattern.V))
+		for _, s := range sets {
+			o := make([]int, 0, s.Size())
+			for x, next := s.Keys()(); next != nil; x, next = next() {
+				o = append(o, int(x.(types.Int)))
+			}
+			overlap = append(overlap, o)
 		}
-		overlap = append(overlap, o)
 	}
 
 	// compute the minimally supported vertex
@@ -236,9 +240,11 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 			return err
 		}
 	}
-	err = dt.Overlap.Add(pattern, overlap)
-	if err != nil {
-		return nil
+	if dt.Overlap != nil {
+		err = dt.Overlap.Add(pattern, overlap)
+		if err != nil {
+			return nil
+		}
 	}
 	return nil
 }
@@ -278,12 +284,14 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*
 		return false, 0, nil, nil, nil, err
 	}
 	var overlap [][]int = nil
-	err = dt.Overlap.DoFind(pattern, func(_ *subgraph.SubGraph, o [][]int) error {
-		overlap = o
-		return nil
-	})
-	if err != nil {
-		return false, 0, nil, nil, nil, err
+	if dt.Overlap != nil {
+		err = dt.Overlap.DoFind(pattern, func(_ *subgraph.SubGraph, o [][]int) error {
+			overlap = o
+			return nil
+		})
+		if err != nil {
+			return false, 0, nil, nil, nil, err
+		}
 	}
 
 	return true, support, exts, embs, overlap, nil

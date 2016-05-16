@@ -476,6 +476,7 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 			for _, id := range o[newIdx] {
 				if newId == id {
 					do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
+					break
 				}
 			}
 		}

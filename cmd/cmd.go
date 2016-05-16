@@ -118,6 +118,9 @@ Types
         -c, count-mode=<cmode>   strategy for counting embeddings with
                                  minimum image support.
                                  (default: optimistic-pruning)
+        --overlap-pruning        prune potential embeddings of lattice nodes
+                                 based on the overlap of embeddings of their
+                                 parents
         --min-edges=<int>        minimum edges in a samplable digraph
         --max-edges=<int>        maximum edges in a samplable digraph
         --min-vertices=<int>     minimum vertices in a samplable digraph
@@ -154,6 +157,20 @@ Types
                                  which have automorphic rotations with unique
                                  extensions for one or more rotation.
 
+        --overlap-pruning        this is an extra flag. It is safe to use with
+                                 "automorphs" (and is turned on automatically).
+                                 However, for other counting modes it may cause
+                                 some embeddings to not be discovered as it
+                                 prunes potenial embeddings of the current node
+                                 based on the overlap of the embeddings of the
+                                 parent node. Since not all rotations of the
+                                 parent are included in the overlap for
+                                 "no-automorphs" and "optimistic-pruning" some
+                                 nodes may be spuriously unsupported. For some
+                                 datasets, with high amounts of automorphism you
+                                 may want to uses this flag in conjuction with
+                                 "optimistic-pruning" to get the best
+                                 performance (at the cost of completeness).
 
 
     digraph Loaders
@@ -468,6 +485,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		"hl:c:", []string{"help",
 			"loader=",
 			"count-mode=",
+			"overlap-pruning",
 			"min-edges=",
 			"max-edges=",
 			"min-vertices=",
@@ -481,6 +499,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 
 	loaderType := "veg"
 	modeStr := "optimistic-pruning"
+	overlapPruning := false
 	minE := 0
 	maxE := int(math.MaxInt32)
 	minV := 0
@@ -493,6 +512,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			loaderType = oa.Arg()
 		case "-c", "--count-mode":
 			modeStr = oa.Arg()
+		case "--overlap-pruning":
+			overlapPruning = true
 		case "--min-edges":
 			minE = ParseInt(oa.Arg())
 		case "--max-edges":
@@ -510,7 +531,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	var mode digraph.Mode
 	switch modeStr {
 	case "automorphs":
-		mode = digraph.Automorphs
+		mode = digraph.Automorphs | digraph.OverlapPruning
 	case "no-automorphs":
 		mode = digraph.NoAutomorphs
 	case "optimistic-pruning":
@@ -519,6 +540,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		fmt.Fprintf(os.Stderr, "Unknown mode '%v'\n", modeStr)
 		fmt.Fprintf(os.Stderr, "modes: automorphs, no-automorphs, optimistic-pruning\n")
 		Usage(ErrorCodes["opts"])
+	}
+	if overlapPruning {
+		mode |= digraph.OverlapPruning
 	}
 
 	var loader lattice.Loader
