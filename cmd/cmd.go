@@ -129,7 +129,7 @@ Types
     digraph Counting Modes
         Digraph support is always counted using the Minimum Image Support [1].
         However, for performance reasons it can be helpful for certain datasets
-        to prevent automorhic rotations from being considered as seperate
+        to prevent automorphic rotations from being considered as seperate
         embeddings. However, it removing the rotations can results in a
         violation of the Downward Closure Property causing structural
         irregularities in the lattice structure. This can be undesirable. Thus,
@@ -142,7 +142,7 @@ Types
             Bioinformatics), 2008, vol.  5012 LNAI, pp. 858–863.
 
         automorphs               allow automorphic rotations to be counted as
-                                 separate rotations. This is the usual way
+                                 separate embeddings. This is the usual way
                                  Minimum Image Support works.
 
         no-automorphs            do not allow automorphs by filtering them out
