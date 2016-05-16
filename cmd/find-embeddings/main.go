@@ -106,7 +106,7 @@ func run() int {
 		return cmd.Input(inputPath)
 	}
 
-	loader, err := digraph.NewVegLoader(conf, digraph.MinImgSupported, 0, int(math.MaxInt32), 0, int(math.MaxInt32))
+	loader, err := digraph.NewVegLoader(conf, digraph.OptimisticPruning, 0, int(math.MaxInt32), 0, int(math.MaxInt32))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error constructing the loader\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -195,12 +195,12 @@ func run() int {
 	errors.Logf("INFO", "total embeddings %v", total)
 	*/
 
-	sup, exts, embs, err := digraph.ExtsAndEmbs(graph, sg, set.NewSortedSet(0), true)
+	sup, exts, embs, overlap, err := digraph.ExtsAndEmbs(graph, sg, nil, set.NewSortedSet(0), graph.Mode, true)
 	if err != nil {
 		errors.Logf("ERROR", "err: %v", err)
 		return 2
 	}
-	errors.Logf("INFO", "pat %v sup %v exts %v embs %v", sg, sup, len(exts), len(embs))
+	errors.Logf("INFO", "pat %v sup %v exts %v embs %v overlap %v", sg, sup, len(exts), len(embs), overlap)
 	/*
 	errors.Logf("INFO", "")
 	errors.Logf("INFO", "")

@@ -23,7 +23,7 @@ type Overlap struct {
 
 func (sg *SubGraph) FindVertexEmbeddings(indices *Indices, minSupport int) *Overlap {
 	startIdx := 0
-	chain := sg.edgeChain(indices, startIdx)
+	chain := sg.edgeChain(indices, nil, startIdx)
 	b := BuildOverlap(len(sg.V), len(sg.E)).Fillable().Ctx(func(b *FillableOverlapBuilder) {
 		b.SetVertex(startIdx, sg.V[0].Color, indices.IdSet(sg.V[0].Color))
 	})
@@ -48,7 +48,7 @@ func (o *Overlap) SupportedEmbeddings(indices *Indices) []*Embedding {
 	}
 	support, idxs := o.MinSupported()
 	startIdx := idxs[0]
-	chain := o.SG.edgeChain(indices, startIdx)
+	chain := o.SG.edgeChain(indices, nil, startIdx)
 	embs := make([]*Embedding, 0, support)
 	for x, next := o.Ids[startIdx].Items()(); next != nil; x, next = next() {
 		id := int(x.(types.Int))

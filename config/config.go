@@ -22,6 +22,7 @@ import (
 	"github.com/timtadh/sfp/stores/ints_int"
 	"github.com/timtadh/sfp/stores/ints_ints"
 	"github.com/timtadh/sfp/stores/subgraph_embedding"
+	"github.com/timtadh/sfp/stores/subgraph_overlap"
 )
 
 type Config struct {
@@ -149,5 +150,13 @@ func (c *Config) SubgraphEmbeddingMultiMap(name string) (subgraph_embedding.Mult
 		return subgraph_embedding.AnonBpTree()
 	} else {
 		return subgraph_embedding.NewBpTree(c.CacheFile(name + "-" + c.Randstr() + ".bptree"))
+	}
+}
+
+func (c *Config) SubgraphOverlapMultiMap(name string) (subgraph_overlap.MultiMap, error) {
+	if c.Cache == "" {
+		return subgraph_overlap.AnonBpTree()
+	} else {
+		return subgraph_overlap.NewBpTree(c.CacheFile(name + "-" + c.Randstr() + ".bptree"))
 	}
 }

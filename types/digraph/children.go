@@ -17,10 +17,11 @@ import (
 
 type Node interface {
 	lattice.Node
-	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding) Node
+	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, [][]int) Node
 	Label() []byte
 	Extensions() ([]*subgraph.Extension, error)
 	Embeddings() ([]*subgraph.Embedding, error)
+	Overlap() ([][]int, error)
 	UnsupportedExts() (*set.SortedSet, error)
 	SaveUnsupported(int, []int, *set.SortedSet) error
 	SubGraph() *subgraph.SubGraph
@@ -103,6 +104,10 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	if err != nil {
 		return nil, err
 	}
+	nOverlap, err := n.Overlap()
+	if err != nil {
+		return nil, err
+	}
 	vords := make([][]int, 0, 10)
 	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
 		pattern := k.(*subgraph.SubGraph)
@@ -120,7 +125,8 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		for i, next := unsupported.Items()(); next != nil; i, next = next() {
 			tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
 		}
-		support, exts, embs, err := ExtsAndEmbs(dt, pattern, tu, dt.Mode, debug)
+		pOverlap := translateOverlap(nOverlap, vord)
+		support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +134,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 			errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
 		}
 		if support >= dt.Support() {
-			nodes = append(nodes, n.New(pattern, exts, embs))
+			nodes = append(nodes, n.New(pattern, exts, embs, overlap))
 			vords = append(vords, vord)
 		} else {
 			unsupported.Add(ep)
@@ -178,3 +184,15 @@ func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
 
 	return patterns, nil
 }
+
+func translateOverlap(org [][]int, vord []int) [][]int {
+	if org == nil {
+		return nil
+	}
+	neo := make([][]int, len(vord))
+	for idx, o := range org {
+		neo[vord[idx]] = o
+	}
+	return neo
+}
+

@@ -15,6 +15,7 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/subgraph_embedding"
+	"github.com/timtadh/sfp/stores/subgraph_overlap"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
@@ -26,6 +27,7 @@ type Digraph struct {
 	FrequentVertices         [][]byte
 	NodeAttrs                int_json.MultiMap
 	Embeddings               subgraph_embedding.MultiMap
+	Overlap                  subgraph_overlap.MultiMap
 	Extensions               bytes_extension.MultiMap
 	UnsupExts                bytes_extension.MultiMap
 	Parents                  bytes_bytes.MultiMap
@@ -72,6 +74,10 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 	if err != nil {
 		return nil, err
 	}
+	overlap, err := config.SubgraphOverlapMultiMap("digraph-overlap")
+	if err != nil {
+		return nil, err
+	}
 	exts, err := config.BytesExtensionMultiMap("digraph-extensions")
 	if err != nil {
 		return nil, err
@@ -92,6 +98,7 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 		Mode:          mode,
 		NodeAttrs:     nodeAttrs,
 		Embeddings:    embeddings,
+		Overlap:       overlap,
 		Extensions:    exts,
 		UnsupExts:     unexts,
 		Parents:       parents,
@@ -126,7 +133,8 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 		}
 		sg := subgraph.Build(1, 0).FromVertex(color).Build()
 		dt.FrequentVertices = append(dt.FrequentVertices, sg.Label())
-		_, _, _, err := ExtsAndEmbs(dt, sg, nil, dt.Mode, false)
+		// done for the side effect of saving the Nodes.
+		_, _, _, _, err := ExtsAndEmbs(dt, sg, nil, nil, dt.Mode, false)
 		if err != nil {
 			return err
 		}
@@ -152,7 +160,7 @@ func (g *Digraph) MinimumLevel() int {
 }
 
 func RootEmbListNode(g *Digraph) *EmbListNode {
-	return NewEmbListNode(g, subgraph.EmptySubGraph(), nil, nil)
+	return NewEmbListNode(g, subgraph.EmptySubGraph(), nil, nil, nil)
 }
 
 func (g *Digraph) Root() lattice.Node {
@@ -190,6 +198,7 @@ func (g *Digraph) Close() error {
 	g.CanonKids.Close()
 	g.CanonKidCount.Close()
 	g.Embeddings.Close()
+	g.Overlap.Close()
 	g.Extensions.Close()
 	g.UnsupExts.Close()
 	g.NodeAttrs.Close()
