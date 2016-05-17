@@ -46,7 +46,7 @@ func graph(t *testing.T) (*goiso.Graph, *goiso.SubGraph, *SubGraph, *Indices) {
 func TestEdgeChain(t *testing.T) {
 	_, _, sg, indices := graph(t)
 	t.Log(sg)
-	chain := sg.edgeChain(indices, 0)
+	chain := sg.edgeChain(indices, nil, 0)
 	for _, e := range chain {
 		t.Log(e)
 	}
@@ -83,9 +83,8 @@ func TestEdgeChain2(t *testing.T) {
 		b.AddEdge(z, y, 2)
 	}).Build()
 	t.Log(sg)
-	t.Skip()
-	// skip test because borked without indices for edgeChain
-	chain := sg.edgeChain(nil, 0)
+	t.Skip("skip test because borked without indices for edgeChain")
+	chain := sg.edgeChain(nil, nil, 0)
 	for _, e := range chain {
 		t.Log(e)
 	}
