@@ -64,7 +64,7 @@ func Next(ctx interface{}, cur lattice.Node) (lattice.Node, error) {
 	}
 	adjs := append(kids, parents...)
 	errors.Logf("DEBUG", "cur %v parents %v kids %v adjs %v", cur, len(parents), len(kids), len(adjs))
-	_, next, err := walker.Transition(cur, adjs, weight)
+	_, next, err := walker.Transition(cur, adjs, weight, false)
 	return next, err
 }
 

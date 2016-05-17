@@ -5,70 +5,97 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 type EmbListNode struct {
-	SearchNode
-	sgs []*goiso.SubGraph
+	SubgraphPattern
+	extensions []*subgraph.Extension
+	embeddings []*subgraph.Embedding
+	overlap    []map[int]bool
 }
 
 type Embedding struct {
 	sg *goiso.SubGraph
 }
 
-func NewEmbListNode(Dt *Digraph, sgs []*goiso.SubGraph) *EmbListNode {
-	if len(sgs) > 0 {
-		return &EmbListNode{newSearchNode(Dt, sgs[0]), sgs}
+func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) *EmbListNode {
+	if embs != nil {
+		if exts == nil {
+			panic("nil exts")
+		}
+		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap}
 	}
-	return &EmbListNode{newSearchNode(Dt, nil), nil}
+	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil}
 }
 
-func (n *EmbListNode) New(sgs []*goiso.SubGraph) Node {
-	return NewEmbListNode(n.Dt, sgs)
+func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) Node {
+	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap)
 }
 
-func LoadEmbListNode(Dt *Digraph, label []byte) (*EmbListNode, error) {
-	sgs := make([]*goiso.SubGraph, 0, 10)
-	err := Dt.Embeddings.DoFind(label, func(_ []byte, sg *goiso.SubGraph) error {
-		sgs = append(sgs, sg)
-		return nil
+func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
+	sg, err := subgraph.LoadSubGraph(label)
+	if err != nil {
+		return nil, err
+	}
+	has, _, exts, embs, overlap, err := loadCachedExtsEmbs(dt, sg)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, errors.Errorf("Node was not saved: %v", &SubgraphPattern{Dt: dt, Pat: sg})
+	}
+
+	n := &EmbListNode{
+		SubgraphPattern: SubgraphPattern{Dt: dt, Pat: sg},
+		extensions:      exts,
+		embeddings:      embs,
+		overlap:         overlap,
+	}
+	return n, nil
+}
+
+func (n *EmbListNode) Pattern() lattice.Pattern {
+	return &n.SubgraphPattern
+}
+
+func (n *EmbListNode) Extensions() ([]*subgraph.Extension, error) {
+	return n.extensions, nil
+}
+
+func (n *EmbListNode) Embeddings() ([]*subgraph.Embedding, error) {
+	return n.embeddings, nil
+}
+
+func (n *EmbListNode) Overlap() ([]map[int]bool, error) {
+	return n.overlap, nil
+}
+
+func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
+	label := n.Label()
+	u := set.NewSortedSet(10)
+	err := n.Dt.UnsupExts.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
+		return u.Add(ext)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return NewEmbListNode(Dt, sgs), nil
+	return u, nil
 }
 
-func (n *EmbListNode) Pattern() lattice.Pattern {
-	return &n.SearchNode
-}
-
-func (n *EmbListNode) Embedding() (*goiso.SubGraph, error) {
-	// errors.Logf("DEBUG", "Embedding() %v", n)
-	if len(n.sgs) == 0 {
-		return nil, nil
-	} else {
-		return n.sgs[0], nil
-	}
-}
-
-func (n *EmbListNode) Embeddings() ([]*goiso.SubGraph, error) {
-	return n.sgs, nil
-}
-
-func (n *EmbListNode) Save() error {
-	if has, err := n.Dt.Embeddings.Has(n.Label()); err != nil {
-		return err
-	} else if has {
-		return nil
-	}
-	for _, sg := range n.sgs {
-		err := n.Dt.Embeddings.Add(n.Label(), sg)
+func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet) error {
+	label := n.Label()
+	for x, next := eps.Items()(); next != nil; x, next = next() {
+		ep := x.(*subgraph.Extension)
+		ept := ep.Translate(orgLen, vord)
+		err := n.Dt.UnsupExts.Add(label, ept)
 		if err != nil {
 			return err
 		}
@@ -77,11 +104,8 @@ func (n *EmbListNode) Save() error {
 }
 
 func (n *EmbListNode) String() string {
-	if len(n.sgs) > 0 {
-		return fmt.Sprintf("<EmbListNode %v>", n.sgs[0].Label())
-	} else {
-		return fmt.Sprintf("<EmbListNode {}>")
-	}
+	return fmt.Sprintf("<EmbListNode %v>", n.Pat.Pretty(n.Dt.G.Colors))
+	//return fmt.Sprintf("<Node %v %v %v>", len(n.embeddings), len(n.extensions), n.Pat.Pretty(n.Dt.G.Colors))
 }
 
 func (n *EmbListNode) Parents() ([]lattice.Node, error) {
@@ -138,7 +162,7 @@ func (n *EmbListNode) Maximal() (bool, error) {
 }
 
 func (n *EmbListNode) Label() []byte {
-	return n.SearchNode.Label()
+	return n.SubgraphPattern.Label()
 }
 
 func (n *EmbListNode) Lattice() (*lattice.Lattice, error) {

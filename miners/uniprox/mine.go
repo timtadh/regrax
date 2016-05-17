@@ -62,7 +62,7 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 		return nil, err
 	}
 	errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
-	pr, next, err := walker.Transition(cur, kids, w.weight)
+	pr, next, err := walker.Transition(cur, kids, w.weight, true)
 	if err != nil {
 		return nil, err
 	}
@@ -124,9 +124,9 @@ func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 		return est, nil
 	}
 	var est float64
-	if ismax, err := v.Maximal(); err != nil {
+	if kids, err := v.CanonKids(); err != nil {
 		return 0, err
-	} else if !ismax {
+	} else if len(kids) > 0 {
 		depth, diameter, err := w.estimateDepthDiameter(v, w.EstimatingWalks)
 		if err != nil {
 			return 0, err
@@ -159,6 +159,7 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 	var maxTail lattice.Pattern = nil
 	tails := set.NewSortedSet(10)
 	for i := 0; i < walks; i++ {
+		errors.Logf("EST-WALK-DEBUG", "walk %v %v", i, v)
 		var path []lattice.Node = nil
 		var err error = nil
 		path, err = w.walkFrom(v)
@@ -191,18 +192,21 @@ func (w *Walker) estimateDepthDiameter(v lattice.Node, walks int) (depth, diamet
 
 func (w *Walker) walkFrom(v lattice.Node) (path []lattice.Node, err error) {
 	weight := func(_, a lattice.Node) (float64, error) {
-		kids, err := a.CanonKids()
-		if err != nil {
-			return 0, err
-		}
-		return float64(len(kids)), nil
+		// kids, err := a.CanonKids()
+		// if err != nil {
+		// 	return 0, err
+		// }
+		// return float64(len(kids)), nil
+		return 1, nil
 	}
 	transition := func(c lattice.Node) (lattice.Node, error) {
+		errors.Logf("EST-WALK-DEBUG", "walk cur %v", c)
 		kids, err := c.CanonKids()
 		if err != nil {
 			return nil, err
 		}
-		_, next, err := walker.Transition(c, kids, weight)
+		// errors.Logf("EST-WALK-DEBUG", "cur %v len(kids) %v", c, len(kids))
+		_, next, err := walker.Transition(c, kids, weight, false)
 		return next, err
 	}
 	c := v

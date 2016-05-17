@@ -79,10 +79,205 @@ var ErrorCodes map[string]int = map[string]int{
 var UsageMessage string
 var ExtendedMessage string
 
+var CommonUsage string =`
+Types
+    itemset                   sets of items, treated as sets of integers
+    digraph                   large directed graphs
+
+    itemset Exmaple
+        $ sfp -o /tmp/sfp --support=1000 --samples=10 \
+            itemset --min-items=4 --max-items=4  ./data/transactions.dat.gz \
+            graple
+
+    itemset Options
+        -h, help                 view this message
+        -l, loader=<loader-name> the loader to use (default int)
+        --min-items=<int>        minimum items in a samplable set
+        --max-items=<int>        maximum items in a samplable set
+
+    itemset Loaders
+       int                         each line is a transaction
+                                   the items are integers
+                                   the items are space separated
+
+       int Example file:
+            10 1 5 7
+            213 2 5 1
+            23 1 4 5 7
+            3 4 1
+
+    digraph Example
+        $ sfp -o /tmp/sfp --support=5 --samples=100 \
+            digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
+                ./data/digraph.veg.gz \
+            graple
+
+    digraph Options
+        -h, help                 view this message
+        -l, loader=<loader-name> the loader to use (default: veg)
+        -c, count-mode=<cmode>   strategy for counting embeddings with
+                                 minimum image support.
+                                 (default: optimistic-pruning)
+        --overlap-pruning        prune potential embeddings of lattice nodes
+                                 based on the overlap of embeddings of their
+                                 parents
+        --min-edges=<int>        minimum edges in a samplable digraph
+        --max-edges=<int>        maximum edges in a samplable digraph
+        --min-vertices=<int>     minimum vertices in a samplable digraph
+        --max-vertices=<int>     maximum vertices in a samplable digraph
+
+    digraph Counting Modes
+        Digraph support is always counted using the Minimum Image Support [1].
+        However, for performance reasons it can be helpful for certain datasets
+        to prevent automorphic rotations from being considered as seperate
+        embeddings. However, it removing the rotations can results in a
+        violation of the Downward Closure Property causing structural
+        irregularities in the lattice structure. This can be undesirable. Thus,
+        continuing to count all minimum image supported embeddings is included
+        as an option: "automorphs".
+
+        [1] B. Bringmann and S. Nijssen, “What is frequent in a single graph?,”
+            in Lecture Notes in Computer Science (including subseries Lecture
+            Notes in Artificial Intelligence and Lecture Notes in
+            Bioinformatics), 2008, vol.  5012 LNAI, pp. 858–863.
+
+        automorphs               allow automorphic rotations to be counted as
+                                 separate embeddings. This is the usual way
+                                 Minimum Image Support works.
+
+        no-automorphs            do not allow automorphs by filtering them out
+                                 after the full embedding has been found. May
+                                 fail to find support for graphs which are
+                                 rotatable on their embedding.
+
+        optimistic-pruning       optimistically prune automorphs by removing
+                                 fully overlapping partial embeddings as they
+                                 discovered. Fastest (and default) option. May
+                                 fail to find support for graphs with subgraphs
+                                 which have automorphic rotations with unique
+                                 extensions for one or more rotation.
+
+        --overlap-pruning        this is an extra flag. It is safe to use with
+                                 "automorphs" (and is turned on automatically).
+                                 However, for other counting modes it may cause
+                                 some embeddings to not be discovered as it
+                                 prunes potenial embeddings of the current node
+                                 based on the overlap of the embeddings of the
+                                 parent node. Since not all rotations of the
+                                 parent are included in the overlap for
+                                 "no-automorphs" and "optimistic-pruning" some
+                                 nodes may be spuriously unsupported. For some
+                                 datasets, with high amounts of automorphism you
+                                 may want to uses this flag in conjuction with
+                                 "optimistic-pruning" to get the best
+                                 performance (at the cost of completeness).
+
+
+    digraph Loaders
+        veg File Format
+            The veg file format is a line delimited format with vertex lines and
+            edge lines. For example:
+
+            vertex	{"id":136,"label":""}
+            edge	{"src":23,"targ":25,"label":"ddg"}
+
+            Note: the spaces between vertex and {...} are tabs
+            Note: the spaces between edge and {...} are tabs
+
+        veg Grammar
+            line -> vertex "\n"
+                  | edge "\n"
+
+            vertex -> "vertex" "\t" vertex_json
+
+            edge -> "edge" "\t" edge_json
+
+            vertex_json -> {"id": int, "label": string, ...}
+            // other items are optional
+
+            edge_json -> {"src": int, "targ": int, "label": int, ...}
+            // other items are  optional
+
+
+Reporters
+    chain                     chain several reporters together (end the chain
+                              with endchain)
+    log                       log the samples
+    file                      write the samples to a file in the output dir
+    dir                       write samples to a nested dir format
+    unique                    takes an "inner reporter" but only passes the
+                              unique samples to inner reporter. (useful in
+                              conjunction with --non-unique)
+
+    log Options
+        -l, level=<string>    log level the logger should use
+        -p, prefix=<string>   a prefix to put before the log line
+        --show-pr             show the selection probability (when applicable)
+                              NB: may cause extra (and excessive computation)
+
+    file Options
+        -e, embeddings=<name>  the prefix of the name of the file in the output
+                               directory to write the embeddings
+        -p, patterns=<name>    the prefix of the name of the file in the output
+                               directory to write the patterns
+        -n, names=<name>       the name of the file in the output directory to
+                               write the pattern names
+        --show-pr              show the selection probability (when applicable)
+                               NB: may cause extra (and excessive computation)
+        --matrices=<name>      when --show-pr (and the current <mode> supports
+                               probabilities) this the name of the file where
+                               the pr-matrices will be written. For some modes
+                               nothing will be written to this file even when
+                               probabilities are computed
+        --probabilities=<name> when --show-pr (with <mode> support) the
+                               probabilities computed will be written to this
+                               file.
+
+        Note: the file extension is chosen by the formatter for the datatype.
+              Some data types may provide multiple formatters to choose from
+              however that is configured (at this time) from the <type> Options.
+
+        Note: all options are optional. There are default values setup.
+
+    dir Options
+        -d, dir-name=<name>   name of the directory.
+        --show-pr             show the selection probability (when applicable)
+                              NB: may cause extra (and excessive computation)
+
+    unique Options
+        --histogram=<name>    if set unique will write the histogram of how many
+                              times each node is sampled.
+
+    Examples
+
+        $ sfp -o <path> --samples=5 --support=5 \
+            digraph ./digraph.veg.gz \
+            graple \
+            chain log file
+
+        $ sfp -o <path> --samples=5 --support=5 \
+            digraph ./digraph.veg.gz \
+            graple \
+            chain log chain log log endchain file
+
+        $ sfp --non-unique --skip-log=DEBUG -o /tmp/sfp --samples=5 --support=5 \
+            digraph --min-vertices=3 ../fsm/data/expr.gz \
+            graple \
+            chain \
+                log -p non-unique \
+                unique \
+                    chain \
+                        log -p unique \
+                        file -e unique-embeddings -p unique-patterns \
+                    endchain \
+                file -e non-unique-embeddings -p non-unique-patterns
+`
+
 func Usage(code int) {
 	fmt.Fprintln(os.Stderr, UsageMessage)
 	if code == 0 {
 		fmt.Fprintln(os.Stdout, ExtendedMessage)
+		fmt.Fprintln(os.Stdout, CommonUsage)
 		code = ErrorCodes["usage"]
 	} else {
 		fmt.Fprintln(os.Stderr, "Try -h or --help for help")
@@ -287,15 +482,14 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hl:s:", []string{"help",
-			"search",
+		"hl:c:", []string{"help",
 			"loader=",
-			"support=",
+			"count-mode=",
+			"overlap-pruning",
 			"min-edges=",
 			"max-edges=",
 			"min-vertices=",
 			"max-vertices=",
-			"tx-attr=",
 		},
 	)
 	if err != nil {
@@ -303,24 +497,23 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		Usage(ErrorCodes["opts"])
 	}
 
-	search := false
 	loaderType := "veg"
-	supportedFunc := "min-image"
+	modeStr := "optimistic-pruning"
+	overlapPruning := false
 	minE := 0
 	maxE := int(math.MaxInt32)
 	minV := 0
 	maxV := int(math.MaxInt32)
-	txAttr := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
-		case "--search":
-			search = true
 		case "-l", "--loader":
 			loaderType = oa.Arg()
-		case "-s", "--support":
-			supportedFunc = oa.Arg()
+		case "-c", "--count-mode":
+			modeStr = oa.Arg()
+		case "--overlap-pruning":
+			overlapPruning = true
 		case "--min-edges":
 			minE = ParseInt(oa.Arg())
 		case "--max-edges":
@@ -329,36 +522,33 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			minV = ParseInt(oa.Arg())
 		case "--max-vertices":
 			maxV = ParseInt(oa.Arg())
-		case "--tx-attr":
-			txAttr = oa.Arg()
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 
-	var supported digraph.Supported
-	switch supportedFunc {
-	case "min-image":
-		supported = digraph.MinImgSupported
-	case "max-indep":
-		supported = digraph.MaxIndepSupported
-	case "tx":
-		if txAttr == "" {
-			fmt.Fprintf(os.Stderr, "For support function tx you must additionally supply --tx-attr=<attr>\n")
-			Usage(ErrorCodes["opts"])
-		}
-		supported = digraph.MakeTxSupported(txAttr)
+	var mode digraph.Mode
+	switch modeStr {
+	case "automorphs":
+		mode = digraph.Automorphs | digraph.OverlapPruning
+	case "no-automorphs":
+		mode = digraph.NoAutomorphs
+	case "optimistic-pruning":
+		mode = digraph.OptimisticPruning
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown support function '%v'\n", supportedFunc)
-		fmt.Fprintf(os.Stderr, "funcs: min-image, max-indep, dedup\n")
+		fmt.Fprintf(os.Stderr, "Unknown mode '%v'\n", modeStr)
+		fmt.Fprintf(os.Stderr, "modes: automorphs, no-automorphs, optimistic-pruning\n")
 		Usage(ErrorCodes["opts"])
+	}
+	if overlapPruning {
+		mode |= digraph.OverlapPruning
 	}
 
 	var loader lattice.Loader
 	switch loaderType {
 	case "veg":
-		loader, err = digraph.NewVegLoader(conf, search, supported, minE, maxE, minV, maxV)
+		loader, err = digraph.NewVegLoader(conf, mode, minE, maxE, minV, maxV)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
@@ -426,7 +616,7 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	patterns := "patterns"
@@ -452,14 +642,14 @@ func fileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatt
 		case "--show-pr":
 			showPr = true
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 	fr, err := reporters.NewFile(conf, fmtr, showPr, patterns, embeddings, names, matrices, probabilities)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		errors.Logf("ERROR", "There was error creating output files\n")
+		errors.Logf("ERROR", "%v\n", err)
 		os.Exit(1)
 	}
 	return fr, args
@@ -476,7 +666,7 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	dir := "samples"
@@ -490,14 +680,14 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 		case "--show-pr":
 			showPr = true
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 	fr, err := reporters.NewDir(conf, fmtr, showPr, dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error creating output files\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		errors.Logf("ERROR", "There was error creating output files\n")
+		errors.Logf("ERROR", "%v", err)
 		os.Exit(1)
 	}
 	return fr, args
@@ -512,7 +702,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	for _, oa := range optargs {
@@ -520,7 +710,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 		case "-h", "--help":
 			Usage(0)
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
@@ -531,7 +721,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 			break
 		}
 		if _, has := reports[args[0]]; !has {
-			fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+			errors.Logf("ERROR", "Unknown reporter '%v'\n", args[0])
 			fmt.Fprintln(os.Stderr, "Reporters:")
 			for k := range reports {
 				fmt.Fprintln(os.Stderr, "  ", k)
@@ -543,7 +733,7 @@ func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Form
 		rptrs = append(rptrs, rptr)
 	}
 	if len(rptrs) == 0 {
-		fmt.Fprintln(os.Stderr, "Empty chain")
+		errors.Logf("ERROR", "Empty chain")
 		fmt.Fprintln(os.Stderr, "try: chain log file")
 		Usage(ErrorCodes["opts"])
 	}
@@ -560,7 +750,7 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	histogram := ""
@@ -571,17 +761,17 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 		case "--histogram":
 			histogram = oa.Arg()
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			errors.Logf("ERROR", "Unknown flag '%v'", oa.Opt())
 			Usage(ErrorCodes["opts"])
 		}
 	}
 	var rptr miners.Reporter
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to unique")
+		errors.Logf("ERROR", "You must supply an inner reporter to unique")
 		fmt.Fprintln(os.Stderr, "try: unique file")
 		Usage(ErrorCodes["opts"])
 	} else if _, has := reports[args[0]]; !has {
-		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+		errors.Logf("ERROR", "Unknown reporter '%v'", args[0])
 		fmt.Fprintln(os.Stderr, "Reporters:")
 		for k := range reports {
 			fmt.Fprintln(os.Stderr, "  ", k)
@@ -592,7 +782,7 @@ func uniqueReporter(reports map[string]Reporter, argv []string, fmtr lattice.For
 	}
 	uniq, err := reporters.NewUnique(conf, fmtr, rptr, histogram)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating unique reporter '%v'\n", err)
+		errors.Logf("ERROR", "Error creating unique reporter '%v'\n", err)
 		Usage(ErrorCodes["opts"])
 	}
 	return uniq, args
@@ -607,7 +797,7 @@ func maxReporter(reports map[string]Reporter, argv []string, fmtr lattice.Format
 		},
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
 	for _, oa := range optargs {

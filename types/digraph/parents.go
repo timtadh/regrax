@@ -4,6 +4,7 @@ import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/set"
 )
 
 import (
@@ -20,28 +21,42 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 	dt := n.dt()
 	sg := n.SubGraph()
 	if len(sg.V) == 1 && len(sg.E) == 0 {
-		return []lattice.Node{NewEmbListNode(dt, nil)}, nil
+		return []lattice.Node{dt.Root()}, nil
 	}
-	if nodes, has, err := cached(n, dt, dt.ParentCount, dt.Parents); err != nil {
+	if nodes, has, err := cachedAdj(n, dt, dt.ParentCount, dt.Parents); err != nil {
 		return nil, err
 	} else if has {
 		return nodes, nil
 	}
-	embs, err := n.Embeddings()
+	parentBuilders, err := allParents(n.SubGraph().Builder())
 	if err != nil {
 		return nil, err
 	}
+	seen := set.NewSortedSet(10)
 	nodes = make([]lattice.Node, 0, 10)
-	for _, psg := range embs[0].SubGraphs() {
-		psn := NewSearchNode(dt, psg)
-		psgs, err := psn.Embeddings()
+	for _, pBuilder := range parentBuilders {
+		parent := pBuilder.Build()
+		if seen.Has(parent) {
+			continue
+		}
+		seen.Add(parent)
+		support, pexts, pembs, poverlap, err := ExtsAndEmbs(dt, parent, nil, set.NewSortedSet(0), dt.Mode, false)
 		if err != nil {
 			return nil, err
 		}
-		nodes = append(nodes, n.New(psgs))
+		if support < dt.Support() {
+			// this means this parent support comes from automorphism
+			// it isn't truly supported, and its children may be spurious as well
+			// log and skip?
+			ExtsAndEmbs(dt, parent, nil, set.NewSortedSet(0), dt.Mode, true)
+
+			errors.Logf("WARN", "for node %v parent %v had support %v less than required %v due to automorphism", n, parent.Pretty(dt.G.Colors), support, dt.Support())
+		} else {
+			nodes = append(nodes, n.New(parent, pexts, pembs, poverlap))
+		}
 	}
 	if len(nodes) == 0 {
 		return nil, errors.Errorf("Found no parents!!\n    node %v", n)
 	}
-	return nodes, cache(dt, dt.ParentCount, dt.Parents, n.Label(), nodes)
+	return nodes, cacheAdj(dt, dt.ParentCount, dt.Parents, n.Label(), nodes)
 }

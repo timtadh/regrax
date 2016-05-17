@@ -35,7 +35,7 @@ func init() {
 	}
 }
 
-func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode, *SearchNode) {
+func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.SubGraph, *EmbListNode) {
 	Graph := goiso.NewGraph(10, 10)
 	G := &Graph
 
@@ -58,7 +58,7 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 	}
 
 	// make the *Digraph
-	dt, err := NewDigraph(conf, false, MinImgSupported, 0, len(G.V), 0, len(G.E))
+	dt, err := NewDigraph(conf, Automorphs, 0, len(G.V), 0, len(G.E))
 	if err != nil {
 		errors.Logf("ERROR", "%v", err)
 		t.Fatal(err)
@@ -69,7 +69,7 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 		t.Fatal(err)
 	}
 
-	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt), RootSearchNode(dt)
+	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt)
 }
 
 func BenchmarkEmbList(b *testing.B) {
@@ -80,7 +80,7 @@ func BenchmarkEmbList(b *testing.B) {
 		vlabels := []string{"a", "b", "c", "d", "e", "f"}
 		elabels := []string{"g", "h", "i"}
 		V := 100
-		_, _, _, _, eroot, _ := randomGraph(
+		_, _, _, _, eroot := randomGraph(
 			b, V, int(float64(V)*2.25), vlabels, elabels)
 		b.StartTimer()
 		dfs(b, x, eroot)
@@ -93,17 +93,8 @@ func TestVerifyEmbList(t *testing.T) {
 	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
 	elabels := []string{""}
 	V := 150
-	_, _, _, _, eroot, _ := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
+	_, _, _, _, eroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
 	dfs(t, x, eroot)
-}
-
-func TestVerifySearch(t *testing.T) {
-	x := assert.New(t)
-	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
-	elabels := []string{""}
-	V := 150
-	_, _, _, _, _, sroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
-	dfs(t, x, sroot)
 }
 
 func dfs(t testing.TB, x *assert.Assertions, root Node) {
@@ -111,11 +102,16 @@ func dfs(t testing.TB, x *assert.Assertions, root Node) {
 }
 
 func visit(t testing.TB, x *assert.Assertions, visited *set.SortedSet, node Node) {
-	// errors.Logf("DEBUG", "visiting %v", node)
+	errors.Logf("DEBUG", "visiting %v", node)
+	if visited.Has(node.Pattern()) {
+		return
+	}
 	visited.Add(node.Pattern())
 	checkNode(t, x, node)
 	kids, err := node.Children()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, kid := range kids {
 		if !visited.Has(kid.Pattern()) {
 			visit(t, x, visited, kid.(Node))
@@ -125,15 +121,25 @@ func visit(t testing.TB, x *assert.Assertions, visited *set.SortedSet, node Node
 
 func checkNode(t testing.TB, x *assert.Assertions, node Node) {
 	acount, err := node.AdjacentCount()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	kcount, err := node.ChildCount()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	kids, err := node.Children()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pcount, err := node.ParentCount()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	parents, err := node.Parents()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if kcount != len(kids) {
 		x.Fail("kcount != len(kids)")
 	}
@@ -153,7 +159,9 @@ func checkNode(t testing.TB, x *assert.Assertions, node Node) {
 
 func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 	pkids, err := parent.Children()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	found := false
 	for _, pkid := range pkids {
 		if bytes.Equal(pkid.Pattern().Label(), kid.Label()) {
@@ -161,10 +169,14 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		}
 	}
 	if !found {
-		x.Fail(errors.Errorf("parent %v kids %v did not have %v", parent, pkids, kid).Error())
+		t.Errorf("parent %v kids %v did not have %v", parent, pkids, kid)
+		findChildren(parent, nil, true)
+		t.Fatalf("assert-fail")
 	}
 	kparents, err := kid.Parents()
-	x.Nil(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	found = false
 	for _, kparent := range kparents {
 		if bytes.Equal(kparent.Pattern().Label(), parent.Label()) {
@@ -172,7 +184,7 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		}
 	}
 	if !found {
-		x.Fail(errors.Errorf("kid %v parents %v did not have %v", kid, kparents, parent).Error())
+		t.Fatalf("kid %v parents %v did not have %v", kid, kparents, parent)
 	}
 	pkids, err = parent.CanonKids()
 	if err != nil {
@@ -190,14 +202,18 @@ func checkKid(t testing.TB, x *assert.Assertions, parent, kid Node) {
 		// kid is a canon kid
 		// kid should have no other canon parents
 		kparents, err := kid.Parents()
-		x.Nil(err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		found = false
 		for _, kparent := range kparents {
 			if bytes.Equal(kparent.Pattern().Label(), parent.Label()) {
 				continue
 			}
 			kparent_ckids, err := kparent.CanonKids()
-			x.Nil(err)
+			if err != nil {
+				t.Fatal(err)
+			}
 			for _, kparent_ckid := range kparent_ckids {
 				if bytes.Equal(kparent_ckid.Pattern().Label(), kid.Label()) {
 					x.Fail(errors.Errorf("kid %v had multiple canon parents %v %v", kid, parent, kparent).Error())

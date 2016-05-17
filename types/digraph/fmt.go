@@ -8,11 +8,11 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
 type Formatter struct {
@@ -38,13 +38,11 @@ func (f *Formatter) FileExt() string {
 func (f *Formatter) PatternName(node lattice.Node) string {
 	switch n := node.(type) {
 	case *EmbListNode:
-		if len(n.sgs) > 0 {
-			return n.sgs[0].Label()
+		if len(n.embeddings) > 0 {
+			return n.Pat.Pretty(n.Dt.G.Colors)
 		} else {
 			return "0:0"
 		}
-	case *SearchNode:
-		return n.Pat.String()
 	default:
 		panic(errors.Errorf("unknown node type %v", node))
 	}
@@ -53,36 +51,12 @@ func (f *Formatter) PatternName(node lattice.Node) string {
 func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	switch n := node.(type) {
 	case *EmbListNode:
-		max := ""
-		if ismax, err := n.Maximal(); err != nil {
-			return "", err
-		} else if ismax {
-			max = " # maximal"
-		}
-		if len(n.sgs) > 0 {
-			Pat := n.sgs[0].Label()
-			dot := n.sgs[0].String()
-			return fmt.Sprintf("// %s%s\n\n%s\n", Pat, max, dot), nil
+		if len(n.embeddings) > 0 {
+			Pat := n.Pat.Pretty(n.Dt.G.Colors)
+			dot := n.embeddings[0].Dotty(n.Dt.G, nil)
+			return fmt.Sprintf("// %s\n\n%s\n", Pat, dot), nil
 		} else {
-			return fmt.Sprintf("// 0:0\n\ndigraph{}\n"), nil
-		}
-	case *SearchNode:
-		max := ""
-		if ismax, err := n.Maximal(); err != nil {
-			return "", err
-		} else if ismax {
-			max = " # maximal"
-		}
-		pat := n.Pat.String()
-		embs, err := n.Embeddings()
-		if err != nil {
-			return "", err
-		}
-		if len(embs) > 0 {
-			dot := embs[0].String()
-			return fmt.Sprintf("// %s%s\n\n%s\n", pat, max, dot), nil
-		} else {
-			return fmt.Sprintf("// 0:0\n\ndigraph{}\n"), nil
+			return fmt.Sprintf("// {0:0}\n\ndigraph{}\n"), nil
 		}
 	default:
 		return "", errors.Errorf("unknown node type %v", node)
@@ -90,34 +64,30 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 }
 
 func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
-	var sgs []*goiso.SubGraph = nil
+	var dt *Digraph
+	var embeddings []*subgraph.Embedding = nil
 	switch n := node.(type) {
 	case *EmbListNode:
-		sgs = n.sgs
-	case *SearchNode:
-		embs, err := n.Embeddings()
-		if err != nil {
-			return nil, err
-		}
-		sgs = embs
+		embeddings = n.embeddings
+		dt = n.Dt
 	default:
 		return nil, errors.Errorf("unknown node type %v", node)
 	}
-	embs := make([]string, 0, len(sgs))
-	for _, sg := range sgs {
+	embs := make([]string, 0, len(embeddings))
+	for _, emb := range embeddings {
 		allAttrs := make(map[int]map[string]interface{})
-		for _, v := range sg.V {
+		for _, id := range emb.Ids {
 			err := f.g.NodeAttrs.DoFind(
-				int32(f.g.G.V[v.Id].Id),
-				func(id int32, attrs map[string]interface{}) error {
-					allAttrs[v.Id] = attrs
+				int32(f.g.G.V[id].Id),
+				func(_ int32, attrs map[string]interface{}) error {
+					allAttrs[id] = attrs
 					return nil
 				})
 			if err != nil {
 				return nil, err
 			}
 		}
-		embs = append(embs, sg.StringWithAttrs(allAttrs))
+		embs = append(embs, emb.Dotty(dt.G, allAttrs))
 	}
 	return embs, nil
 }

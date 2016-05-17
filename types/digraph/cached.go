@@ -12,11 +12,12 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
-type Saveable interface {
-	Save() error
-}
-
-func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
+func cacheAdj(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
+	if false {
+		pat, _ := LoadSubgraphPattern(dt, key)
+		errors.Logf("WARN", "skipped caching %v", pat.Pat)
+		return nil
+	}
 	if has, err := count.Has(key); err != nil {
 		return err
 	} else if has {
@@ -27,15 +28,6 @@ func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, ke
 		return err
 	}
 	for _, n := range nodes {
-		switch node := n.(type) {
-		case Saveable:
-			err = node.Save()
-			if err != nil {
-				return err
-			}
-		default:
-			return errors.Errorf("unexpected lattice.Node type %T %v", n, n)
-		}
 		err = cache.Add(key, n.Pattern().Label())
 		if err != nil {
 			return err
@@ -44,23 +36,16 @@ func cache(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, ke
 	return nil
 }
 
-func cached(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap) (nodes []lattice.Node, has bool, err error) {
+func cachedAdj(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap) (nodes []lattice.Node, has bool, err error) {
 	key := n.Label()
 	if has, err := count.Has(key); err != nil {
 		return nil, false, err
 	} else if !has {
 		return nil, false, nil
 	}
+	// errors.Logf("DEBUG", "loading %v", n)
 	err = cache.DoFind(key, func(_, adj []byte) (err error) {
-		var node lattice.Node
-		switch n.(type) {
-		case *SearchNode:
-			node, err = LoadSearchNode(dt, adj)
-		case *EmbListNode:
-			node, err = LoadEmbListNode(dt, adj)
-		default:
-			return errors.Errorf("unexpected lattice.Node type %T %v", n, n)
-		}
+		node, err := LoadEmbListNode(dt, adj)
 		if err != nil {
 			return err
 		}
@@ -69,6 +54,10 @@ func cached(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.Mul
 	})
 	if err != nil {
 		return nil, false, err
+	}
+	if false {
+		pat, _ := LoadSubgraphPattern(dt, key)
+		errors.Logf("LOAD-DEBUG", "Loaded Cached Adj %v adj %v", pat.Pat, len(nodes))
 	}
 	return nodes, true, nil
 }
