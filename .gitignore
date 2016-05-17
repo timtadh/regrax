@@ -8,4 +8,7 @@ env/
 results/
 tmp*
 cover*
+x
+tough*
+slow*
 
