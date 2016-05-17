@@ -107,11 +107,11 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	var err error
 	var ei subgraph.EmbIterator
 	switch {
-	case mode & Automorphs == Automorphs:
+	case mode&Automorphs == Automorphs:
 		ei, err = pattern.IterEmbeddings(dt.Indices, patternOverlap, nil)
-	case mode & NoAutomorphs == NoAutomorphs:
+	case mode&NoAutomorphs == NoAutomorphs:
 		ei, err = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, patternOverlap, nil))
-	case mode & OptimisticPruning == OptimisticPruning:
+	case mode&OptimisticPruning == OptimisticPruning:
 		seen = make(map[int]bool)
 		ei, err = pattern.IterEmbeddings(
 			dt.Indices,
@@ -123,7 +123,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 					}
 				}
 				return true
-		})
+			})
 	default:
 		return 0, nil, nil, nil, errors.Errorf("Unknown mode %v", mode)
 	}
@@ -215,6 +215,8 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
 	label := pattern.Label()
+	// frequency will always get added, so if frequency has the label
+	// this pattern has already been saved
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return err
 	} else if has {
@@ -224,6 +226,8 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 	if err != nil {
 		return nil
 	}
+	// if the support is too low we can bail on saving the rest of the
+	// node
 	if support < dt.Support() {
 		return nil
 	}
@@ -241,6 +245,7 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 		}
 	}
 	if dt.Overlap != nil {
+		// save the overlap if using
 		err = dt.Overlap.Add(pattern, overlap)
 		if err != nil {
 			return nil
@@ -283,6 +288,7 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*
 	if err != nil {
 		return false, 0, nil, nil, nil, err
 	}
+
 	var overlap []map[int]bool = nil
 	if dt.Overlap != nil {
 		err = dt.Overlap.DoFind(pattern, func(_ *subgraph.SubGraph, o []map[int]bool) error {

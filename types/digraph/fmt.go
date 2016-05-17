@@ -56,7 +56,7 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 			dot := n.embeddings[0].Dotty(n.Dt.G, nil)
 			return fmt.Sprintf("// %s\n\n%s\n", Pat, dot), nil
 		} else {
-			return fmt.Sprintf("// 0:0\n\ndigraph{}\n"), nil
+			return fmt.Sprintf("// {0:0}\n\ndigraph{}\n"), nil
 		}
 	default:
 		return "", errors.Errorf("unknown node type %v", node)

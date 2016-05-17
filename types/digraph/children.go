@@ -46,10 +46,8 @@ func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.Mult
 	if nodes, has, err := cachedAdj(n, dt, kidCount, kids); err != nil {
 		return false, nil, err
 	} else if has {
-		// errors.Logf("DEBUG", "cached %v, %v", n, nodes)
 		return true, nodes, nil
 	}
-	// errors.Logf("DEBUG", "not cached %v", n)
 	return false, nil, nil
 }
 
@@ -58,23 +56,16 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	if has, nodes, err := precheckChildren(n, dt.CanonKidCount, dt.CanonKids); err != nil {
 		return nil, err
 	} else if has {
-		// errors.Logf("DEBUG", "got from precheck %v", n)
 		return nodes, nil
 	}
 	sg := n.SubGraph()
 	nodes, err = findChildren(n, func(pattern *subgraph.SubGraph) (bool, error) {
 		return isCanonicalExtension(sg, pattern)
 	}, false)
-	// errors.Logf("DEBUG", "n %v canon-kids %v", n, len(nodes))
 	return nodes, cacheAdj(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
 func children(n Node) (nodes []lattice.Node, err error) {
-	// errors.Logf("DEBUG", "")
-	// errors.Logf("DEBUG", "")
-	// errors.Logf("DEBUG", "")
-	// errors.Logf("DEBUG", "")
-	// errors.Logf("DEBUG", "n %v", n)
 	dt := n.dt()
 	if has, nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
 		return nil, err
@@ -90,7 +81,6 @@ func children(n Node) (nodes []lattice.Node, err error) {
 }
 
 func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bool) (nodes []lattice.Node, err error) {
-	// errors.Logf("DEBUG", "")
 	if debug {
 		errors.Logf("CHILDREN-DEBUG", "node %v", n)
 	}
@@ -140,19 +130,17 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 			unsupported.Add(ep)
 		}
 	}
-
 	for i, newNode := range nodes {
 		err := newNode.(Node).SaveUnsupported(len(sg.V), vords[i], unsupported)
 		if err != nil {
 			return nil, err
 		}
 	}
-
 	return nodes, nil
 }
 
 type extInfo struct {
-	ep  *subgraph.Extension
+	ep   *subgraph.Extension
 	vord []int
 }
 
@@ -166,12 +154,8 @@ func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
 	if err != nil {
 		return nil, err
 	}
-	// if debug {
-	// 	_, extPoints, _, err = ExtsAndEmbs(n.dt(), sg, set.NewSortedSet(0), dt.Mode, debug)
-	// }
 	patterns := hashtable.NewLinearHash()
 	for _, ep := range extPoints {
-		// errors.Logf("DEBUG", "  ext point %v", ep)
 		bc := b.Copy()
 		bc.Extend(ep)
 		vord, eord := bc.CanonicalPermutation()
@@ -179,7 +163,6 @@ func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
 		if !patterns.Has(ext) {
 			patterns.Put(ext, &extInfo{ep, vord})
 		}
-		// errors.Logf("DEBUG", "    ext %v", ext)
 	}
 
 	return patterns, nil
@@ -195,4 +178,3 @@ func translateOverlap(org []map[int]bool, vord []int) []map[int]bool {
 	}
 	return neo
 }
-

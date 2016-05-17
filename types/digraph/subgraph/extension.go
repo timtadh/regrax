@@ -35,11 +35,11 @@ func (e *Extension) Translate(orgLen int, vord []int) *Extension {
 	}
 	return &Extension{
 		Source: Vertex{
-			Idx: srcIdx,
+			Idx:   srcIdx,
 			Color: e.Source.Color,
 		},
 		Target: Vertex{
-			Idx: targIdx,
+			Idx:   targIdx,
 			Color: e.Target.Color,
 		},
 		Color: e.Color,

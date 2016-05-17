@@ -8,6 +8,7 @@ type EmbeddingBuilder struct {
 	*Builder
 	Ids []int // Idx vertices in the graph
 }
+
 func BuildEmbedding(V, E int) *EmbeddingBuilder {
 	return &EmbeddingBuilder{
 		Builder: &Builder{

@@ -9,14 +9,14 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
-	"github.com/timtadh/data-structures/set"
-	"github.com/timtadh/data-structures/list"
 	"github.com/timtadh/data-structures/heap"
+	"github.com/timtadh/data-structures/list"
+	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 )
 
 import (
-	// "github.com/timtadh/sfp/stats"
+// "github.com/timtadh/sfp/stats"
 )
 
 // Tim You Are Here:
@@ -85,8 +85,8 @@ func FilterAutomorphs(it EmbIterator, err error) (ei EmbIterator, _ error) {
 }
 
 type IdNode struct {
-	Id  int
-	Idx int
+	Id   int
+	Idx  int
 	Prev *IdNode
 }
 
@@ -162,7 +162,6 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap []map[int]bool, pru
 		idx, id int
 	}
 
-
 	ei = func() (*Embedding, EmbIterator) {
 		for len(stack) > 0 {
 			var i entry
@@ -178,7 +177,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap []map[int]bool, pru
 			if i.eid >= len(chain) {
 				// check that this is the subgraph we sought
 				emb := &Embedding{
-					SG: sg,
+					SG:  sg,
 					Ids: i.ids.list(len(sg.V)),
 				}
 				// if len(sg.E) > 0 {
@@ -362,8 +361,8 @@ func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx
 		if seen[u] {
 			continue
 		}
-		find_edge:
-		for i := len(prevs)-1; i >= 0; i-- {
+	find_edge:
+		for i := len(prevs) - 1; i >= 0; i-- {
 			prev := prevs[i]
 			for _, e := range sg.Adj[prev] {
 				v := other(prev, e)
@@ -396,7 +395,7 @@ func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx
 			if extsFrom == 0 {
 				// p = // indices.G.ColorFrequency(sg.V[v].Color) // * sg.vertexCard(indices, v)
 				// p = sg.vertexCard(indices, v)
-				p = sg.extensionsFrom(indices, overlap, v)*4 // penalty for all targets being known
+				p = sg.extensionsFrom(indices, overlap, v) * 4 // penalty for all targets being known
 			}
 			if !colors[v] {
 				p /= 2
@@ -460,7 +459,7 @@ func (ids *IdNode) String() string {
 		items = append(items, fmt.Sprintf("<id: %v, idx: %v>", c.Id, c.Idx))
 	}
 	ritems := make([]string, len(items))
-	idx := len(items)-1
+	idx := len(items) - 1
 	for _, item := range items {
 		ritems[idx] = item
 		idx--

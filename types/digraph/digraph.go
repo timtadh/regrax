@@ -75,7 +75,7 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 		return nil, err
 	}
 	var overlap subgraph_overlap.MultiMap = nil
-	if mode & OverlapPruning == OverlapPruning {
+	if mode&OverlapPruning == OverlapPruning {
 		overlap, err = config.SubgraphOverlapMultiMap("digraph-overlap")
 		if err != nil {
 			return nil, err
