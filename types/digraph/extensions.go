@@ -22,6 +22,7 @@ const (
 	NoAutomorphs
 	OptimisticPruning
 	OverlapPruning
+	ExtensionPruning
 )
 
 // YOU ARE HERE:
@@ -244,7 +245,7 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 			return err
 		}
 	}
-	if dt.Overlap != nil {
+	if dt.Overlap != nil && len(pattern.E) > 3 {
 		// save the overlap if using
 		err = dt.Overlap.Add(pattern, overlap)
 		if err != nil {

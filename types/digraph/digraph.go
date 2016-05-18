@@ -85,9 +85,12 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 	if err != nil {
 		return nil, err
 	}
-	unexts, err := config.BytesExtensionMultiMap("digraph-unsupported-extensions")
-	if err != nil {
-		return nil, err
+	var unexts bytes_extension.MultiMap
+	if mode&ExtensionPruning == ExtensionPruning {
+		unexts, err = config.BytesExtensionMultiMap("digraph-unsupported-extensions")
+		if err != nil {
+			return nil, err
+		}
 	}
 	frequency, err := config.BytesIntMultiMap("digraph-pattern-frequency")
 	if err != nil {
@@ -205,7 +208,9 @@ func (g *Digraph) Close() error {
 		g.Overlap.Close()
 	}
 	g.Extensions.Close()
-	g.UnsupExts.Close()
+	if g.UnsupExts != nil {
+		g.UnsupExts.Close()
+	}
 	g.NodeAttrs.Close()
 	g.Frequency.Close()
 	return nil

@@ -121,6 +121,9 @@ Types
         --overlap-pruning        prune potential embeddings of lattice nodes
                                  based on the overlap of embeddings of their
                                  parents
+        --extension-pruning      prune potential extensions by removing
+                                 extensions which had no support in ancestor
+                                 nodes
         --min-edges=<int>        minimum edges in a samplable digraph
         --max-edges=<int>        maximum edges in a samplable digraph
         --min-vertices=<int>     minimum vertices in a samplable digraph
@@ -171,6 +174,14 @@ Types
                                  may want to uses this flag in conjuction with
                                  "optimistic-pruning" to get the best
                                  performance (at the cost of completeness).
+
+        --extension-pruning      prune potential extensions by removing
+                                 extensions which had no support in ancestor
+                                 nodes. This is a safe mode to use with all
+                                 counting options. However, it may cause a high
+                                 amount of file IO depending on the mining mode
+                                 used. It has been observed to not play as well
+                                 with fastmax for certain datasets.
 
 
     digraph Loaders
@@ -486,6 +497,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"loader=",
 			"count-mode=",
 			"overlap-pruning",
+			"extension-pruning",
 			"min-edges=",
 			"max-edges=",
 			"min-vertices=",
@@ -500,6 +512,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	loaderType := "veg"
 	modeStr := "optimistic-pruning"
 	overlapPruning := false
+	extensionPruning := false
 	minE := 0
 	maxE := int(math.MaxInt32)
 	minV := 0
@@ -514,6 +527,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			modeStr = oa.Arg()
 		case "--overlap-pruning":
 			overlapPruning = true
+		case "--extension-pruning":
+			extensionPruning = true
 		case "--min-edges":
 			minE = ParseInt(oa.Arg())
 		case "--max-edges":
@@ -543,6 +558,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 	if overlapPruning {
 		mode |= digraph.OverlapPruning
+	}
+	if extensionPruning {
+		mode |= digraph.ExtensionPruning
 	}
 
 	var loader lattice.Loader

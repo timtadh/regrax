@@ -79,6 +79,9 @@ func (n *EmbListNode) Overlap() ([]map[int]bool, error) {
 }
 
 func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
+	if n.Dt.UnsupExts == nil {
+		return set.NewSortedSet(0), nil
+	}
 	label := n.Label()
 	u := set.NewSortedSet(10)
 	err := n.Dt.UnsupExts.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
@@ -91,6 +94,12 @@ func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
 }
 
 func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet) error {
+	if n.Dt.UnsupExts == nil {
+		return nil
+	}
+	if len(n.Pat.E) < 4 {
+		return nil
+	}
 	label := n.Label()
 	for x, next := eps.Items()(); next != nil; x, next = next() {
 		ep := x.(*subgraph.Extension)
