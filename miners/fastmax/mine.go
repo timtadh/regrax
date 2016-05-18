@@ -2,7 +2,9 @@ package fastmax
 
 import ()
 
-import ()
+import (
+	"github.com/timtadh/data-structures/errors"
+)
 
 import (
 	"github.com/timtadh/sfp/config"
@@ -26,7 +28,9 @@ func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	// errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
+	if false {
+		errors.Logf("DEBUG", "cur %v kids %v", cur, len(kids))
+	}
 	_, next, err := walker.Transition(cur, kids, w.weight, false)
 	return next, err
 }
@@ -46,14 +50,17 @@ func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 		// maxLevel := float64(w.Dt.LargestLevel())
 		// return (level) / (float64(indeg) * maxLevel), nil
 	} else {
-		indeg, err := v.ParentCount()
-		if err != nil {
-			return 0, err
-		}
+		// level approximates indeg
+		level := float64(v.Pattern().Level())
+		// indeg, err := v.ParentCount()
+		// if err != nil {
+		// 	return 0, err
+		// }
 		odeg, err := v.ChildCount()
 		if err != nil {
 			return 0, err
 		}
-		return float64(odeg) / float64(indeg), nil
+		// return float64(odeg) / float64(indeg), nil
+		return float64(odeg) / (level), nil
 	}
 }
