@@ -42,8 +42,9 @@ func (w *Walker) weight(_, v lattice.Node) (float64, error) {
 			return 0, err
 		}
 		level := float64(v.Pattern().Level())
-		maxLevel := float64(w.Dt.LargestLevel())
-		return (level) / (float64(indeg) * maxLevel), nil
+		return (level) / float64(indeg), nil
+		// maxLevel := float64(w.Dt.LargestLevel())
+		// return (level) / (float64(indeg) * maxLevel), nil
 	} else {
 		indeg, err := v.ParentCount()
 		if err != nil {
