@@ -41,7 +41,7 @@ then
 fi
 
 >&2 echo
-line=(uniformity-test -n $NAMES -e "$OUTPUT"/histogram.csv -p "$OUTPUT"/probabilities.prs)
+line=(uniformity-test -n $NAMES -e $OUTPUT/histogram.csv -p $OUTPUT/probabilities.prs)
 >&2 echo $ "${line[@]}" \>\> "$DATAFILE"
 "${line[@]}" >> "$DATAFILE"
 

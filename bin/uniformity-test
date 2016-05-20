@@ -92,9 +92,12 @@ def add_uniform(table):
 
 def stats(df, col_name):
     col = df[col_name]
-    if col.hasnans:
+    col = col[col.notnull()]
+    if len(col) == 0:
         return None
-    expected = 1.0/float(len(col))
+    #if col.hasnans:
+    #    return None
+    expected = 1.0/float(len(df[col_name]))
     stderr = round(np.sqrt(sum((p - expected)**2 for p in col)), 10)
     return {
         'expected uniform pr': expected,
@@ -130,9 +133,13 @@ def x2test(df, a, b=None):
     from scipy import stats
     if b is not None:
         counts = np.sum(df['count'])
-        _, pval = stats.chisquare(df[a], df[b]*counts)
+        bcol = df[b].copy()
+        bcol = bcol.fillna(0) * len(df[a]) * counts
+        bcol = [int(x)+1 for x in bcol]
+        log(list(bcol))
+        chisq, pval = stats.chisquare(f_obs=df[a], f_exp=bcol)
     else:
-        _, pval = stats.chisquare(df[a])
+        _, pval = stats.chisquare(f_obs=df[a])
     if np.isnan(pval):
         return None
     return {
@@ -190,6 +197,7 @@ def main(argv):
     with open(empirical, 'r') as f:
         load_csv_into(data_table, f, ['count', 'observed probability', 'name'])
 
+    log("predicted", predicted)
     if predicted is not None:
         with open(predicted, 'r') as f:
             load_csv_into(data_table, f, ['theoretical probability', 'name'])
