@@ -25,3 +25,9 @@
 [submodule "src/github.com/pmezard/go-difflib"]
 	path = src/github.com/pmezard/go-difflib
 	url = git@github.com:pmezard/go-difflib
+[submodule "src/github.com/timtadh/lexmachine"]
+	path = src/github.com/timtadh/lexmachine
+	url = git@github.com:timtadh/lexmachine.git
+[submodule "src/github.com/timtadh/dot"]
+	path = src/github.com/timtadh/dot
+	url = git@github.com:timtadh/dot.git
