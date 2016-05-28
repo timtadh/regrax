@@ -26,8 +26,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"io"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/pprof"
 	"strings"
 	"syscall"
@@ -226,28 +228,41 @@ func run() int {
 	}
 
 	if cpuProfile != "" {
-		errors.Logf("DEBUG", "starting cpu profile: %v", cpuProfile)
+		useSafeProfile := false
+		errors.Logf("DEBUG", "starting cpu profile: %v is safe: %v", cpuProfile, useSafeProfile)
 		f, err := os.Create(cpuProfile)
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = pprof.StartCPUProfile(f)
-		if err != nil {
-			log.Fatal(err)
+		if useSafeProfile {
+			err = pprof.StartCPUProfile(f)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			profileUnsafe(f, 100000)
 		}
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			sig:=<-sigs
 			errors.Logf("DEBUG", "closing cpu profile")
-			pprof.StopCPUProfile()
+			if useSafeProfile {
+				pprof.StopCPUProfile()
+			} else {
+				stopProfile()
+			}
 			err := f.Close()
 			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
 			panic(errors.Errorf("caught signal: %v", sig))
 		}()
 		defer func() {
 			errors.Logf("DEBUG", "closing cpu profile")
-			pprof.StopCPUProfile()
+			if useSafeProfile {
+				pprof.StopCPUProfile()
+			} else {
+				stopProfile()
+			}
 			err := f.Close()
 			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
 		}()
@@ -260,4 +275,30 @@ func run() int {
 	}
 
 	return cmd.Main(args, conf, modes)
+}
+
+var profileDone chan bool
+
+func profileWriter(w io.Writer) {
+	for {
+		data := runtime.CPUProfile()
+		if data == nil {
+			break
+		}
+		errors.Logf("DEBUG", "profileWriter got data %v", len(data))
+		w.Write(data)
+	}
+	profileDone<-true
+}
+
+func profileUnsafe(w io.Writer, hz int) {
+	errors.Logf("DEBUG", "profileUnsafe at %v hz", hz)
+	profileDone = make(chan bool)
+	runtime.SetCPUProfileRate(hz)
+	go profileWriter(w)
+}
+
+func stopProfile() {
+	runtime.SetCPUProfileRate(0)
+	<-profileDone
 }
