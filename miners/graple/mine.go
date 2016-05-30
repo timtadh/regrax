@@ -199,6 +199,7 @@ func MakeSample(t Transitioner) func(lattice.Node) (lattice.Node, error) {
 }
 
 func (w *Walker) Next(cur lattice.Node) (lattice.Node, error) {
+	errors.Logf("DEBUG", "cur %v", cur)
 	return uniform(cur.Children())
 }
 
