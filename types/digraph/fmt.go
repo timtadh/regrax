@@ -53,7 +53,18 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	case *EmbListNode:
 		if len(n.embeddings) > 0 {
 			Pat := n.Pat.Pretty(n.Dt.G.Colors)
-			dot := n.embeddings[0].Dotty(n.Dt.G, nil)
+			allAttrs, err := f.loadAttrs(n.embeddings[0])
+			if err != nil {
+				return "", err
+			}
+			attrs := make(map[int]map[string]interface{})
+			for id, _ := range allAttrs {
+				attrs[id] = make(map[string]interface{})
+				if size, has := allAttrs[id]["fontsize"]; has {
+					attrs[id]["fontsize"] = size
+				}
+			}
+			dot := n.embeddings[0].Dotty(n.Dt.G, attrs)
 			return fmt.Sprintf("// %s\n\n%s\n", Pat, dot), nil
 		} else {
 			return fmt.Sprintf("// {0:0}\n\ndigraph{}\n"), nil
@@ -75,21 +86,29 @@ func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
 	}
 	embs := make([]string, 0, len(embeddings))
 	for _, emb := range embeddings {
-		allAttrs := make(map[int]map[string]interface{})
-		for _, id := range emb.Ids {
-			err := f.g.NodeAttrs.DoFind(
-				int32(f.g.G.V[id].Id),
-				func(_ int32, attrs map[string]interface{}) error {
-					allAttrs[id] = attrs
-					return nil
-				})
-			if err != nil {
-				return nil, err
-			}
+		allAttrs, err := f.loadAttrs(emb)
+		if err != nil {
+			return nil, err
 		}
 		embs = append(embs, emb.Dotty(dt.G, allAttrs))
 	}
 	return embs, nil
+}
+
+func (f *Formatter) loadAttrs(emb *subgraph.Embedding) (map[int]map[string]interface{}, error) {
+	allAttrs := make(map[int]map[string]interface{})
+	for _, id := range emb.Ids {
+		err := f.g.NodeAttrs.DoFind(
+			int32(f.g.G.V[id].Id),
+			func(_ int32, attrs map[string]interface{}) error {
+				allAttrs[id] = attrs
+				return nil
+			})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return allAttrs, nil
 }
 
 func (f *Formatter) FormatPattern(w io.Writer, node lattice.Node) error {

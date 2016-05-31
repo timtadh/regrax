@@ -84,12 +84,12 @@ func (p *dotParse) Enter(name string, n *dot.Node) error {
 		return nil
 	}
 	p.curGraph = fmt.Sprintf("%v-%d", n.Get(1).Value.(string), p.graphId)
-	errors.Logf("DEBUG", "enter %v %v", p.curGraph, n)
+	// errors.Logf("DEBUG", "enter %v %v", p.curGraph, n)
 	return nil
 }
 
 func (p *dotParse) Stmt(n *dot.Node) error {
-	if true {
+	if false {
 		errors.Logf("DEBUG", "stmt %v", n)
 	}
 	if p.subgraph > 0 {
@@ -169,7 +169,6 @@ func (p *dotParse) loadEdge(n *dot.Node) (err error) {
 			break
 		}
 	}
-	errors.Logf("DEBUG", "%v (%v) -> %v (%v) : '%v'", sid, srcSid, tid, targSid, label)
 	p.g.AddEdge(&p.g.V[sid], &p.g.V[tid], label)
 	return nil
 }

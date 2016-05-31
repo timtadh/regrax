@@ -125,6 +125,7 @@ func run() int {
 
 	var inputf io.ReadCloser
 	if inputPath == "" {
+		inputPath = "stdin"
 		inputf = os.Stdin
 	} else {
 		var err error
@@ -143,6 +144,7 @@ func run() int {
 
 	var output io.WriteCloser
 	if outputPath == "" {
+		inputPath = "stdout"
 		output = os.Stdout
 	} else {
 		var err error
@@ -154,13 +156,12 @@ func run() int {
 	}
 	defer output.Close()
 
+	errors.Logf("INFO", "cleaning %v writing to %v", inputPath, outputPath)
 	err = clean(input, output)
 	if err != nil {
 		errors.Logf("ERROR", "error cleaning profile %v", err)
 		return 1
 	}
-
-	errors.Logf("INFO", "done")
 	return 0
 }
 
@@ -181,7 +182,7 @@ func (p *dotParse) Enter(name string, n *dot.Node) error {
 		return nil
 	}
 	graphName := n.Get(1).Value.(string)
-	fmt.Fprintf(p.output, "digraph %v {\n", graphName)
+	fmt.Fprintf(p.output, `digraph "%v" {%v`, p.escapeString(graphName), "\n")
 	return nil
 }
 
