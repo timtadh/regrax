@@ -130,15 +130,24 @@ func ParsePretty(str string, labels map[string]int) (*SubGraph, error) {
 			return nil, errors.Errorf("expected ( got %v", str[idx:idx+1])
 		}
 		idx++
+		parens := 1
 		labelc := make([]byte, 0, 10)
 		for ; idx < len(str); idx++ {
 			if str[idx] == '\\' {
 				continue
 			} else if str[idx-1] == '\\' {
 				labelc = append(labelc, str[idx])
+			} else if str[idx] == '(' {
+				parens += 1
+				labelc = append(labelc, str[idx])
 			} else if str[idx] == ')' {
-				idx++
-				break
+				parens -= 1
+				if parens > 0 {
+					labelc = append(labelc, str[idx])
+				} else {
+					idx++
+					break
+				}
 			} else {
 				labelc = append(labelc, str[idx])
 			}

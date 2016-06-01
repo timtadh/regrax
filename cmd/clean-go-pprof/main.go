@@ -2,7 +2,7 @@ package main
 
 /* Tim Henderson (tadh@case.edu)
 *
-* Copyright (c) 2015, Tim Henderson, Case Western Reserve University
+* Copyright (c) 2016, Tim Henderson, Case Western Reserve University
 * Cleveland, Ohio 44106. All Rights Reserved.
 *
 * This library is free software; you can redistribute it and/or modify
@@ -38,6 +38,7 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/dot"
+	"github.com/timtadh/combos"
 	"github.com/timtadh/getopt"
 )
 
@@ -176,7 +177,7 @@ type dotParse struct {
 	subgraph int
 }
 
-func (p *dotParse) Enter(name string, n *dot.Node) error {
+func (p *dotParse) Enter(name string, n *combos.Node) error {
 	if name == "SubGraph" {
 		p.subgraph += 1
 		return nil
@@ -186,7 +187,7 @@ func (p *dotParse) Enter(name string, n *dot.Node) error {
 	return nil
 }
 
-func (p *dotParse) Stmt(n *dot.Node) error {
+func (p *dotParse) Stmt(n *combos.Node) error {
 	if false {
 		errors.Logf("DEBUG", "stmt %v", n)
 	}
@@ -211,7 +212,7 @@ func (p *dotParse) Exit(name string) error {
 	return err
 }
 
-func (p *dotParse) cleanNode(n *dot.Node) (err error) {
+func (p *dotParse) cleanNode(n *combos.Node) (err error) {
 	sid := n.Get(0).Value.(string)
 	attrs := make(map[string]interface{})
 	for _, attr := range n.Get(1).Children {
@@ -235,7 +236,7 @@ func (p *dotParse) cleanNode(n *dot.Node) (err error) {
 	return err
 }
 
-func (p *dotParse) cleanEdge(n *dot.Node) (err error) {
+func (p *dotParse) cleanEdge(n *combos.Node) (err error) {
 	srcSid := n.Get(0).Value.(string)
 	targSid := n.Get(1).Value.(string)
 	_, err = fmt.Fprintf(p.output, "	%v -> %v;\n", srcSid, targSid)

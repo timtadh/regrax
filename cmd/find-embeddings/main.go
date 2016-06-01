@@ -2,7 +2,7 @@ package main
 
 /* Tim Henderson (tadh@case.edu)
 *
-* Copyright (c) 2015, Tim Henderson, Case Western Reserve University
+* Copyright (c) 2016, Tim Henderson, Case Western Reserve University
 * Cleveland, Ohio 44106. All Rights Reserved.
 *
 * This library is free software; you can redistribute it and/or modify
@@ -106,7 +106,7 @@ func run() int {
 		return cmd.Input(inputPath)
 	}
 
-	loader, err := digraph.NewVegLoader(conf, digraph.OptimisticPruning, 0, int(math.MaxInt32), 0, int(math.MaxInt32))
+	loader, err := digraph.NewDotLoader(conf, digraph.OptimisticPruning, 0, int(math.MaxInt32), 0, int(math.MaxInt32))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error constructing the loader\n")
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -122,6 +122,7 @@ func run() int {
 	}
 	graph := dt.(*digraph.Digraph)
 
+	errors.Logf("INFO", "input pattern %v", pattern)
 	sg, err := subgraph.ParsePretty(pattern, graph.G.Labels)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
@@ -201,6 +202,9 @@ func run() int {
 		return 2
 	}
 	errors.Logf("INFO", "pat %v sup %v exts %v embs %v overlap %v", sg, sup, len(exts), len(embs), overlap)
+	for _, emb := range embs {
+		errors.Logf("EMBEDDING", "emb %v", emb.Pretty(graph.G.Colors))
+	}
 	/*
 	errors.Logf("INFO", "")
 	errors.Logf("INFO", "")
@@ -218,7 +222,6 @@ func run() int {
 		errors.Logf("INFO", "kid %v", kid)
 	}
 	*/
-
 
 	errors.Logf("INFO", "done")
 	return 0
