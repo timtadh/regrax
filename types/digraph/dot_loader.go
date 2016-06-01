@@ -9,6 +9,7 @@ import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/goiso"
 	"github.com/timtadh/dot"
+	"github.com/timtadh/combos"
 )
 
 import (
@@ -78,7 +79,7 @@ type dotParse struct {
 	vids map[string]int
 }
 
-func (p *dotParse) Enter(name string, n *dot.Node) error {
+func (p *dotParse) Enter(name string, n *combos.Node) error {
 	if name == "SubGraph" {
 		p.subgraph += 1
 		return nil
@@ -88,7 +89,7 @@ func (p *dotParse) Enter(name string, n *dot.Node) error {
 	return nil
 }
 
-func (p *dotParse) Stmt(n *dot.Node) error {
+func (p *dotParse) Stmt(n *combos.Node) error {
 	if false {
 		errors.Logf("DEBUG", "stmt %v", n)
 	}
@@ -115,7 +116,7 @@ func (p *dotParse) Exit(name string) error {
 	return nil
 }
 
-func (p *dotParse) loadVertex(n *dot.Node) (err error) {
+func (p *dotParse) loadVertex(n *combos.Node) (err error) {
 	sid := n.Get(0).Value.(string)
 	attrs := make(map[string]interface{})
 	for _, attr := range n.Get(1).Children {
@@ -139,12 +140,12 @@ func (p *dotParse) loadVertex(n *dot.Node) (err error) {
 	return nil
 }
 
-func (p *dotParse) loadEdge(n *dot.Node) (err error) {
+func (p *dotParse) loadEdge(n *combos.Node) (err error) {
 	getId := func(sid string) (int, error) {
 		if _, has := p.vids[sid]; !has {
-			err := p.loadVertex(dot.NewNode("Node").
-				AddKid(dot.NewValueNode("ID", sid)).
-				AddKid(dot.NewNode("Attrs")))
+			err := p.loadVertex(combos.NewNode("Node").
+				AddKid(combos.NewValueNode("ID", sid)).
+				AddKid(combos.NewNode("Attrs")))
 			if err != nil {
 				return 0, err
 			}
