@@ -31,3 +31,6 @@
 [submodule "src/github.com/timtadh/dot"]
 	path = src/github.com/timtadh/dot
 	url = git@github.com:timtadh/dot.git
+[submodule "src/github.com/timtadh/combos"]
+	path = src/github.com/timtadh/combos
+	url = git@github.com:timtadh/combos.git
