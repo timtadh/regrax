@@ -86,7 +86,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	}
 	dt := n.dt()
 	sg := n.SubGraph()
-	patterns, err := extendNode(n, debug)
+	patterns, err := extendNode(dt, n, debug)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ type extInfo struct {
 	vord []int
 }
 
-func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
+func extendNode(dt *Digraph, n Node, debug bool) (*hashtable.LinearHash, error) {
 	if debug {
 		errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
 	}
@@ -158,6 +158,9 @@ func extendNode(n Node, debug bool) (*hashtable.LinearHash, error) {
 	for _, ep := range extPoints {
 		bc := b.Copy()
 		bc.Extend(ep)
+		if len(bc.V) > dt.MaxVertices {
+			continue
+		}
 		vord, eord := bc.CanonicalPermutation()
 		ext := bc.BuildFromPermutation(vord, eord)
 		if !patterns.Has(ext) {
