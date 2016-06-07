@@ -68,7 +68,7 @@ func firstParent(b *subgraph.Builder) (_ *subgraph.Builder, err error) {
 	return nil, errors.Errorf("no parents for %v", b)
 }
 
-func allParents(b *subgraph.Builder) (parents []*subgraph.Builder, err error) {
+func AllParents(b *subgraph.Builder) (parents []*subgraph.Builder, err error) {
 	if len(b.E) <= 0 {
 		return nil, nil
 	}

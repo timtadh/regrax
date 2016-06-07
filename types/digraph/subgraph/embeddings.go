@@ -197,7 +197,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap []map[int]bool, pru
 			} else {
 				// ok extend the embedding
 				// errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
-				sg.extendEmbedding(indices, i.ids, chain[i.eid], overlap, func(ext *IdNode) {
+				sg.extendEmbedding(indices, i.ids, &sg.E[chain[i.eid]], overlap, func(ext *IdNode) {
 					stack = append(stack, entry{ext, i.eid + 1})
 				})
 				// errors.Logf("DEBUG", "stack len %v", len(stack))
@@ -332,7 +332,7 @@ func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 }
 
 // this is really a breadth first search from the given idx
-func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx int) []*Edge {
+func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx int) []int {
 	other := func(u int, e int) int {
 		s := sg.E[e].Src
 		t := sg.E[e].Targ
@@ -350,7 +350,7 @@ func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx
 		panic("startIdx out of range")
 	}
 	colors := make(map[int]bool, len(sg.V))
-	edges := make([]*Edge, 0, len(sg.E))
+	edges := make([]int, 0, len(sg.E))
 	added := make(map[int]bool, len(sg.E))
 	seen := make(map[int]bool, len(sg.V))
 	queue := heap.NewUnique(heap.NewMinHeap(len(sg.V)))
@@ -368,7 +368,7 @@ func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx
 				v := other(prev, e)
 				if v == u {
 					if !added[e] {
-						edges = append(edges, &sg.E[e])
+						edges = append(edges, e)
 						added[e] = true
 						break find_edge
 					}
@@ -420,7 +420,7 @@ func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx
 	}
 	for e := range sg.E {
 		if !added[e] {
-			edges = append(edges, &sg.E[e])
+			edges = append(edges, e)
 			added[e] = true
 		}
 	}

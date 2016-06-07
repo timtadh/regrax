@@ -33,10 +33,13 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"os/signal"
 	"path"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 import (
@@ -440,6 +443,34 @@ func AssertFile(fname string) string {
 		Usage(ErrorCodes["badfile"])
 	}
 	return fname
+}
+
+func CPUProfile(cpuProfile string) func() {
+	errors.Logf("DEBUG", "starting cpu profile: %v", cpuProfile)
+	f, err := os.Create(cpuProfile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = pprof.StartCPUProfile(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig:=<-sigs
+		errors.Logf("DEBUG", "closing cpu profile")
+		pprof.StopCPUProfile()
+		err := f.Close()
+		errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
+		panic(errors.Errorf("caught signal: %v", sig))
+	}()
+	return func() {
+		errors.Logf("DEBUG", "closing cpu profile")
+		pprof.StopCPUProfile()
+		err := f.Close()
+		errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
+	}
 }
 
 type Type func([]string, *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string)

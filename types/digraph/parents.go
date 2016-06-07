@@ -13,6 +13,7 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 )
 
+
 func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "compute Parents\n    of %v", n)
 	if n.isRoot() {
@@ -28,7 +29,7 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 	} else if has {
 		return nodes, nil
 	}
-	parentBuilders, err := allParents(n.SubGraph().Builder())
+	parentBuilders, err := AllParents(n.SubGraph().Builder())
 	if err != nil {
 		return nil, err
 	}

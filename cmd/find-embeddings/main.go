@@ -25,18 +25,14 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"io"
 	"os"
-	"os/signal"
-	"syscall"
-	"runtime/pprof"
 )
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/exc"
 	"github.com/timtadh/getopt"
 )
 
@@ -113,7 +109,7 @@ func run() int {
 		return 1
 	}
 
-	errors.Logf("INFO", "Got configuration about to load dataset")
+	// errors.Logf("INFO", "Got configuration about to load dataset")
 	dt, err := loader.Load(getInput)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error during the loading process\n")
@@ -122,80 +118,51 @@ func run() int {
 	}
 	graph := dt.(*digraph.Digraph)
 
-	errors.Logf("INFO", "input pattern %v", pattern)
+	// errors.Logf("INFO", "input pattern %v", pattern)
 	sg, err := subgraph.ParsePretty(pattern, graph.G.Labels)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}
-	errors.Logf("INFO", "loaded pattern %v", sg.Pretty(graph.G.Colors))
+	// errors.Logf("INFO", "loaded pattern %v", sg.Pretty(graph.G.Colors))
 
 	if cpuProfile != "" {
-		errors.Logf("DEBUG", "starting cpu profile: %v", cpuProfile)
-		f, err := os.Create(cpuProfile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = pprof.StartCPUProfile(f)
-		if err != nil {
-			log.Fatal(err)
-		}
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			sig:=<-sigs
-			errors.Logf("DEBUG", "closing cpu profile")
-			pprof.StopCPUProfile()
-			err := f.Close()
-			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
-			panic(errors.Errorf("caught signal: %v", sig))
-		}()
-		defer func() {
-			errors.Logf("DEBUG", "closing cpu profile")
-			pprof.StopCPUProfile()
-			err := f.Close()
-			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
-		}()
+		defer cmd.CPUProfile(cpuProfile)()
 	}
 
-	/*
-	prune := 0
-	seen := make(map[int]bool)
-	ei, err := subgraph.FilterAutomorphs(sg.IterEmbeddings(
-		graph.Indices,
-		func(ids *subgraph.IdNode) bool {
-			res := func(ids *subgraph.IdNode) bool {
-				for c := ids; c != nil; c = c.Prev {
-					if _, has := seen[c.Id]; !has {
-						return false
-					}
-				}
-				return true
-			}(ids)
-			if prune % 1000000 == 0 {
-				errors.Logf("INFO", "prune %v %v %v", prune, res, ids)
+
+	err = exc.Try(func(){
+		csg := sg
+		for len(csg.E) > 1 {
+			found, chain, maxEid, ids := csg.Embedded(graph.Indices)
+			if false {
+				errors.Logf("INFO", "found: %v %v %v %v", found, chain, maxEid, ids)
 			}
-			prune++
-			return res
-	}))
+			if found {
+				fmt.Printf("%v\n", float64(maxEid)/float64(len(sg.E)))
+				break
+			}
+			//FIX
+			var b *subgraph.Builder
+			connected := false
+			eid := maxEid
+			for !connected && eid < len(chain) {
+				b = csg.Builder().Ctx(func(b *subgraph.Builder) {
+					exc.ThrowOnError(b.RemoveEdge(chain[eid]))
+				})
+				connected = b.Connected()
+				eid++
+			}
+			csg = b.Build()
+		}
+	}).Error()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error constructing the embedding iterator\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		errors.Logf("ERROR", "%v", err)
 		return 1
 	}
 
-	total := 0
-	for emb, ei := ei(); ei != nil; emb, ei = ei() {
-		errors.Logf("INFO", "embedding %v", emb.Pretty(graph.G.Colors))
-		for _, id := range emb.Ids {
-			seen[id] = true
-		}
-		total++
-	}
-	errors.Logf("INFO", "total embeddings %v", total)
-	*/
-
+	/*
 	sup, exts, embs, overlap, err := digraph.ExtsAndEmbs(graph, sg, nil, set.NewSortedSet(0), graph.Mode, true)
 	if err != nil {
 		errors.Logf("ERROR", "err: %v", err)
@@ -205,24 +172,7 @@ func run() int {
 	for _, emb := range embs {
 		errors.Logf("EMBEDDING", "emb %v", emb.Pretty(graph.G.Colors))
 	}
-	/*
-	errors.Logf("INFO", "")
-	errors.Logf("INFO", "")
-	errors.Logf("INFO", "")
-
-	node := digraph.NewEmbListNode(graph, sg, exts, embs)
-	kids, err := node.Children()
-	if err != nil {
-		errors.Logf("ERROR", "err: %v", err)
-		return 2
-	}
-	errors.Logf("INFO", "kids %v", len(kids))
-
-	for _, kid := range kids {
-		errors.Logf("INFO", "kid %v", kid)
-	}
 	*/
 
-	errors.Logf("INFO", "done")
 	return 0
 }
