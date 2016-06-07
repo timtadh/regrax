@@ -26,6 +26,35 @@ type Indices struct {
 	EdgeCounts map[Colors]int
 }
 
+func (sg *SubGraph) AsIndices(myIndices *Indices) *Indices {
+	x := goiso.NewGraph(len(sg.V),len(sg.E))
+	g := &x
+	for _, color := range myIndices.G.Colors {
+		g.AddColor(color)
+	}
+	for vidx := range sg.V {
+		color := g.AddColor(myIndices.G.Colors[sg.V[vidx].Color])
+		g.V = append(g.V, goiso.Vertex{Id: vidx, Idx: vidx, Color: color})
+	}
+	for eidx := range sg.E {
+		src := sg.E[eidx].Src
+		targ := sg.E[eidx].Targ
+		color := g.AddColor(myIndices.G.Colors[sg.E[eidx].Color])
+		g.E = append(g.E, goiso.Edge{Arc: goiso.Arc{Src: src, Targ: targ}, Idx: eidx, Color: color})
+	}
+	indices := &Indices{
+		G: g,
+		ColorIndex: make(map[int][]int),
+		SrcIndex: make(map[IdColorColor][]int),
+		TargIndex: make(map[IdColorColor][]int),
+		EdgeIndex: make(map[Edge]*goiso.Edge),
+		EdgeCounts: make(map[Colors]int),
+	}
+	indices.InitColorMap(g)
+	indices.InitEdgeIndices(g)
+	return indices
+}
+
 func intSet(ints []int) types.Set {
 	s := set.NewSetMap(hashtable.NewLinearHash())
 	for _, i := range ints {

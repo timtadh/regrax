@@ -32,7 +32,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/data-structures/exc"
 	"github.com/timtadh/getopt"
 )
 
@@ -57,11 +56,12 @@ func main() {
 func run() int {
 	args, optargs, err := getopt.GetOpt(
 		os.Args[1:],
-		"h:p:",
+		"h:p:v:",
 		[]string{
 			"help",
 			"pattern=",
 			"cpu-profile=",
+			"visualize=",
 		},
 	)
 	if err != nil {
@@ -69,23 +69,26 @@ func run() int {
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
 
-	pattern := ""
+	visual := ""
+	patterns := make([]string, 0, 10)
 	cpuProfile := ""
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			cmd.Usage(0)
 		case "-p", "--pattern":
-			pattern = oa.Arg()
+			patterns = append(patterns, oa.Arg())
 		case "--cpu-profile":
 			cpuProfile = cmd.AssertFile(oa.Arg())
+		case "-v", "--visual":
+			visual = cmd.AssertFile(oa.Arg())
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			cmd.Usage(cmd.ErrorCodes["opts"])
 		}
 	}
 
-	if pattern == "" {
+	if len(patterns) == 0 {
 		fmt.Fprintf(os.Stderr, "You must supply a pattern (-p)\n")
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
@@ -118,61 +121,79 @@ func run() int {
 	}
 	graph := dt.(*digraph.Digraph)
 
-	// errors.Logf("INFO", "input pattern %v", pattern)
-	sg, err := subgraph.ParsePretty(pattern, graph.G.Labels)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		return 1
-	}
-	// errors.Logf("INFO", "loaded pattern %v", sg.Pretty(graph.G.Colors))
-
 	if cpuProfile != "" {
 		defer cmd.CPUProfile(cpuProfile)()
 	}
 
-
-	err = exc.Try(func(){
-		csg := sg
-		for len(csg.E) > 1 {
-			found, chain, maxEid, ids := csg.Embedded(graph.Indices)
-			if false {
-				errors.Logf("INFO", "found: %v %v %v %v", found, chain, maxEid, ids)
-			}
-			if found {
-				fmt.Printf("%v\n", float64(maxEid)/float64(len(sg.E)))
-				break
-			}
-			//FIX
-			var b *subgraph.Builder
-			connected := false
-			eid := maxEid
-			for !connected && eid < len(chain) {
-				b = csg.Builder().Ctx(func(b *subgraph.Builder) {
-					exc.ThrowOnError(b.RemoveEdge(chain[eid]))
-				})
-				connected = b.Connected()
-				eid++
-			}
-			csg = b.Build()
+	var visualize io.Writer = nil
+	if visual != "" {
+		f, err := os.Create(visual)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "There was error opening the visualization output file\n")
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			return 1
 		}
-	}).Error()
-	if err != nil {
-		errors.Logf("ERROR", "%v", err)
-		return 1
+		defer f.Close()
+		visualize = f
 	}
 
-	/*
-	sup, exts, embs, overlap, err := digraph.ExtsAndEmbs(graph, sg, nil, set.NewSortedSet(0), graph.Mode, true)
-	if err != nil {
-		errors.Logf("ERROR", "err: %v", err)
-		return 2
+	total := 0.0
+	for i, pattern := range patterns {
+		sg, err := subgraph.ParsePretty(pattern, &graph.G.Colors, graph.G.Labels)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			return 1
+		}
+		match, csg, err := sg.EstimateMatch(graph.Indices)
+		if err != nil {
+			errors.Logf("ERROR", "%v", err)
+			return 1
+		}
+		fmt.Printf("%v, %v, %v\n", i+1, match, pattern)
+		total += match
+		if visualize != nil {
+			edge := func(eid int, vids map[int]int) int {
+				e := &csg.E[eid]
+				for eid := range sg.E {
+					if vids[e.Src] == sg.E[eid].Src && vids[e.Targ] == sg.E[eid].Targ && e.Color == sg.E[eid].Color {
+						return eid
+					}
+				}
+				panic("unreachable")
+			}
+			found, edgeChain, eid, ids := csg.Embedded(sg.AsIndices(graph.Indices))
+			if !found {
+				panic("not found!")
+			}
+			vids := make(map[int]int)
+			vidSet := make(map[int]bool)
+			eidSet := make(map[int]bool)
+			hv := make(map[int]bool)
+			he := make(map[int]bool)
+			for c := ids; c != nil; c = c.Prev {
+				vids[c.Idx] = c.Id
+				vidSet[c.Id] = true
+			}
+			for vidx := range sg.V {
+				if !vidSet[vidx] {
+					hv[vidx] = true
+				}
+			}
+			for ceid, eidx := range edgeChain {
+				if ceid >= eid {
+					continue
+				}
+				eidSet[edge(eidx, vids)] = true
+			}
+			for eidx := range sg.E {
+				if !eidSet[eidx] {
+					he[eidx] = true
+				}
+			}
+			fmt.Fprintln(visualize, sg.Dotty(graph.G.Colors, hv, he))
+		}
 	}
-	errors.Logf("INFO", "pat %v sup %v exts %v embs %v overlap %v", sg, sup, len(exts), len(embs), overlap)
-	for _, emb := range embs {
-		errors.Logf("EMBEDDING", "emb %v", emb.Pretty(graph.G.Colors))
-	}
-	*/
-
+	fmt.Printf("%v, %v, total\n", "-", total/float64(len(patterns)))
 	return 0
 }

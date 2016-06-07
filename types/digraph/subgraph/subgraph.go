@@ -111,7 +111,7 @@ func LoadSubGraph(label []byte) (*SubGraph, error) {
 	return sg, nil
 }
 
-func ParsePretty(str string, labels map[string]int) (*SubGraph, error) {
+func ParsePretty(str string, colors *[]string, labels map[string]int) (*SubGraph, error) {
 	size := regexp.MustCompile(`^\{([0-9]+):([0-9]+)\}`)
 	edge := regexp.MustCompile(`^\[([0-9]+)->([0-9]+):`)
 	matches := size.FindStringSubmatch(str)
@@ -154,6 +154,10 @@ func ParsePretty(str string, labels map[string]int) (*SubGraph, error) {
 		}
 		label := string(labelc)
 		vertices[i].Idx = i
+		if _, has := labels[label]; !has {
+			labels[label] = len(*colors)
+			*colors = append(*colors, label)
+		}
 		vertices[i].Color = labels[label]
 	}
 	edges := make(Edges, E)
@@ -319,4 +323,35 @@ func (sg *SubGraph) Pretty(colors []string) string {
 		))
 	}
 	return fmt.Sprintf("{%v:%v}%v%v", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
+}
+
+func (sg *SubGraph) Dotty(colors []string, highlightVertices, highlightEdges map[int]bool) string {
+	V := make([]string, 0, len(sg.V))
+	E := make([]string, 0, len(sg.E))
+	for vidx, v := range sg.V {
+		highlight := ""
+		if highlightVertices[vidx] {
+			highlight = " color=red"
+		}
+		V = append(V, fmt.Sprintf(
+			"n%v [label=\"%v\"%v];",
+			vidx,
+			colors[v.Color],
+			highlight,
+		))
+	}
+	for eidx, e := range sg.E {
+		highlight := ""
+		if highlightEdges[eidx] {
+			highlight = " color=red"
+		}
+		E = append(E, fmt.Sprintf(
+			"n%v->n%v [label=\"%v\"%v]",
+			e.Src,
+			e.Targ,
+			colors[e.Color],
+			highlight,
+		))
+	}
+	return fmt.Sprintf("digraph{\n%v\n%v\n}", strings.Join(V, "\n"), strings.Join(E, "\n"))
 }

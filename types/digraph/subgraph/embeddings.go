@@ -115,6 +115,16 @@ func (ids *IdNode) has(id, idx int) bool {
 	return false
 }
 
+func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
+	for c := ids; c != nil; c = c.Prev {
+		if idx == c.Idx {
+			c.Id = id
+			return ids
+		}
+	}
+	return &IdNode{Id: id, Idx: idx, Prev: ids}
+}
+
 func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, err error) {
 	type entry struct {
 		ids *IdNode

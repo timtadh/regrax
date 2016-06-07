@@ -1,5 +1,43 @@
 package subgraph
 
+import (
+	"github.com/timtadh/data-structures/errors"
+)
+
+func (sg *SubGraph) EstimateMatch(indices *Indices) (match float64, csg *SubGraph, err error) {
+	csg = sg
+	for len(csg.E) >= 0 {
+		found, chain, maxEid, _ := csg.Embedded(indices)
+		if false {
+			errors.Logf("INFO", "found: %v %v %v %v", found, chain, maxEid, nil)
+		}
+		if found {
+			if len(sg.E) == 0 {
+				match = 1
+			} else {
+				match = float64(maxEid)/float64(len(sg.E))
+			}
+			return match, csg, nil
+		}
+		var b *Builder
+		connected := false
+		eid := maxEid
+		if len(csg.E) == 1 {
+			break
+		}
+		for !connected && eid < len(chain) {
+			b = csg.Builder()
+			if err := b.RemoveEdge(chain[eid]); err != nil {
+				return 0, nil, err
+			}
+			connected = b.Connected()
+			eid++
+		}
+		csg = b.Build()
+	}
+	return 0, csg, errors.Errorf("unreachable")
+}
+
 func (sg *SubGraph) Embedded(indices *Indices) (found bool, edgeChain []int, largestEid int, longest *IdNode) {
 	type entry struct {
 		ids *IdNode
@@ -15,6 +53,9 @@ func (sg *SubGraph) Embedded(indices *Indices) (found bool, edgeChain []int, lar
 		stack := make([]entry, 0, len(vembs)*2)
 		for _, vemb := range vembs {
 			stack = append(stack, entry{vemb, 0})
+		}
+		if false {
+			errors.Logf("DEBUG", "stack %v", stack)
 		}
 		largestEid = -1
 		for len(stack) > 0 {
