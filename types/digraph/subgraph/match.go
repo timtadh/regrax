@@ -2,6 +2,7 @@ package subgraph
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/exc"
 )
 
 func (sg *SubGraph) EstimateMatch(indices *Indices) (match float64, csg *SubGraph, err error) {
@@ -35,7 +36,7 @@ func (sg *SubGraph) EstimateMatch(indices *Indices) (match float64, csg *SubGrap
 		}
 		csg = b.Build()
 	}
-	return 0, csg, errors.Errorf("unreachable")
+	return 0, EmptySubGraph(), nil
 }
 
 func (sg *SubGraph) Embedded(indices *Indices) (found bool, edgeChain []int, largestEid int, longest *IdNode) {
@@ -76,4 +77,50 @@ func (sg *SubGraph) Embedded(indices *Indices) (found bool, edgeChain []int, lar
 		}
 	}
 	return false, edgeChain, largestEid, longest
+}
+
+func (sg *SubGraph) VisualizeEmbedding(indices *Indices) (dotty string, err error) {
+	err = exc.Try(func(){
+		g := FromGraph(indices.G)
+		edge := func(eid int, vids map[int]int) int {
+			e := &sg.E[eid]
+			for eid := range g.E {
+				if vids[e.Src] == g.E[eid].Src && vids[e.Targ] == g.E[eid].Targ && e.Color == g.E[eid].Color {
+					return eid
+				}
+			}
+			panic(exc.Errorf("unreachable").Exception())
+		}
+		found, edgeChain, eid, ids := sg.Embedded(indices)
+		if !found && len(sg.V) > 0 {
+			exc.Throwf("%v not found in graph!", sg)
+		}
+		vids := make(map[int]int)
+		vidSet := make(map[int]bool)
+		eidSet := make(map[int]bool)
+		hv := make(map[int]bool)
+		he := make(map[int]bool)
+		for c := ids; c != nil; c = c.Prev {
+			vids[c.Idx] = c.Id
+			vidSet[c.Id] = true
+		}
+		for vidx := range g.V {
+			if !vidSet[vidx] {
+				hv[vidx] = true
+			}
+		}
+		for ceid, eidx := range edgeChain {
+			if ceid >= eid {
+				continue
+			}
+			eidSet[edge(eidx, vids)] = true
+		}
+		for eidx := range g.E {
+			if !eidSet[eidx] {
+				he[eidx] = true
+			}
+		}
+		dotty = g.Dotty(indices.G.Colors, hv, he)
+	}).Error()
+	return dotty, err
 }

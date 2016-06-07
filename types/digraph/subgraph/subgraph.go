@@ -102,6 +102,37 @@ func FromEmbedding(sg *goiso.SubGraph) *SubGraph {
 	return pat
 }
 
+// Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
+// canonical ordering. This is a necessary assumption for Embeddings() to
+// work properly.
+func FromGraph(g *goiso.Graph) *SubGraph {
+	if g == nil {
+		return &SubGraph{
+			V:   make([]Vertex, 0),
+			E:   make([]Edge, 0),
+			Adj: make([][]int, 0),
+		}
+	}
+	pat := &SubGraph{
+		V:   make([]Vertex, len(g.V)),
+		E:   make([]Edge, len(g.E)),
+		Adj: make([][]int, len(g.V)),
+	}
+	for i := range g.V {
+		pat.V[i].Idx = i
+		pat.V[i].Color = g.V[i].Color
+		pat.Adj[i] = make([]int, 0, 5)
+	}
+	for i := range g.E {
+		pat.E[i].Src = g.E[i].Src
+		pat.E[i].Targ = g.E[i].Targ
+		pat.E[i].Color = g.E[i].Color
+		pat.Adj[pat.E[i].Src] = append(pat.Adj[pat.E[i].Src], i)
+		pat.Adj[pat.E[i].Targ] = append(pat.Adj[pat.E[i].Targ], i)
+	}
+	return pat
+}
+
 func LoadSubGraph(label []byte) (*SubGraph, error) {
 	sg := new(SubGraph)
 	err := sg.UnmarshalBinary(label)

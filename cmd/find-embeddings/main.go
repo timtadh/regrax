@@ -153,45 +153,13 @@ func run() int {
 		fmt.Printf("%v, %v, %v\n", i+1, match, pattern)
 		total += match
 		if visualize != nil {
-			edge := func(eid int, vids map[int]int) int {
-				e := &csg.E[eid]
-				for eid := range sg.E {
-					if vids[e.Src] == sg.E[eid].Src && vids[e.Targ] == sg.E[eid].Targ && e.Color == sg.E[eid].Color {
-						return eid
-					}
-				}
-				panic("unreachable")
+			dotty, err := csg.VisualizeEmbedding(sg.AsIndices(graph.Indices))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "There was error visualizing the embedding '%v'\n", csg)
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				return 1
 			}
-			found, edgeChain, eid, ids := csg.Embedded(sg.AsIndices(graph.Indices))
-			if !found {
-				panic("not found!")
-			}
-			vids := make(map[int]int)
-			vidSet := make(map[int]bool)
-			eidSet := make(map[int]bool)
-			hv := make(map[int]bool)
-			he := make(map[int]bool)
-			for c := ids; c != nil; c = c.Prev {
-				vids[c.Idx] = c.Id
-				vidSet[c.Id] = true
-			}
-			for vidx := range sg.V {
-				if !vidSet[vidx] {
-					hv[vidx] = true
-				}
-			}
-			for ceid, eidx := range edgeChain {
-				if ceid >= eid {
-					continue
-				}
-				eidSet[edge(eidx, vids)] = true
-			}
-			for eidx := range sg.E {
-				if !eidSet[eidx] {
-					he[eidx] = true
-				}
-			}
-			fmt.Fprintln(visualize, sg.Dotty(graph.G.Colors, hv, he))
+			fmt.Fprintln(visualize, dotty)
 		}
 	}
 	fmt.Printf("%v, %v, total\n", "-", total/float64(len(patterns)))
