@@ -154,30 +154,8 @@ func run() int {
 
 	conf := &config.Config{}
 
-	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "You must supply exactly an input path\n")
-		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
-		cmd.Usage(cmd.ErrorCodes["opts"])
-	}
-	inputPath := cmd.AssertFileOrDirExists(args[0])
-	getInput := func() (io.Reader, func()) {
-		return cmd.Input(inputPath)
-	}
-
-	loader, err := digraph.NewDotLoader(conf, digraph.OptimisticPruning, 0, int(math.MaxInt32), 0, int(math.MaxInt32))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error constructing the loader\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		return 1
-	}
-
-	// errors.Logf("INFO", "Got configuration about to load dataset")
-	dt, err := loader.Load(getInput)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error during the loading process\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		return 1
-	}
+	loadDt, args := cmd.ParseType(args, conf)
+	dt, _ := loadDt(nil)
 	graph := dt.(*digraph.Digraph)
 
 	if cpuProfile != "" {

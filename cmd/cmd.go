@@ -1009,9 +1009,9 @@ var Reporters map[string]Reporter = map[string]Reporter{
 
 type Mode func(argv []string, conf *config.Config) (miners.Miner, []string)
 
-func Main(args []string, conf *config.Config, modes map[string]Mode) int {
+func ParseType(args []string, conf *config.Config) (func(lattice.PrFormatter) (lattice.DataType, lattice.Formatter), []string) {
 	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "You must supply a type and a mode\n")
+		fmt.Fprintf(os.Stderr, "You must supply a type\n")
 		Usage(ErrorCodes["opts"])
 	} else if _, has := Types[args[0]]; !has {
 		fmt.Fprintf(os.Stderr, "Unknown data type '%v'\n", args[0])
@@ -1022,7 +1022,6 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 		Usage(ErrorCodes["opts"])
 	}
 	loader, makeFmtr, args := Types[args[0]](args[1:], conf)
-
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply exactly an input path\n")
 		fmt.Fprintf(os.Stderr, "You gave: %v\n", args)
@@ -1030,11 +1029,24 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 	}
 	inputPath := AssertFileOrDirExists(args[0])
 	args = args[1:]
-
 	getInput := func() (io.Reader, func()) {
 		return Input(inputPath)
 	}
+	f := func(prfmtr lattice.PrFormatter) (lattice.DataType, lattice.Formatter) {
+		errors.Logf("INFO", "Got configuration about to load dataset")
+		dt, err := loader.Load(getInput)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "There was error during the loading process\n")
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmtr := makeFmtr(dt, prfmtr)
+		return dt, fmtr
+	}
+	return f, args
+}
 
+func ParseMode(args []string, conf *config.Config, modes map[string]Mode) (miners.Miner, []string) {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "You must supply a mode\n")
 		Usage(ErrorCodes["opts"])
@@ -1046,17 +1058,10 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 		}
 		Usage(ErrorCodes["opts"])
 	}
-	mode, args := modes[args[0]](args[1:], conf)
+	return modes[args[0]](args[1:], conf)
+}
 
-	errors.Logf("INFO", "Got configuration about to load dataset")
-	dt, err := loader.Load(getInput)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "There was error during the loading process\n")
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	fmtr := makeFmtr(dt, mode.PrFormatter())
-
+func ParseReporter(args []string, conf *config.Config, fmtr lattice.Formatter) (miners.Reporter, []string) {
 	var rptr miners.Reporter
 	if len(args) == 0 {
 		rptr, _ = Reporters["chain"](Reporters, []string{"log", "file"}, fmtr, conf)
@@ -1070,12 +1075,10 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 	} else {
 		rptr, args = Reporters[args[0]](Reporters, args[1:], fmtr, conf)
 	}
+	return rptr, args
+}
 
-	if len(args) != 0 {
-		fmt.Fprintf(os.Stderr, "unconsumed commandline options: '%v'\n", strings.Join(args, " "))
-		Usage(ErrorCodes["opts"])
-	}
-
+func Run(dt lattice.DataType, fmtr lattice.Formatter, mode miners.Miner, rptr miners.Reporter) int {
 	errors.Logf("INFO", "loaded data, about to start mining")
 	mineErr := mode.Mine(dt, rptr, fmtr)
 
@@ -1092,4 +1095,23 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 		errors.Logf("INFO", "Done!")
 	}
 	return code
+}
+
+func Main(args []string, conf *config.Config, modes map[string]Mode) int {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "You must supply a type and a mode\n")
+		Usage(ErrorCodes["opts"])
+	}
+
+	loadDt, args := ParseType(args, conf)
+	mode, args := ParseMode(args, conf, modes)
+	dt, fmtr := loadDt(mode.PrFormatter())
+	rptr, args := ParseReporter(args, conf, fmtr)
+
+	if len(args) != 0 {
+		fmt.Fprintf(os.Stderr, "unconsumed commandline options: '%v'\n", strings.Join(args, " "))
+		Usage(ErrorCodes["opts"])
+	}
+
+	return Run(dt, fmtr, mode, rptr)
 }
