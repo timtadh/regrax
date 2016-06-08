@@ -58,7 +58,13 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 	}
 
 	// make the *Digraph
-	dt, err := NewDigraph(conf, Automorphs, 0, len(G.V), 0, len(G.E))
+	dt, err := NewDigraph(conf, &Config{
+		MinEdges: 0,
+		MaxEdges: len(G.E),
+		MinVertices: 0,
+		MaxVertices: len(G.V),
+		Mode: Automorphs,
+	})
 	if err != nil {
 		errors.Logf("ERROR", "%v", err)
 		t.Fatal(err)

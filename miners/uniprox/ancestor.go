@@ -87,7 +87,13 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 	}
 
 	// init the datatype (we are now ready to mine)
-	dt, err := digraph.NewDigraph(conf, digraph.OptimisticPruning, 0, maxE, 0, maxV)
+	dt, err := digraph.NewDigraph(conf, &digraph.Config{
+		MinEdges: 0,
+		MaxEdges: maxE,
+		MinVertices: 0,
+		MaxVertices: maxV,
+		Mode: digraph.OptimisticPruning | digraph.OverlapPruning,
+	})
 	if err != nil {
 		return nil, err
 	}

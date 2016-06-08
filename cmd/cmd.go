@@ -612,12 +612,20 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		mode |= digraph.ExtensionPruning
 	}
 
+	dc := &digraph.Config{
+		MinEdges: minE,
+		MaxEdges: maxE,
+		MinVertices: minV,
+		MaxVertices: maxV,
+		Mode: mode,
+	}
+
 	var loader lattice.Loader
 	switch loaderType {
 	case "veg":
-		loader, err = digraph.NewVegLoader(conf, mode, minE, maxE, minV, maxV)
+		loader, err = digraph.NewVegLoader(conf, dc)
 	case "dot":
-		loader, err = digraph.NewDotLoader(conf, mode, minE, maxE, minV, maxV)
+		loader, err = digraph.NewDotLoader(conf, dc)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])

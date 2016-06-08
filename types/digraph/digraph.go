@@ -1,6 +1,8 @@
 package digraph
 
-import ()
+import (
+	"math"
+)
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -19,10 +21,15 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-type Digraph struct {
+type Config struct {
 	MinEdges, MaxEdges       int
 	MinVertices, MaxVertices int
 	Mode                     Mode
+}
+
+type Digraph struct {
+	Config
+	config                   *config.Config
 	G                        *goiso.Graph
 	FrequentVertices         [][]byte
 	NodeAttrs                int_json.MultiMap
@@ -38,10 +45,21 @@ type Digraph struct {
 	CanonKidCount            bytes_int.MultiMap
 	Frequency                bytes_int.MultiMap
 	Indices                  *subgraph.Indices
-	config                   *config.Config
 }
 
-func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g *Digraph, err error) {
+func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
+	if dc.MaxEdges <= 0 {
+		dc.MaxEdges = int(math.MaxInt32)
+	}
+	if dc.MaxVertices <= 0 {
+		dc.MaxVertices = int(math.MaxInt32)
+	}
+	if dc.MinEdges > dc.MaxEdges {
+		dc.MinEdges = dc.MaxEdges - 1
+	}
+	if dc.MinVertices > dc.MaxVertices {
+		dc.MinVertices = dc.MaxVertices - 1
+	}
 	nodeAttrs, err := config.IntJsonMultiMap("digraph-node-attrs")
 	if err != nil {
 		return nil, err
@@ -75,7 +93,7 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 		return nil, err
 	}
 	var overlap subgraph_overlap.MultiMap = nil
-	if mode&OverlapPruning == OverlapPruning {
+	if dc.Mode&OverlapPruning == OverlapPruning {
 		overlap, err = config.SubgraphOverlapMultiMap("digraph-overlap")
 		if err != nil {
 			return nil, err
@@ -86,7 +104,7 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 		return nil, err
 	}
 	var unexts bytes_extension.MultiMap
-	if mode&ExtensionPruning == ExtensionPruning {
+	if dc.Mode&ExtensionPruning == ExtensionPruning {
 		unexts, err = config.BytesExtensionMultiMap("digraph-unsupported-extensions")
 		if err != nil {
 			return nil, err
@@ -97,11 +115,7 @@ func NewDigraph(config *config.Config, mode Mode, minE, maxE, minV, maxV int) (g
 		return nil, err
 	}
 	g = &Digraph{
-		MinEdges:      minE,
-		MaxEdges:      maxE,
-		MinVertices:   minV,
-		MaxVertices:   maxV,
-		Mode:          mode,
+		Config: *dc,
 		NodeAttrs:     nodeAttrs,
 		Embeddings:    embeddings,
 		Overlap:       overlap,

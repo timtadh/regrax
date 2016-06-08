@@ -36,7 +36,13 @@ func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.Sub
 	}
 
 	// make the *Digraph
-	dt, err := NewDigraph(conf, Automorphs, 0, len(G.V), 0, len(G.E))
+	dt, err := NewDigraph(conf, &Config{
+		MinEdges: 0,
+		MaxEdges: len(G.E),
+		MinVertices: 0,
+		MaxVertices: len(G.V),
+		Mode: Automorphs,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
