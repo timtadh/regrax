@@ -12,4 +12,6 @@ cover*
 x
 tough*
 slow*
+*.test
+test.*
 
