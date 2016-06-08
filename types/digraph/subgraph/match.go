@@ -26,13 +26,16 @@ func (sg *SubGraph) EstimateMatch(indices *Indices) (match float64, csg *SubGrap
 		if len(csg.E) == 1 {
 			break
 		}
-		for !connected && eid < len(chain) {
+		for !connected && eid >= 0 && eid < len(chain) {
 			b = csg.Builder()
 			if err := b.RemoveEdge(chain[eid]); err != nil {
 				return 0, nil, err
 			}
 			connected = b.Connected()
 			eid++
+		}
+		if !connected {
+			break
 		}
 		csg = b.Build()
 	}

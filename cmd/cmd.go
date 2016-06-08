@@ -430,6 +430,24 @@ func AssertFileOrDirExists(fname string) string {
 	return fname
 }
 
+func AssertFileExists(fname string) string {
+	fname = path.Clean(fname)
+	fi, err := os.Stat(fname)
+	if err != nil && os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "File '%s' does not exist!\n", fname)
+		Usage(ErrorCodes["badfile"])
+	} else if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		Usage(ErrorCodes["badfile"])
+	} else if fi.IsDir() {
+		fmt.Fprintf(os.Stderr, "Passed in file was a directory, %s", fname)
+		Usage(ErrorCodes["badfile"])
+	}
+	return fname
+}
+
+
+
 func AssertFile(fname string) string {
 	fname = path.Clean(fname)
 	fi, err := os.Stat(fname)
