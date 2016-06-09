@@ -10,8 +10,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/data-structures/hashtable"
-	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
 
@@ -65,7 +63,7 @@ func (v *VegLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 	}
 	G := goiso.NewGraph(V, E)
 	graph = &G
-	vids := hashtable.NewLinearHash() // int64 ==> *goiso.Vertex
+	b := newBaseLoader(v.dt, graph)
 
 	in, closer := input()
 	defer closer()
@@ -76,11 +74,11 @@ func (v *VegLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 		line_type, data := parseLine(line)
 		switch line_type {
 		case "vertex":
-			if err := v.loadVertex(graph, vids, data); err != nil {
+			if err := v.loadVertex(b, data); err != nil {
 				errs = append(errs, err)
 			}
 		case "edge":
-			if err := v.loadEdge(graph, vids, data); err != nil {
+			if err := v.loadEdge(b, data); err != nil {
 				errs = append(errs, err)
 			}
 		default:
@@ -96,7 +94,7 @@ func (v *VegLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 	return graph, errs
 }
 
-func (v *VegLoader) loadVertex(g *goiso.Graph, vids types.Map, data []byte) (err error) {
+func (v *VegLoader) loadVertex(b *baseLoader, data []byte) (err error) {
 	obj, err := parseJson(data)
 	if err != nil {
 		return err
@@ -106,20 +104,11 @@ func (v *VegLoader) loadVertex(g *goiso.Graph, vids types.Map, data []byte) (err
 		return err
 	}
 	label := strings.TrimSpace(obj["label"].(string))
-	id := int(_id)
-	vertex := g.AddVertex(id, label)
-	err = vids.Put(types.Int(id), vertex)
-	if err != nil {
-		return err
-	}
-	err = v.dt.NodeAttrs.Add(int32(vertex.Id), obj)
-	if err != nil {
-		return err
-	}
-	return nil
+	id := int32(_id)
+	return b.addVertex(id, label, obj)
 }
 
-func (v *VegLoader) loadEdge(g *goiso.Graph, vids types.Map, data []byte) (err error) {
+func (v *VegLoader) loadEdge(b *baseLoader, data []byte) (err error) {
 	obj, err := parseJson(data)
 	if err != nil {
 		return err
@@ -132,21 +121,10 @@ func (v *VegLoader) loadEdge(g *goiso.Graph, vids types.Map, data []byte) (err e
 	if err != nil {
 		return err
 	}
-	src := int(_src)
-	targ := int(_targ)
+	src := int32(_src)
+	targ := int32(_targ)
 	label := strings.TrimSpace(obj["label"].(string))
-	if o, err := vids.Get(types.Int(src)); err != nil {
-		return err
-	} else {
-		u := o.(*goiso.Vertex)
-		if o, err := vids.Get(types.Int(targ)); err != nil {
-			return err
-		} else {
-			v := o.(*goiso.Vertex)
-			g.AddEdge(u, v, label)
-		}
-	}
-	return nil
+	return b.addEdge(src, targ, label)
 }
 
 func processLines(in io.Reader, process func([]byte)) error {

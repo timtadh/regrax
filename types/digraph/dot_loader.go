@@ -53,9 +53,9 @@ func (v *DotLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 	}
 	G := goiso.NewGraph(10, 10)
 	dp := &dotParse{
-		g: &G,
+		b: newBaseLoader(v.dt, &G),
 		d: v,
-		vids: make(map[string]int),
+		vids: make(map[string]int32),
 	}
 	// s, err := dot.Lexer.Scanner(text)
 	// if err != nil {
@@ -66,17 +66,17 @@ func (v *DotLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 	if err != nil {
 		return nil, err
 	}
-	return dp.g, nil
+	return &G, nil
 }
 
 type dotParse struct {
-	g *goiso.Graph
+	b *baseLoader
 	d *DotLoader
 	graphId int
 	curGraph string
 	subgraph int
-	nextId int
-	vids map[string]int
+	nextId int32
+	vids map[string]int32
 }
 
 func (p *dotParse) Enter(name string, n *combos.Node) error {
@@ -132,16 +132,11 @@ func (p *dotParse) loadVertex(n *combos.Node) (err error) {
 	if l, has := attrs["label"]; has {
 		label = l.(string)
 	}
-	vertex := p.g.AddVertex(id, label)
-	err = p.d.dt.NodeAttrs.Add(int32(vertex.Id), attrs)
-	if err != nil {
-		return err
-	}
-	return nil
+	return p.b.addVertex(id, label, attrs)
 }
 
 func (p *dotParse) loadEdge(n *combos.Node) (err error) {
-	getId := func(sid string) (int, error) {
+	getId := func(sid string) (int32, error) {
 		if _, has := p.vids[sid]; !has {
 			err := p.loadVertex(combos.NewNode("Node").
 				AddKid(combos.NewValueNode("ID", sid)).
@@ -170,6 +165,5 @@ func (p *dotParse) loadEdge(n *combos.Node) (err error) {
 			break
 		}
 	}
-	p.g.AddEdge(&p.g.V[sid], &p.g.V[tid], label)
-	return nil
+	return p.b.addEdge(sid, tid, label)
 }
