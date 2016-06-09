@@ -22,12 +22,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-// Tim You Are Here:
-//
-// You just added the Config struct to digraph. The purpose is to provide a
-// place for extra loading and mining options. Particularly, for bench marking
-// and testing you want to be able to exclude certain nodes. This will mean
-// exclude/include regular expressions on the node labels.
 
 type Config struct {
 	MinEdges, MaxEdges       int

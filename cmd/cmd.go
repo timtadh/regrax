@@ -35,6 +35,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
 	"runtime"
 	"runtime/pprof"
 	"strconv"
@@ -446,8 +447,6 @@ func AssertFileExists(fname string) string {
 	return fname
 }
 
-
-
 func AssertFile(fname string) string {
 	fname = path.Clean(fname)
 	fi, err := os.Stat(fname)
@@ -461,6 +460,16 @@ func AssertFile(fname string) string {
 		Usage(ErrorCodes["badfile"])
 	}
 	return fname
+}
+
+func AssertRegex(pat string) string {
+	_, err := regexp.Compile(pat)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "String '%v' is not a valid regex", pat)
+		fmt.Fprintf(os.Stderr, "Compile error: %v", err)
+		Usage(ErrorCodes["opts"])
+	}
+	return pat
 }
 
 func CPUProfile(cpuProfile string) func() {
@@ -539,10 +548,29 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	return loader, fmtr, args
 }
 
+// Tim You Are Here:
+//
+// You just added the Config struct to digraph. The purpose is to provide a
+// place for extra loading and mining options. Particularly, for bench marking
+// and testing you want to be able to exclude certain nodes. This will mean
+// exclude/include regular expressions on the node labels.
+//
+// You now have Include/Exclude regexp fields in digraph.Config. You need to
+// populate them from command line arguments. You want it to look like:
+//
+//     digraph -i ^runtime\. -i ^github\.com/timtadh/ -e matrix -e stores
+//
+// The should compile to:
+//
+//     include: (^runtime\.)|(^github.com\./timtadh/)
+//     exclude: (matrix)|(stores)
+//
+
 func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hl:c:", []string{"help",
+		"hl:c:i:e:",
+		[]string{"help",
 			"loader=",
 			"count-mode=",
 			"overlap-pruning",
@@ -551,6 +579,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"max-edges=",
 			"min-vertices=",
 			"max-vertices=",
+			"include=",
+			"exclude=",
 		},
 	)
 	if err != nil {
@@ -566,6 +596,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	maxE := int(math.MaxInt32)
 	minV := 0
 	maxV := int(math.MaxInt32)
+	includes := make([]string, 0, 10)
+	excludes := make([]string, 0, 10)
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -586,6 +618,10 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			minV = ParseInt(oa.Arg())
 		case "--max-vertices":
 			maxV = ParseInt(oa.Arg())
+		case "-i", "--include":
+			includes = append(includes, "(" + AssertRegex(oa.Arg()) + ")")
+		case "-e", "--exclude":
+			excludes = append(excludes, "(" + AssertRegex(oa.Arg()) + ")")
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -612,12 +648,26 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		mode |= digraph.ExtensionPruning
 	}
 
+	var include *regexp.Regexp = nil
+	var exclude *regexp.Regexp = nil
+	if len(includes) > 0 {
+		include = regexp.MustCompile(strings.Join(includes, "|"))
+	}
+	if len(excludes) > 0 {
+		exclude = regexp.MustCompile(strings.Join(excludes, "|"))
+	}
+
+	errors.Logf("INFO", "including labels matching '%v'", include)
+	errors.Logf("INFO", "excluding labels matching '%v'", exclude)
+
 	dc := &digraph.Config{
 		MinEdges: minE,
 		MaxEdges: maxE,
 		MinVertices: minV,
 		MaxVertices: maxV,
 		Mode: mode,
+		Include: include,
+		Exclude: exclude,
 	}
 
 	var loader lattice.Loader
