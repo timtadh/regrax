@@ -152,6 +152,14 @@ func run() int {
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
 
+	if len(prs) == 0 {
+		prs = make([]float64, 0, len(patterns))
+		p := 1.0/float64(len(patterns))
+		for _ = range patterns {
+			prs = append(prs, p)
+		}
+	}
+
 	conf := &config.Config{}
 
 	loadDt, args := cmd.ParseType(args, conf)

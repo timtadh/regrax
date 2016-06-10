@@ -83,7 +83,9 @@ var ErrorCodes map[string]int = map[string]int{
 var UsageMessage string
 var ExtendedMessage string
 
-var CommonUsage string =`
+var CommonUsage string = TypesUsage + ReportersUsage
+
+var TypesUsage string = `
 Types
     itemset                   sets of items, treated as sets of integers
     digraph                   large directed graphs
@@ -132,6 +134,26 @@ Types
         --max-edges=<int>        maximum edges in a samplable digraph
         --min-vertices=<int>     minimum vertices in a samplable digraph
         --max-vertices=<int>     maximum vertices in a samplable digraph
+        -i, --include=<regex>    regex specifying what nodes and edges should
+                                 be included based on their label.
+        -e, --exclude=<regex>    regex specifying what nodes and edges should
+                                 be excluded based on their label.
+
+        Note on inclusion and exclusion of nodes/edges by regexs:
+
+          The include directives are processed before exclude directives. If
+          no includes are specified then all labels are included by default.
+          If no excludes are specified then no labels are excluded by default.
+
+          You can specify both (-i,--include) and (-e,--exclude) multiple
+          times. For example:
+
+            $ digraph -i '^github\.com/timtadh' -i '^$' -e sfp -e fs2
+
+          Would result in the following regular expressions
+
+            include: (^github\.com/timtadh)|(^$)
+            exclude: (sfp)|(fs2)
 
     digraph Counting Modes
         Digraph support is always counted using the Minimum Image Support [1].
@@ -213,7 +235,9 @@ Types
             edge_json -> {"src": int, "targ": int, "label": int, ...}
             // other items are  optional
 
+`
 
+var ReportersUsage string = `
 Reporters
     chain                     chain several reporters together (end the chain
                               with endchain)
@@ -441,7 +465,7 @@ func AssertFileExists(fname string) string {
 		fmt.Fprintf(os.Stderr, err.Error())
 		Usage(ErrorCodes["badfile"])
 	} else if fi.IsDir() {
-		fmt.Fprintf(os.Stderr, "Passed in file was a directory, %s", fname)
+		fmt.Fprintf(os.Stderr, "Passed in file was a directory, %s\n", fname)
 		Usage(ErrorCodes["badfile"])
 	}
 	return fname
@@ -456,7 +480,7 @@ func AssertFile(fname string) string {
 		fmt.Fprintf(os.Stderr, err.Error())
 		Usage(ErrorCodes["badfile"])
 	} else if fi.IsDir() {
-		fmt.Fprintf(os.Stderr, "Passed in file was a directory, %s", fname)
+		fmt.Fprintf(os.Stderr, "Passed in file was a directory, %s\n", fname)
 		Usage(ErrorCodes["badfile"])
 	}
 	return fname
@@ -465,8 +489,8 @@ func AssertFile(fname string) string {
 func AssertRegex(pat string) string {
 	_, err := regexp.Compile(pat)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "String '%v' is not a valid regex", pat)
-		fmt.Fprintf(os.Stderr, "Compile error: %v", err)
+		fmt.Fprintf(os.Stderr, "String '%v' is not a valid regex\n", pat)
+		fmt.Fprintf(os.Stderr, "Compile error: %v\n", err)
 		Usage(ErrorCodes["opts"])
 	}
 	return pat
@@ -547,24 +571,6 @@ func itemsetType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 	return loader, fmtr, args
 }
-
-// Tim You Are Here:
-//
-// You just added the Config struct to digraph. The purpose is to provide a
-// place for extra loading and mining options. Particularly, for bench marking
-// and testing you want to be able to exclude certain nodes. This will mean
-// exclude/include regular expressions on the node labels.
-//
-// You now have Include/Exclude regexp fields in digraph.Config. You need to
-// populate them from command line arguments. You want it to look like:
-//
-//     digraph -i ^runtime\. -i ^github\.com/timtadh/ -e matrix -e stores
-//
-// The should compile to:
-//
-//     include: (^runtime\.)|(^github.com\./timtadh/)
-//     exclude: (matrix)|(stores)
-//
 
 func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(lattice.DataType, lattice.PrFormatter) lattice.Formatter, []string) {
 	args, optargs, err := getopt.GetOpt(
@@ -652,13 +658,12 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	var exclude *regexp.Regexp = nil
 	if len(includes) > 0 {
 		include = regexp.MustCompile(strings.Join(includes, "|"))
+		errors.Logf("INFO", "including labels matching '%v'", include)
 	}
 	if len(excludes) > 0 {
 		exclude = regexp.MustCompile(strings.Join(excludes, "|"))
+		errors.Logf("INFO", "excluding labels matching '%v'", exclude)
 	}
-
-	errors.Logf("INFO", "including labels matching '%v'", include)
-	errors.Logf("INFO", "excluding labels matching '%v'", exclude)
 
 	dc := &digraph.Config{
 		MinEdges: minE,
