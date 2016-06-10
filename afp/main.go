@@ -25,14 +25,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"io"
 	"os"
-	"os/signal"
 	"runtime"
-	"runtime/pprof"
 	"strings"
-	"syscall"
 )
 
 import (
@@ -228,44 +224,7 @@ func run() int {
 	}
 
 	if cpuProfile != "" {
-		useSafeProfile := false
-		errors.Logf("DEBUG", "starting cpu profile: %v is safe: %v", cpuProfile, useSafeProfile)
-		f, err := os.Create(cpuProfile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if useSafeProfile {
-			err = pprof.StartCPUProfile(f)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			profileUnsafe(f, 100000)
-		}
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			sig:=<-sigs
-			errors.Logf("DEBUG", "closing cpu profile")
-			if useSafeProfile {
-				pprof.StopCPUProfile()
-			} else {
-				stopProfile()
-			}
-			err := f.Close()
-			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
-			panic(errors.Errorf("caught signal: %v", sig))
-		}()
-		defer func() {
-			errors.Logf("DEBUG", "closing cpu profile")
-			if useSafeProfile {
-				pprof.StopCPUProfile()
-			} else {
-				stopProfile()
-			}
-			err := f.Close()
-			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
-		}()
+		defer cmd.CPUProfile(cpuProfile)()
 	}
 
 	conf := &config.Config{
