@@ -222,7 +222,7 @@ func run() int {
 	sgEdges := make([]float64, 0, len(patterns))
 	total := 0.0
 	totalEdges := 0.0
-	for i, pattern := range patterns {
+	for _, pattern := range patterns {
 		sg, err := subgraph.ParsePretty(pattern, &graph.G.Colors, graph.G.Labels)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
@@ -238,7 +238,7 @@ func run() int {
 		matches = append(matches, match)
 		matched = append(matched, csg)
 		sgEdges = append(sgEdges, float64(len(sg.E)))
-		fmt.Printf("%v, %v, %v\n", i+1, match, pattern)
+		// fmt.Printf("%v, %v, %v\n", i+1, match, pattern)
 		total += match
 		totalEdges += float64(len(sg.E))
 		if visualize != nil {
