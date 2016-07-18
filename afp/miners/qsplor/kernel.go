@@ -1,6 +1,10 @@
 package qsplor
 
 import (
+	"sync"
+)
+
+import (
 	"github.com/timtadh/sfp/stats"
 )
 
@@ -18,14 +22,20 @@ func kernel(items []int, f func(i, j int) float64) Kernel {
 	for i := range scores {
 		scores[i] = make([]float64, len(items))
 	}
+	var wg sync.WaitGroup
 	for x, i := range items {
-		for y, j := range items {
-			if i == j {
-				scores[x][y] = 0
-			} else {
-				scores[x][y] = f(i, j)
+		wg.Add(1)
+		go func(x, i int) {
+			defer wg.Done()
+			for y, j := range items {
+				if i == j {
+					scores[x][y] = 0
+				} else {
+					scores[x][y] = f(i, j)
+				}
 			}
-		}
+		}(x, i)
 	}
+	wg.Wait()
 	return scores
 }
