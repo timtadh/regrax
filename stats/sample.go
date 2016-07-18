@@ -105,6 +105,32 @@ func Round(val float64, places int) (newVal float64) {
 	return round / pow
 }
 
+func Mean(items []int, f func(item int) float64) (mean, variance float64) {
+	if len(items) == 0 {
+		return -1, -1
+	}
+	F := make([]float64, len(items))
+	var sum float64
+	for j, i := range items {
+		F[j] = f(i)
+		sum += F[j]
+	}
+	mean = sum / float64(len(items))
+	var s2 float64
+	for _, f := range F {
+		d := f - mean
+		s2 += d*d
+	}
+	if len(items) > 1 {
+		variance = (1/(float64(len(items))-1))*s2
+	} else {
+		variance = 0
+	}
+	return mean, variance
+}
+
+
+
 func RandomPermutation(size int) (perm []int) {
 	return Sample(size, size)
 }

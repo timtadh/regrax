@@ -38,6 +38,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/afp/miners/dfs"
+	"github.com/timtadh/sfp/afp/miners/qsplor"
 	"github.com/timtadh/sfp/afp/miners/vsigram"
 	"github.com/timtadh/sfp/cmd"
 	"github.com/timtadh/sfp/config"
@@ -140,6 +141,46 @@ func dfsMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return dfs.NewMiner(conf), args
 }
 
+func qsplorMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hs:m:",
+		[]string{
+			"help",
+			"score-function=",
+			"max-queue-size=",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		cmd.Usage(cmd.ErrorCodes["opts"])
+	}
+	var scorer qsplor.Scorer = qsplor.Scorers["random"]
+	var maxQueueSize int = 10
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			cmd.Usage(0)
+		case "-m", "--max-queue-size":
+			maxQueueSize = cmd.ParseInt(oa.Arg())
+		case "-s", "--score-function":
+			if _, has := qsplor.Scorers[oa.Arg()]; !has {
+				fmt.Fprintf(os.Stderr, "Unknown score function: %v\n", oa.Arg())
+				fmt.Fprintf(os.Stderr, "Valid score functions:\n")
+				for name, _ := range qsplor.Scorers {
+					fmt.Fprintf(os.Stderr, "%v\n", name)
+				}
+				cmd.Usage(cmd.ErrorCodes["opts"])
+			}
+			scorer = qsplor.Scorers[oa.Arg()]
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			cmd.Usage(cmd.ErrorCodes["opts"])
+		}
+	}
+	return qsplor.NewMiner(conf, scorer, maxQueueSize), args
+}
+
 func main() {
 	os.Exit(run())
 }
@@ -148,6 +189,7 @@ func run() int {
 	modes := map[string]cmd.Mode{
 		"dfs":     dfsMode,
 		"vsigram": vsigramMode,
+		"qsplor":  qsplorMode,
 	}
 
 	args, optargs, err := getopt.GetOpt(
