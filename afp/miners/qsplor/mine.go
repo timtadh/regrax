@@ -73,15 +73,7 @@ func (m *Miner) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.For
 }
 
 func (m *Miner) mine() (err error) {
-	seen, err := m.Config.BytesIntMultiMap("stack-seen")
-	if err != nil {
-		return err
-	}
 	add := func(stack []lattice.Node, n lattice.Node) ([]lattice.Node, error) {
-		err := seen.Add(n.Pattern().Label(), 1)
-		if err != nil {
-			return nil, err
-		}
 		stack = append(stack, n)
 		if len(stack) > m.MaxQueueSize {
 			stack = m.dropOne(stack)
@@ -89,7 +81,7 @@ func (m *Miner) mine() (err error) {
 		return stack, nil
 	}
 	root := m.Dt.Root()
-	rootKids, err := root.Children()
+	rootKids, err := root.CanonKids()
 	if err != nil {
 		return err
 	}
@@ -108,18 +100,14 @@ func (m *Miner) mine() (err error) {
 					return err
 				}
 			}
-			kids, err := n.Children()
+			kids, err := n.CanonKids()
 			if err != nil {
 				return err
 			}
 			for _, k := range kids {
-				if has, err := seen.Has(k.Pattern().Label()); err != nil {
+				stack, err = add(stack, k)
+				if err != nil {
 					return err
-				} else if !has {
-					stack, err = add(stack, k)
-					if err != nil {
-						return err
-					}
 				}
 			}
 		}
