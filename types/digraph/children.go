@@ -112,12 +112,14 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		for nep := range nodeCh {
 			nodes = append(nodes, nep.n)
 			vords = append(vords, nep.vord)
+			wg.Done()
 		}
 	}()
 	epCh := make(chan *subgraph.Extension)
 	go func() {
 		for ep := range epCh {
 			newUnsupported.Add(ep)
+			wg.Done()
 		}
 	}()
 	errorCh := make(chan error)
@@ -125,17 +127,19 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	go func() {
 		for err := range errorCh {
 			errs = append(errs, err)
+			wg.Done()
 		}
 	}()
 	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
 		wg.Add(1)
 		go func(pattern *subgraph.SubGraph, i *extInfo) {
-			defer wg.Done()
+			// defer wg.Done()
 			if allow != nil {
 				if allowed, err := allow(pattern); err != nil {
 					errorCh <- err
 					return
 				} else if !allowed {
+					wg.Done()
 					return
 				}
 			}
@@ -151,13 +155,13 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 				errorCh <- err
 				return
 			}
+			if debug {
+				errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
+			}
 			if support >= dt.Support() {
 				nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap), vord}
 			} else {
 				epCh <- ep
-			}
-			if debug {
-				errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
 			}
 		}(k.(*subgraph.SubGraph), v.(*extInfo))
 	}
