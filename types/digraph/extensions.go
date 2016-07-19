@@ -215,8 +215,8 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 }
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
-	dt.lock.RLock()
-	defer dt.lock.RUnlock()
+	dt.lock.Lock()
+	defer dt.lock.Unlock()
 	label := pattern.Label()
 	// frequency will always get added, so if frequency has the label
 	// this pattern has already been saved
@@ -258,8 +258,8 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 }
 
 func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
-	dt.lock.Lock()
-	defer dt.lock.Unlock()
+	dt.lock.RLock()
+	defer dt.lock.RUnlock()
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return false, 0, nil, nil, nil, err
