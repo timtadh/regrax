@@ -3,6 +3,7 @@ package digraph
 import (
 	"math"
 	"regexp"
+	"sync"
 )
 
 import (
@@ -48,6 +49,7 @@ type Digraph struct {
 	CanonKidCount            bytes_int.MultiMap
 	Frequency                bytes_int.MultiMap
 	Indices                  *subgraph.Indices
+	lock                     sync.RWMutex
 }
 
 func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
@@ -144,18 +146,23 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 }
 
 func (dt *Digraph) Init(G *goiso.Graph) (err error) {
+	dt.lock.Lock()
 	dt.G = G
 	dt.Indices.G = G
-
 	dt.Indices.InitColorMap(G)
 	dt.Indices.InitEdgeIndices(G)
+	dt.lock.Unlock()
 
 	for color := range dt.Indices.ColorIndex {
 		if G.ColorFrequency(color) < dt.config.Support {
 			continue
 		}
 		sg := subgraph.Build(1, 0).FromVertex(color).Build()
+
+		dt.lock.Lock()
 		dt.FrequentVertices = append(dt.FrequentVertices, sg.Label())
+		dt.lock.Unlock()
+
 		// done for the side effect of saving the Nodes.
 		_, _, _, _, err := ExtsAndEmbs(dt, sg, nil, nil, dt.Mode, false)
 		if err != nil {
@@ -213,6 +220,8 @@ func (g *Digraph) TooLarge(node lattice.Node) bool {
 }
 
 func (g *Digraph) Close() error {
+	g.lock.Lock()
+	defer g.lock.Unlock()
 	g.config.AsyncTasks.Wait()
 	g.Parents.Close()
 	g.ParentCount.Close()

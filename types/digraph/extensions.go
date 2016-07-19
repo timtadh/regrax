@@ -30,12 +30,12 @@ const (
 // 1. The embeddings and extensions are being computed multiple times for the
 //    same pattern. Memoization needs to be added! (done)
 //
-// 2. There may be duplicate embeddings computed. Investigate. (recheck)
+// 2. There may be duplicate embeddings computed. Investigate. (does not happen)
 //
-// 3. There may be automorphic embeddings computed. Investigate. (recheck)
+// 3. There may be automorphic embeddings computed. Investigate. (happens)
 //
-// 4. Instead of the full Embeddings we could work in overlap space. (todo)
-//    Investigate.
+// 4. Instead of the full Embeddings we could work in overlap space.
+//    Investigate. (done, it was difficult and not worth it)
 
 func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge, src, targ int) *subgraph.Extension {
 	hasTarg := false
@@ -215,6 +215,8 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 }
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
+	dt.lock.RLock()
+	defer dt.lock.RUnlock()
 	label := pattern.Label()
 	// frequency will always get added, so if frequency has the label
 	// this pattern has already been saved
@@ -256,6 +258,8 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 }
 
 func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
+	dt.lock.Lock()
+	defer dt.lock.Unlock()
 	label := pattern.Label()
 	if has, err := dt.Frequency.Has(label); err != nil {
 		return false, 0, nil, nil, nil, err
