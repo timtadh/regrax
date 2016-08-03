@@ -182,7 +182,10 @@ func qsplorMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 }
 
 func main() {
-	os.Exit(run())
+	exitCode := run()
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }
 
 func run() int {
