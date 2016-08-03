@@ -17,26 +17,26 @@ import (
 
 type Dir struct {
 	config *config.Config
-	fmt    lattice.Formatter
-	prfmt  lattice.PrFormatter
+	fmtr    lattice.Formatter
+	prfmtr  lattice.PrFormatter
 	dir    string
 	count  int
 }
 
-func NewDir(c *config.Config, fmt lattice.Formatter, showPr bool, dirname string) (*Dir, error) {
+func NewDir(c *config.Config, fmtr lattice.Formatter, showPr bool, dirname string) (*Dir, error) {
 	samples := c.OutputFile(dirname)
 	err := os.MkdirAll(samples, 0775)
 	if err != nil {
 		return nil, err
 	}
-	var prfmt lattice.PrFormatter
+	var prfmtr lattice.PrFormatter
 	if showPr {
-		prfmt = fmt.PrFormatter()
+		prfmtr = fmtr.PrFormatter()
 	}
 	r := &Dir{
 		config: c,
-		fmt:    fmt,
-		prfmt:  prfmt,
+		fmtr:    fmtr,
+		prfmtr:  prfmtr,
 		dir:    samples,
 	}
 	return r, nil
@@ -54,17 +54,17 @@ func (r *Dir) Report(n lattice.Node) error {
 		return err
 	}
 	defer name.Close()
-	fmt.Fprintf(name, "%s\n", r.fmt.PatternName(n))
-	pattern, err := os.Create(filepath.Join(dir, "pattern"+r.fmt.FileExt()))
+	fmt.Fprintf(name, "%s\n", r.fmtr.PatternName(n))
+	pattern, err := os.Create(filepath.Join(dir, "pattern"+r.fmtr.FileExt()))
 	if err != nil {
 		return err
 	}
 	defer pattern.Close()
-	err = r.fmt.FormatPattern(pattern, n)
+	err = r.fmtr.FormatPattern(pattern, n)
 	if err != nil {
 		return err
 	}
-	embs, err := r.fmt.Embeddings(n)
+	embs, err := r.fmtr.Embeddings(n)
 	if err != nil {
 		return err
 	}
@@ -80,27 +80,27 @@ func (r *Dir) Report(n lattice.Node) error {
 		if err != nil {
 			return err
 		}
-		embedding, err := os.Create(filepath.Join(edir, "embedding"+r.fmt.FileExt()))
+		embedding, err := os.Create(filepath.Join(edir, "embedding"+r.fmtr.FileExt()))
 		if err != nil {
 			return err
 		}
 		defer embedding.Close()
 		fmt.Fprintf(embedding, "%s\n", emb)
 	}
-	if r.prfmt != nil {
-		matrices, err := r.prfmt.Matrices(n)
+	if r.prfmtr != nil {
+		matrices, err := r.prfmtr.Matrices(n)
 		if err == nil {
 			mw, err := os.Create(filepath.Join(dir, "matrices.json"))
 			if err != nil {
 				return err
 			}
 			defer mw.Close()
-			r.prfmt.FormatMatrices(mw, r.fmt, n, matrices)
+			r.prfmtr.FormatMatrices(mw, r.fmtr, n, matrices)
 		}
 		if err != nil {
 			errors.Logf("ERROR", "Pr Matrices Computation Error: %v", err)
-		} else if r.prfmt.CanComputeSelPr(n, matrices) {
-			pr, err := r.prfmt.SelectionProbability(n, matrices)
+		} else if r.prfmtr.CanComputeSelPr(n, matrices) {
+			pr, err := r.prfmtr.SelectionProbability(n, matrices)
 			if err != nil {
 				errors.Logf("ERROR", "PrComputation Error: %v", err)
 			} else {

@@ -17,8 +17,8 @@ import (
 
 type File struct {
 	config     *config.Config
-	fmt        lattice.Formatter
-	prfmt      lattice.PrFormatter
+	fmtr        lattice.Formatter
+	prfmtr      lattice.PrFormatter
 	patterns   io.WriteCloser
 	embeddings io.WriteCloser
 	names      io.WriteCloser
@@ -26,12 +26,12 @@ type File struct {
 	prs        io.WriteCloser
 }
 
-func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilename, embeddingsFilename, namesFilename, matricesFilename, prsFilename string) (*File, error) {
-	patterns, err := os.Create(c.OutputFile(patternsFilename + fmt.FileExt()))
+func NewFile(c *config.Config, fmtr lattice.Formatter, showPr bool, patternsFilename, embeddingsFilename, namesFilename, matricesFilename, prsFilename string) (*File, error) {
+	patterns, err := os.Create(c.OutputFile(patternsFilename + fmtr.FileExt()))
 	if err != nil {
 		return nil, err
 	}
-	embeddings, err := os.Create(c.OutputFile(embeddingsFilename + fmt.FileExt()))
+	embeddings, err := os.Create(c.OutputFile(embeddingsFilename + fmtr.FileExt()))
 	if err != nil {
 		return nil, err
 	}
@@ -41,10 +41,10 @@ func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilen
 	}
 	var matrices io.WriteCloser
 	var prs io.WriteCloser
-	var prfmt lattice.PrFormatter
+	var prfmtr lattice.PrFormatter
 	if showPr {
-		prfmt = fmt.PrFormatter()
-		if prfmt != nil {
+		prfmtr = fmtr.PrFormatter()
+		if prfmtr != nil {
 			prs, err = os.Create(c.OutputFile(prsFilename))
 			if err != nil {
 				return nil, err
@@ -57,8 +57,8 @@ func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilen
 	}
 	r := &File{
 		config:     c,
-		fmt:        fmt,
-		prfmt:      prfmt,
+		fmtr:        fmtr,
+		prfmtr:      prfmtr,
 		patterns:   patterns,
 		embeddings: embeddings,
 		names:      names,
@@ -69,33 +69,33 @@ func NewFile(c *config.Config, fmt lattice.Formatter, showPr bool, patternsFilen
 }
 
 func (r *File) Report(n lattice.Node) error {
-	err := r.fmt.FormatPattern(r.patterns, n)
+	err := r.fmtr.FormatPattern(r.patterns, n)
 	if err != nil {
 		return err
 	}
-	err = r.fmt.FormatEmbeddings(r.embeddings, n)
+	err = r.fmtr.FormatEmbeddings(r.embeddings, n)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(r.names, "%v\n", r.fmt.PatternName(n))
+	_, err = fmt.Fprintf(r.names, "%v\n", r.fmtr.PatternName(n))
 	if err != nil {
 		return err
 	}
-	if r.prfmt != nil {
-		matrices, err := r.prfmt.Matrices(n)
+	if r.prfmtr != nil {
+		matrices, err := r.prfmtr.Matrices(n)
 		if err == nil {
-			r.prfmt.FormatMatrices(r.matrices, r.fmt, n, matrices)
+			r.prfmtr.FormatMatrices(r.matrices, r.fmtr, n, matrices)
 		}
 		if err != nil {
 			fmt.Fprintf(r.matrices, "ERR: %v\n", err)
 			errors.Logf("ERROR", "Pr Matrices Computation Error: vs", err)
-		} else if r.prfmt.CanComputeSelPr(n, matrices) {
-			pr, err := r.prfmt.SelectionProbability(n, matrices)
+		} else if r.prfmtr.CanComputeSelPr(n, matrices) {
+			pr, err := r.prfmtr.SelectionProbability(n, matrices)
 			if err != nil {
 				fmt.Fprintf(r.prs, "ERR: %v\n", err)
 				errors.Logf("ERROR", "PrComputation Error: %v", err)
 			} else {
-				fmt.Fprintf(r.prs, "%g, %v\n", pr, r.fmt.PatternName(n))
+				fmt.Fprintf(r.prs, "%g, %v\n", pr, r.fmtr.PatternName(n))
 			}
 		} else {
 			fmt.Fprintf(r.prs, "SKIPPED\n")

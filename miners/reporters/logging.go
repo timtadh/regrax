@@ -9,30 +9,30 @@ import (
 )
 
 type Log struct {
-	fmt    lattice.Formatter
+	fmtr    lattice.Formatter
 	prs    bool
 	level  string
 	prefix string
 	count  int
 }
 
-func NewLog(fmt lattice.Formatter, prs bool, level, prefix string) *Log {
+func NewLog(fmtr lattice.Formatter, prs bool, level, prefix string) *Log {
 	if level == "" {
 		level = "INFO"
 	}
-	return &Log{fmt: fmt, prs: prs, level: level, prefix: prefix}
+	return &Log{fmtr: fmtr, prs: prs, level: level, prefix: prefix}
 }
 
 func (lr *Log) Report(n lattice.Node) error {
 	lr.count++
-	prfmt := lr.fmt.PrFormatter()
+	prfmtr := lr.fmtr.PrFormatter()
 	pr := -1.0
-	if lr.prs && prfmt != nil {
-		matrices, err := prfmt.Matrices(n)
+	if lr.prs && prfmtr != nil {
+		matrices, err := prfmtr.Matrices(n)
 		if err != nil {
 			errors.Logf("ERROR", "Pr Matrices Computation Error: %v", err)
-		} else if prfmt.CanComputeSelPr(n, matrices) {
-			pr, err = prfmt.SelectionProbability(n, matrices)
+		} else if prfmtr.CanComputeSelPr(n, matrices) {
+			pr, err = prfmtr.SelectionProbability(n, matrices)
 			if err != nil {
 				errors.Logf("ERROR", "PrComputation Error: %v", err)
 			}
