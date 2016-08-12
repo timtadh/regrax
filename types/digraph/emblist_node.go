@@ -82,6 +82,8 @@ func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
 	if n.Dt.UnsupExts == nil {
 		return set.NewSortedSet(0), nil
 	}
+	n.Dt.lock.RLock()
+	defer n.Dt.lock.RUnlock()
 	label := n.Label()
 	u := set.NewSortedSet(10)
 	err := n.Dt.UnsupExts.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
@@ -97,6 +99,8 @@ func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet
 	if n.Dt.UnsupExts == nil {
 		return nil
 	}
+	n.Dt.lock.Lock()
+	defer n.Dt.lock.Unlock()
 	if len(n.Pat.E) < 4 {
 		return nil
 	}

@@ -1,6 +1,8 @@
 package digraph
 
-import ()
+import (
+	"sync"
+)
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -94,44 +96,88 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	if err != nil {
 		return nil, err
 	}
+	newUnsupported := unsupported.Copy()
 	nOverlap, err := n.Overlap()
 	if err != nil {
 		return nil, err
 	}
+	var wg sync.WaitGroup
+	type nodeEp struct {
+		n lattice.Node
+		vord []int
+	}
+	nodeCh := make(chan nodeEp)
 	vords := make([][]int, 0, 10)
+	go func() {
+		for nep := range nodeCh {
+			nodes = append(nodes, nep.n)
+			vords = append(vords, nep.vord)
+			wg.Done()
+		}
+	}()
+	epCh := make(chan *subgraph.Extension)
+	go func() {
+		for ep := range epCh {
+			newUnsupported.Add(ep)
+			wg.Done()
+		}
+	}()
+	errorCh := make(chan error)
+	errs := make([]error, 0, 10)
+	go func() {
+		for err := range errorCh {
+			errs = append(errs, err)
+			wg.Done()
+		}
+	}()
 	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
-		pattern := k.(*subgraph.SubGraph)
-		if allow != nil {
-			if allowed, err := allow(pattern); err != nil {
-				return nil, err
-			} else if !allowed {
-				continue
+		wg.Add(1)
+		go func(pattern *subgraph.SubGraph, i *extInfo) {
+			// defer wg.Done()
+			if allow != nil {
+				if allowed, err := allow(pattern); err != nil {
+					errorCh <- err
+					return
+				} else if !allowed {
+					wg.Done()
+					return
+				}
 			}
+			ep := i.ep
+			vord := i.vord
+			tu := set.NewSetMap(hashtable.NewLinearHash())
+			for i, next := unsupported.Items()(); next != nil; i, next = next() {
+				tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
+			}
+			pOverlap := translateOverlap(nOverlap, vord)
+			support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
+			if err != nil {
+				errorCh <- err
+				return
+			}
+			if debug {
+				errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
+			}
+			if support >= dt.Support() {
+				nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap), vord}
+			} else {
+				epCh <- ep
+			}
+		}(k.(*subgraph.SubGraph), v.(*extInfo))
+	}
+	wg.Wait()
+	close(nodeCh)
+	close(epCh)
+	close(errorCh)
+	if len(errs) > 0 {
+		e := errors.Errorf("findChildren error").(*errors.Error)
+		for _, err := range errs {
+			e.Chain(err)
 		}
-		i := v.(*extInfo)
-		ep := i.ep
-		vord := i.vord
-		tu := set.NewSetMap(hashtable.NewLinearHash())
-		for i, next := unsupported.Items()(); next != nil; i, next = next() {
-			tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
-		}
-		pOverlap := translateOverlap(nOverlap, vord)
-		support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
-		if err != nil {
-			return nil, err
-		}
-		if debug {
-			errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
-		}
-		if support >= dt.Support() {
-			nodes = append(nodes, n.New(pattern, exts, embs, overlap))
-			vords = append(vords, vord)
-		} else {
-			unsupported.Add(ep)
-		}
+		return nil, e
 	}
 	for i, newNode := range nodes {
-		err := newNode.(Node).SaveUnsupported(len(sg.V), vords[i], unsupported)
+		err := newNode.(Node).SaveUnsupported(len(sg.V), vords[i], newUnsupported)
 		if err != nil {
 			return nil, err
 		}

@@ -197,9 +197,14 @@ func run() int {
 
 	conf := &config.Config{}
 
-	loadDt, args := cmd.ParseType(args, conf)
-	dt, _ := loadDt(nil)
-	graph := dt.(*digraph.Digraph)
+	graphs := make([]*digraph.Digraph, 0, 10)
+	for len(args) > 0 {
+		loadDt, as := cmd.ParseType(args, conf)
+		args = as
+		dt, _ := loadDt(nil)
+		graph := dt.(*digraph.Digraph)
+		graphs = append(graphs, graph)
+	}
 
 	if cpuProfile != "" {
 		defer cmd.CPUProfile(cpuProfile)()
@@ -222,33 +227,35 @@ func run() int {
 	sgEdges := make([]float64, 0, len(patterns))
 	total := 0.0
 	totalEdges := 0.0
-	for _, pattern := range patterns {
-		sg, err := subgraph.ParsePretty(pattern, &graph.G.Colors, graph.G.Labels)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			return 1
-		}
-		match, csg, err := sg.EstimateMatch(graph.Indices)
-		match = match * float64(len(sg.E))
-		if err != nil {
-			errors.Logf("ERROR", "%v", err)
-			return 1
-		}
-		matches = append(matches, match)
-		matched = append(matched, csg)
-		sgEdges = append(sgEdges, float64(len(sg.E)))
-		// fmt.Printf("%v, %v, %v\n", i+1, match, pattern)
-		total += match
-		totalEdges += float64(len(sg.E))
-		if visualize != nil {
-			dotty, err := csg.VisualizeEmbedding(sg.AsIndices(graph.Indices))
+	for _, graph := range graphs {
+		for _, pattern := range patterns {
+			sg, err := subgraph.ParsePretty(pattern, &graph.G.Colors, graph.G.Labels)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "There was error visualizing the embedding '%v'\n", csg)
+				fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 				return 1
 			}
-			fmt.Fprintln(visualize, dotty)
+			match, csg, err := sg.EstimateMatch(graph.Indices)
+			match = match * float64(len(sg.E))
+			if err != nil {
+				errors.Logf("ERROR", "%v", err)
+				return 1
+			}
+			matches = append(matches, match)
+			matched = append(matched, csg)
+			sgEdges = append(sgEdges, float64(len(sg.E)))
+			// fmt.Printf("%v, %v, %v\n", i+1, match, pattern)
+			total += match
+			totalEdges += float64(len(sg.E))
+			if visualize != nil {
+				dotty, err := csg.VisualizeEmbedding(sg.AsIndices(graph.Indices))
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "There was error visualizing the embedding '%v'\n", csg)
+					fmt.Fprintf(os.Stderr, "%v\n", err)
+					return 1
+				}
+				fmt.Fprintln(visualize, dotty)
+			}
 		}
 	}
 	errors.Logf("DEBUG", "prs %v",  sum(prs))

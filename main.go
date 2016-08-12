@@ -280,7 +280,10 @@ func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 }
 
 func main() {
-	os.Exit(run())
+	code := run()
+	if code != 0 {
+		os.Exit(code)
+	}
 }
 
 func run() int {
