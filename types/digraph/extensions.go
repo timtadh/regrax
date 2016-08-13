@@ -1,5 +1,7 @@
 package digraph
 
+import ()
+
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
@@ -215,6 +217,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 }
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
+
 	dt.lock.Lock()
 	defer dt.lock.Unlock()
 	label := pattern.Label()

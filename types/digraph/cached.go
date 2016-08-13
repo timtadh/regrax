@@ -49,9 +49,22 @@ func cachedAdj(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.
 	}
 	// errors.Logf("DEBUG", "loading %v", n)
 	err = cache.DoFind(key, func(_, adj []byte) (err error) {
+		// WHY DO WE NEED TO UNLOCK?
+		// We will aquire this lock in the course of LoadEmbList in READ MODE
+		// This is fine to re-aquire in READ
+		// However, if another thread tries to aquire in WRITE before we re-aquire
+		// There will be a waiting WRITE when we try to aquire READ
+		// A waiting WRITE will prevent all READ aquisitions
+		// DEADLOCK.
+		dt.lock.RUnlock()
+		defer dt.lock.RLock()
 		node, err := LoadEmbListNode(dt, adj)
 		if err != nil {
 			return err
+		}
+		if node == nil {
+			errors.Logf("ERROR", "node is nil")
+			panic("node was nil")
 		}
 		nodes = append(nodes, node)
 		return nil
