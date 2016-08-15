@@ -1,0 +1,58 @@
+#!/usr/bin/env python2
+
+import sys
+import json
+
+def get(data, item):
+    if item in data:
+        return data[item]
+    else:
+        n = len(data)
+        data[item] = n
+        return n
+
+def getlabel(labels, label):
+    return get(labels, label)
+
+def getvertex(labels, label):
+    return get(labels, label)
+
+def vertex(vertices, labels, fout, line):
+    line = json.loads(line)
+    id = getvertex(vertices, line['id'])
+    label = getlabel(labels, line['label'].strip())
+    print >>fout, "v %d %d" % (id, label)
+
+def edge(vertices, labels, fout, line):
+    line = json.loads(line)
+    src = getvertex(vertices, line['src'])
+    targ = getvertex(vertices, line['targ'])
+    label = getlabel(labels, line['label'].strip())
+    print >>fout, "e %d %d %d" % (src, targ, label)
+
+def process_line(vertices, labels, fout, line):
+    typ, split = line.strip().split('\t', 1)
+    if typ == 'vertex':
+        vertex(vertices, labels, fout, split)
+    elif typ == "edge":
+        edge(vertices, labels, fout, split)
+    else:
+        print >>sys.stderr, "Unexpected line: '%s'" % line
+
+def process(fin, fout):
+    vertices = dict()
+    labels = dict()
+    for line in fin:
+        line = line.strip()
+        if not line:
+            continue
+        process_line(vertices, labels, fout, line)
+
+def main(argv):
+    fin = sys.stdin
+    fout = sys.stdout
+    process(fin, fout)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
+
