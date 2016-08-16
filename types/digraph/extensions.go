@@ -54,6 +54,9 @@ func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge, src,
 		targIdx = targ
 	}
 	for idx, id := range emb.Ids {
+		if hasTarg && hasSrc {
+			break
+		}
 		if !hasSrc && e.Src == id {
 			hasSrc = true
 			srcIdx = idx
@@ -61,9 +64,6 @@ func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge, src,
 		if !hasTarg && e.Targ == id {
 			hasTarg = true
 			targIdx = idx
-		}
-		if hasTarg && hasSrc {
-			break
 		}
 	}
 	return subgraph.NewExt(
