@@ -39,6 +39,9 @@ const (
 //
 // 4. Instead of the full Embeddings we could work in overlap space.
 //    Investigate. (done, it was difficult and not worth it)
+//
+// 5. Add a parallel implementation of extending from embedding list ala original
+//    graple. This will give a benchmarking point of comparison.
 
 func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge, src, targ int) *subgraph.Extension {
 	hasTarg := false
