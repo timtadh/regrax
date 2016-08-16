@@ -2,6 +2,7 @@ package digraph
 
 import (
 	"sync"
+	"runtime"
 )
 
 import (
@@ -130,41 +131,44 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 			wg.Done()
 		}
 	}()
+	wrkrs := newExtWorkers(runtime.NumCPU())
 	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
-		wg.Add(1)
-		go func(pattern *subgraph.SubGraph, i *extInfo) {
-			// defer wg.Done()
-			if allow != nil {
-				if allowed, err := allow(pattern); err != nil {
+		wrkrs.Do(func(pattern *subgraph.SubGraph, i *extInfo) func() {
+			wg.Add(1)
+			return func() {
+				if allow != nil {
+					if allowed, err := allow(pattern); err != nil {
+						errorCh <- err
+						return
+					} else if !allowed {
+						wg.Done()
+						return
+					}
+				}
+				ep := i.ep
+				vord := i.vord
+				tu := set.NewSetMap(hashtable.NewLinearHash())
+				for i, next := unsupported.Items()(); next != nil; i, next = next() {
+					tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
+				}
+				pOverlap := translateOverlap(nOverlap, vord)
+				support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
+				if err != nil {
 					errorCh <- err
 					return
-				} else if !allowed {
-					wg.Done()
-					return
+				}
+				if debug {
+					errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
+				}
+				if support >= dt.Support() {
+					nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap), vord}
+				} else {
+					epCh <- ep
 				}
 			}
-			ep := i.ep
-			vord := i.vord
-			tu := set.NewSetMap(hashtable.NewLinearHash())
-			for i, next := unsupported.Items()(); next != nil; i, next = next() {
-				tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
-			}
-			pOverlap := translateOverlap(nOverlap, vord)
-			support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
-			if err != nil {
-				errorCh <- err
-				return
-			}
-			if debug {
-				errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
-			}
-			if support >= dt.Support() {
-				nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap), vord}
-			} else {
-				epCh <- ep
-			}
-		}(k.(*subgraph.SubGraph), v.(*extInfo))
+		}(k.(*subgraph.SubGraph), v.(*extInfo)))
 	}
+	wrkrs.Stop()
 	wg.Wait()
 	close(nodeCh)
 	close(epCh)

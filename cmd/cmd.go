@@ -1166,6 +1166,7 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 		Usage(ErrorCodes["opts"])
 	}
 
+	errors.Logf("INFO", "args: %v", os.Args)
 	loadDt, args := ParseType(args, conf)
 	mode, args := ParseMode(args, conf, modes)
 	dt, fmtr := loadDt(mode.PrFormatter())
@@ -1175,6 +1176,7 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 		fmt.Fprintf(os.Stderr, "unconsumed commandline options: '%v'\n", strings.Join(args, " "))
 		Usage(ErrorCodes["opts"])
 	}
+
 
 	return Run(dt, fmtr, mode, rptr)
 }
