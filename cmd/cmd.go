@@ -581,6 +581,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"count-mode=",
 			"overlap-pruning",
 			"extension-pruning",
+			"no-caching",
 			"min-edges=",
 			"max-edges=",
 			"min-vertices=",
@@ -598,6 +599,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	modeStr := "optimistic-pruning"
 	overlapPruning := false
 	extensionPruning := false
+	caching := true
 	minE := 0
 	maxE := int(math.MaxInt32)
 	minV := 0
@@ -616,6 +618,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			overlapPruning = true
 		case "--extension-pruning":
 			extensionPruning = true
+		case "--no-caching":
+			caching = false
 		case "--min-edges":
 			minE = ParseInt(oa.Arg())
 		case "--max-edges":
@@ -652,6 +656,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 	if extensionPruning {
 		mode |= digraph.ExtensionPruning
+	}
+	if caching {
+		mode |= digraph.Caching
 	}
 
 	var include *regexp.Regexp = nil
