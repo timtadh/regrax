@@ -1,9 +1,13 @@
 package vsigram
 
-import ()
+import (
+	"runtime"
+	"sync"
+)
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/pool"
 )
 
 import (
@@ -66,28 +70,81 @@ func (m *Miner) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.For
 	return nil
 }
 
-func (m *Miner) mine() error {
-	pop := func(stack []lattice.Node) ([]lattice.Node, lattice.Node) {
-		return stack[:len(stack)-1], stack[len(stack)-1]
-	}
-	stack := make([]lattice.Node, 0, 10)
-	stack = append(stack, m.Dt.Root())
-	for len(stack) > 0 {
-		var n lattice.Node
-		stack, n = pop(stack)
-		if m.Dt.Acceptable(n) {
+func (m *Miner) mine() (err error) {
+	var wg sync.WaitGroup
+	pool := pool.New(runtime.NumCPU())
+	errors.Logf("DEBUG", "pool %v", pool)
+	stack := NewStack()
+	stack.Push(m.Dt.Root())
+	errs := make(chan error)
+	reports := make(chan lattice.Node, 10)
+	go func() {
+		for n := range reports {
 			err := m.Rptr.Report(n)
 			if err != nil {
-				return err
+				errs<-err
 			}
+			wg.Done()
 		}
-		kids, err := n.CanonKids()
+	}()
+	errList := make([]error, 0, 10)
+	go func() {
+		for err := range errs {
+			if err != nil {
+				errList = append(errList, err)
+			}
+			wg.Done()
+		}
+	}()
+	for {
+		if stack.Empty() {
+			pool.WaitLock()
+			if stack.Empty() {
+				pool.Unlock()
+				break
+			}
+			pool.Unlock()
+		}
+		err := pool.Do(func() {
+			var err error
+			err = m.step(&wg, reports, stack)
+			if err != nil {
+				wg.Add(1)
+				errs <- err
+			}
+		})
 		if err != nil {
 			return err
 		}
-		for _, k := range kids {
-			stack = append(stack, k)
+	}
+	pool.Stop()
+	close(reports)
+	close(errs)
+	wg.Wait()
+	if len(errList) > 0 {
+		for _, err := range errList {
+			errors.Logf("ERROR", "err: %v", err)
 		}
+		return errList[0]
+	}
+	return nil
+}
+
+func (m *Miner) step(wg *sync.WaitGroup, reports chan lattice.Node, stack *Stack) (err error) {
+	n := stack.Pop()
+	if n == nil {
+		return nil
+	}
+	if m.Dt.Acceptable(n) {
+		wg.Add(1)
+		reports<-n
+	}
+	kids, err := n.CanonKids()
+	if err != nil {
+		return err
+	}
+	for _, k := range kids {
+		stack.Push(k)
 	}
 	return nil
 }

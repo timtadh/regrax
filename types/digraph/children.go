@@ -8,6 +8,7 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
+	"github.com/timtadh/data-structures/pool"
 	"github.com/timtadh/data-structures/set"
 )
 
@@ -17,6 +18,12 @@ import (
 	"github.com/timtadh/sfp/stores/bytes_int"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
+
+var workPool *pool.Pool
+
+func init() {
+	workPool = pool.New(runtime.NumCPU())
+}
 
 type Node interface {
 	lattice.Node
@@ -65,6 +72,9 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	nodes, err = findChildren(n, func(pattern *subgraph.SubGraph) (bool, error) {
 		return isCanonicalExtension(sg, pattern)
 	}, false)
+	if err != nil {
+		return nil, err
+	}
 	return nodes, cacheAdj(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
 }
 
@@ -131,9 +141,8 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 			wg.Done()
 		}
 	}()
-	wrkrs := newExtWorkers(runtime.NumCPU())
 	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
-		wrkrs.Do(func(pattern *subgraph.SubGraph, i *extInfo) func() {
+		err := workPool.Do(func(pattern *subgraph.SubGraph, i *extInfo) func() {
 			wg.Add(1)
 			return func() {
 				if allow != nil {
@@ -167,8 +176,10 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 				}
 			}
 		}(k.(*subgraph.SubGraph), v.(*extInfo)))
+		if err != nil {
+			return nil, err
+		}
 	}
-	wrkrs.Stop()
 	wg.Wait()
 	close(nodeCh)
 	close(epCh)
