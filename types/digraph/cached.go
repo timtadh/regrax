@@ -13,13 +13,11 @@ import (
 )
 
 func cacheAdj(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {
-	dt.lock.Lock()
-	defer dt.lock.Unlock()
-	if false {
-		pat, _ := LoadSubgraphPattern(dt, key)
-		errors.Logf("WARN", "skipped caching %v", pat.Pat)
+	if dt.Mode & Caching == 0 {
 		return nil
 	}
+	dt.lock.Lock()
+	defer dt.lock.Unlock()
 	if has, err := count.Has(key); err != nil {
 		return err
 	} else if has {
@@ -39,6 +37,9 @@ func cacheAdj(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap,
 }
 
 func cachedAdj(n Node, dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap) (nodes []lattice.Node, has bool, err error) {
+	if dt.Mode & Caching == 0 {
+		return nil, false, nil
+	}
 	dt.lock.RLock()
 	defer dt.lock.RUnlock()
 	key := n.Label()

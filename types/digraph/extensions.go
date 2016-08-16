@@ -25,6 +25,7 @@ const (
 	OptimisticPruning
 	OverlapPruning
 	ExtensionPruning
+	Caching
 )
 
 // YOU ARE HERE:
@@ -217,7 +218,9 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 }
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
-
+	if dt.Mode & Caching == 0 && len(pattern.E) > 0 {
+		return nil
+	}
 	dt.lock.Lock()
 	defer dt.lock.Unlock()
 	label := pattern.Label()
@@ -261,6 +264,9 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 }
 
 func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
+	if dt.Mode & Caching == 0 && len(pattern.E) > 0 {
+		return false, 0, nil, nil, nil, nil
+	}
 	dt.lock.RLock()
 	defer dt.lock.RUnlock()
 	label := pattern.Label()
