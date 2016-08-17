@@ -77,7 +77,7 @@ func (m *Miner) mine() (err error) {
 	stack := NewStack()
 	stack.Push(m.Dt.Root())
 	errs := make(chan error)
-	reports := make(chan lattice.Node, 10)
+	reports := make(chan lattice.Node, 100)
 	go func() {
 		for n := range reports {
 			err := m.Rptr.Report(n)
