@@ -240,16 +240,18 @@ Types
 var ReportersUsage string = `
 Reporters
     chain                     chain several reporters together (end the chain
-                              with endchain)
+                                with endchain)
     max                       only write maximal patterns
     canon-max                 only write patterns that are leaf nodes of the
-                              canonical-edge frequent pattern tree
+                                canonical-edge frequent pattern tree
+    skip                      skip a specified (-s) number of patterns between
+                                each reported pattern
     log                       log the samples
     file                      write the samples to a file in the output dir
     dir                       write samples to a nested dir format
     unique                    takes an "inner reporter" but only passes the
-                              unique samples to inner reporter. (useful in
-                              conjunction with --non-unique)
+                                unique samples to inner reporter. (useful in
+                                conjunction with --non-unique)
 
     log Options
         -l, level=<string>    log level the logger should use
