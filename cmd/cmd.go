@@ -241,6 +241,9 @@ var ReportersUsage string = `
 Reporters
     chain                     chain several reporters together (end the chain
                               with endchain)
+    max                       only write maximal patterns
+    canon-max                 only write patterns that are leaf nodes of the
+                              canonical-edge frequent pattern tree
     log                       log the samples
     file                      write the samples to a file in the output dir
     dir                       write samples to a nested dir format
@@ -298,6 +301,11 @@ Reporters
             digraph ./digraph.veg.gz \
             graple \
             chain log chain log log endchain file
+
+        $ sfp -o <path> --samples=5 --support=5 \
+            digraph ./digraph.veg.gz \
+            graple \
+            chain log -p all max chain log -p max file
 
         $ sfp --non-unique --skip-log=DEBUG -o /tmp/sfp --samples=5 --support=5 \
             digraph --min-vertices=3 ../fsm/data/expr.gz \
@@ -1015,6 +1023,50 @@ func canonMaxReporter(reports map[string]Reporter, argv []string, fmtr lattice.F
 	return m, args
 }
 
+func skipReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hs:",
+		[]string{
+			"help",
+			"skip=",
+		},
+	)
+	if err != nil {
+		errors.Logf("ERROR", "%v", err)
+		Usage(ErrorCodes["opts"])
+	}
+	skip := 0
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		case "-s", "--skip":
+			skip = ParseInt(oa.Arg())
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	var rptr miners.Reporter
+	if len(args) == 0 {
+		fmt.Fprintln(os.Stderr, "You must supply an inner reporter to skip")
+		fmt.Fprintln(os.Stderr, "try: skip log")
+		Usage(ErrorCodes["opts"])
+	} else if _, has := reports[args[0]]; !has {
+		fmt.Fprintf(os.Stderr, "Unknown reporter '%v'\n", args[0])
+		fmt.Fprintln(os.Stderr, "Reporters:")
+		for k := range reports {
+			fmt.Fprintln(os.Stderr, "  ", k)
+		}
+		Usage(ErrorCodes["opts"])
+	} else {
+		rptr, args = reports[args[0]](reports, args[1:], fmtr, conf)
+	}
+	r := reporters.NewSkip(skip, rptr)
+	return r, args
+}
+
 func heapProfileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
@@ -1074,6 +1126,7 @@ var Reporters map[string]Reporter = map[string]Reporter{
 	"unique":       uniqueReporter,
 	"max":          maxReporter,
 	"canon-max":    canonMaxReporter,
+	"skip":         skipReporter,
 	"heap-profile": heapProfileReporter,
 }
 
