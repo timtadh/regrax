@@ -523,9 +523,11 @@ outer:
 			}
 		}
 		for _, id := range indices.ColorIndex[sg.V[idx].Color] {
-			sg.extendEmbedding(indices, &IdNode{Id: id, Idx: idx}, e, overlap, func(_ *IdNode) {
-				total++
-			})
+			if overlap == nil || len(overlap[idx]) == 0 || overlap[idx][id] {
+				sg.extendEmbedding(indices, &IdNode{Id: id, Idx: idx}, e, overlap, func(_ *IdNode) {
+					total++
+				})
+			}
 		}
 	}
 	return total

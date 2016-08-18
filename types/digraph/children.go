@@ -22,7 +22,7 @@ import (
 var workPool *pool.Pool
 
 func init() {
-	workPool = pool.New(runtime.NumCPU())
+	workPool = pool.New(runtime.NumCPU()*0 + 1)
 }
 
 type Node interface {
