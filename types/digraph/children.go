@@ -17,7 +17,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-
 type Node interface {
 	lattice.Node
 	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool) Node

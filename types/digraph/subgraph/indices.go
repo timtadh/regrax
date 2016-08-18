@@ -25,6 +25,7 @@ type Indices struct {
 	TargIndex   map[IdColorColor][]int // (TargIdx, EdgeColor, SrcColor) -> SrcIdx (where Idx in G.V)
 	EdgeIndex   map[Edge]*goiso.Edge
 	EdgeCounts  map[Colors]int
+	FreqEdges   []Colors
 }
 
 func (i *Indices) Colors(e *goiso.Edge) Colors {
@@ -41,7 +42,7 @@ func (i *Indices) Degree(id int) int {
 	return len(i.G.Kids[id]) + len(i.G.Parents[id])
 }
 
-func (sg *SubGraph) AsIndices(myIndices *Indices) *Indices {
+func (sg *SubGraph) AsIndices(myIndices *Indices, support int) *Indices {
 	x := goiso.NewGraph(len(sg.V),len(sg.E))
 	g := &x
 	for _, color := range myIndices.G.Colors {
@@ -66,7 +67,7 @@ func (sg *SubGraph) AsIndices(myIndices *Indices) *Indices {
 		EdgeCounts: make(map[Colors]int),
 	}
 	indices.InitVertexIndices(g)
-	indices.InitEdgeIndices(g)
+	indices.InitEdgeIndices(g, support)
 	return indices
 }
 
@@ -85,7 +86,7 @@ func (indices *Indices) InitVertexIndices(G *goiso.Graph) {
 	}
 }
 
-func (indices *Indices) InitEdgeIndices(G *goiso.Graph) {
+func (indices *Indices) InitEdgeIndices(G *goiso.Graph, support int) {
 	for idx := range G.E {
 		e := &G.E[idx]
 		edge := Edge{Src: e.Src, Targ: e.Targ, Color: e.Color}
@@ -96,6 +97,11 @@ func (indices *Indices) InitEdgeIndices(G *goiso.Graph) {
 		indices.SrcIndex[srcKey] = append(indices.SrcIndex[srcKey], e.Targ)
 		indices.TargIndex[targKey] = append(indices.TargIndex[targKey], e.Src)
 		indices.EdgeCounts[colorKey] += 1
+	}
+	for color, count := range indices.EdgeCounts {
+		if count >= support {
+			indices.FreqEdges = append(indices.FreqEdges, color)
+		}
 	}
 }
 
