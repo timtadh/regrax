@@ -77,13 +77,16 @@ func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge, src,
 
 func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extension)) func(*subgraph.Embedding, *goiso.Edge, int, int) int {
 	return func(emb *subgraph.Embedding, e *goiso.Edge, src, targ int) int {
-		if dt.G.ColorFrequency(e.Color) < dt.Support() {
-			return 0
-		} else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {
-			return 0
-		} else if dt.G.ColorFrequency(dt.G.V[e.Targ].Color) < dt.Support() {
+		if dt.Indices.EdgeCounts[dt.Indices.Colors(e)] < dt.Support() {
 			return 0
 		}
+		// if dt.G.ColorFrequency(e.Color) < dt.Support() {
+		// 	return 0
+		// } else if dt.G.ColorFrequency(dt.G.V[e.Src].Color) < dt.Support() {
+		// 	return 0
+		// } else if dt.G.ColorFrequency(dt.G.V[e.Targ].Color) < dt.Support() {
+		// 	return 0
+		// }
 		ep := extensionPoint(dt.G, emb, e, src, targ)
 		if !emb.SG.HasExtension(ep) {
 			do(emb, ep)

@@ -19,13 +19,6 @@ import (
 // "github.com/timtadh/sfp/stats"
 )
 
-// Tim You Are Here:
-// You just ran %s/\*goiso.SubGraph/*Embedding/g
-//
-// Now it is time to transition this thing over to *Embeddings :check:
-// Next it is time to create stores for *Embeddings
-// Then it is time to transition types/digraph to *Embeddings
-
 type EmbIterator func() (*Embedding, EmbIterator)
 
 func (sg *SubGraph) Embeddings(indices *Indices) ([]*Embedding, error) {
@@ -207,9 +200,13 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, overlap []map[int]bool, pru
 			} else {
 				// ok extend the embedding
 				// errors.Logf("DEBUG", "\n  extend %v %v %v", i.emb.Builder, i.emb.Ids, chain[i.eid])
+				size := len(stack)
 				sg.extendEmbedding(indices, i.ids, &sg.E[chain[i.eid]], overlap, func(ext *IdNode) {
 					stack = append(stack, entry{ext, i.eid + 1})
 				})
+				if size == len(stack) {
+					// errors.Logf("EMB-SEARCH", "stack, no change %v, dropping %v", len(stack), i.ids)
+				}
 				// errors.Logf("DEBUG", "stack len %v", len(stack))
 			}
 		}
@@ -494,12 +491,21 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 			do(cur)
 		}
 	} else if srcId != -1 {
+		deg := len(sg.Adj[e.Targ])
 		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur, func(targId int) {
-			doNew(e.Targ, targId)
+			// TIM YOU ARE HERE:
+			// filter these potential targId by ensuring they have adequate degree
+			if deg <= indices.Degree(targId) {
+				doNew(e.Targ, targId)
+			}
 		})
 	} else if targId != -1 {
+		deg := len(sg.Adj[e.Src])
 		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur, func(srcId int) {
-			doNew(e.Src, srcId)
+			// filter these potential srcId by ensuring they have adequate degree
+			if deg <= indices.Degree(srcId) {
+				doNew(e.Src, srcId)
+			}
 		})
 	} else {
 		panic("unreachable")

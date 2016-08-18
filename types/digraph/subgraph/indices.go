@@ -17,13 +17,28 @@ type Colors struct {
 	SrcColor, TargColor, EdgeColor int
 }
 
+
 type Indices struct {
-	G          *goiso.Graph
-	ColorIndex map[int][]int          // Colors -> []Idx in G.V
-	SrcIndex   map[IdColorColor][]int // (SrcIdx, EdgeColor, TargColor) -> TargIdx (where Idx in G.V)
-	TargIndex  map[IdColorColor][]int // (TargIdx, EdgeColor, SrcColor) -> SrcIdx (where Idx in G.V)
-	EdgeIndex  map[Edge]*goiso.Edge
-	EdgeCounts map[Colors]int
+	G           *goiso.Graph
+	ColorIndex  map[int][]int          // Colors -> []Idx in G.V
+	SrcIndex    map[IdColorColor][]int // (SrcIdx, EdgeColor, TargColor) -> TargIdx (where Idx in G.V)
+	TargIndex   map[IdColorColor][]int // (TargIdx, EdgeColor, SrcColor) -> SrcIdx (where Idx in G.V)
+	EdgeIndex   map[Edge]*goiso.Edge
+	EdgeCounts  map[Colors]int
+}
+
+func (i *Indices) Colors(e *goiso.Edge) Colors {
+	return Colors{
+		SrcColor: i.G.V[e.Src].Color,
+		TargColor: i.G.V[e.Targ].Color,
+		EdgeColor: e.Color,
+	}
+}
+
+// From an sg.V.id, get the degree of that vertex in the graph.
+// so the id is really a Graph Idx
+func (i *Indices) Degree(id int) int {
+	return len(i.G.Kids[id]) + len(i.G.Parents[id])
 }
 
 func (sg *SubGraph) AsIndices(myIndices *Indices) *Indices {
@@ -50,7 +65,7 @@ func (sg *SubGraph) AsIndices(myIndices *Indices) *Indices {
 		EdgeIndex: make(map[Edge]*goiso.Edge),
 		EdgeCounts: make(map[Colors]int),
 	}
-	indices.InitColorMap(g)
+	indices.InitVertexIndices(g)
 	indices.InitEdgeIndices(g)
 	return indices
 }
@@ -63,7 +78,7 @@ func intSet(ints []int) types.Set {
 	return s
 }
 
-func (indices *Indices) InitColorMap(G *goiso.Graph) {
+func (indices *Indices) InitVertexIndices(G *goiso.Graph) {
 	for i := range G.V {
 		u := &G.V[i]
 		indices.ColorIndex[u.Color] = append(indices.ColorIndex[u.Color], u.Idx)

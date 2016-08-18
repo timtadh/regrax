@@ -149,7 +149,7 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 	dt.lock.Lock()
 	dt.G = G
 	dt.Indices.G = G
-	dt.Indices.InitColorMap(G)
+	dt.Indices.InitVertexIndices(G)
 	dt.Indices.InitEdgeIndices(G)
 	dt.lock.Unlock()
 
