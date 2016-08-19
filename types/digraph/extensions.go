@@ -129,9 +129,50 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 }
 
 func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, sets []*hashtable.LinearHash, exts types.Set) {
-	exts = set.NewSetMap(hashtable.NewLinearHash())
 	sets = make([]*hashtable.LinearHash, len(pattern.V))
 	support := dt.Support()
+	done := make(chan types.Set)
+	go func(done chan types.Set) {
+		exts := make(chan *subgraph.Extension, len(pattern.V))
+		go func() {
+			hash := set.NewSetMap(hashtable.NewLinearHash())
+			for ext := range exts {
+				if !pattern.HasExtension(ext) {
+					hash.Add(ext)
+				}
+			}
+			done<-hash
+			close(done)
+		}()
+		for i := range pattern.V {
+			u := &pattern.V[i]
+			for _, e := range dt.Indices.EdgesFromColor[u.Color] {
+				for j := range pattern.V {
+					v := &pattern.V[j]
+					if v.Color == e.TargColor {
+						ep := subgraph.NewExt(
+							subgraph.Vertex{Idx: i, Color: e.SrcColor},
+							subgraph.Vertex{Idx: j, Color: e.TargColor},
+							e.EdgeColor)
+						exts <-ep
+					}
+				}
+				ep := subgraph.NewExt(
+					subgraph.Vertex{Idx: i, Color: u.Color},
+					subgraph.Vertex{Idx: len(pattern.V), Color: e.TargColor},
+					e.EdgeColor)
+				exts <-ep
+			}
+			for _, e := range dt.Indices.EdgesToColor[u.Color] {
+				ep := subgraph.NewExt(
+					subgraph.Vertex{Idx: len(pattern.V), Color: e.SrcColor},
+					subgraph.Vertex{Idx: i, Color: u.Color},
+					e.EdgeColor)
+				exts <-ep
+			}
+		}
+		close(exts)
+	}(done)
 	for emb, next := ei(); next != nil; emb, next = next() {
 		min := -1
 		for idx, id := range emb.Ids {
@@ -156,42 +197,9 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 		}
 	}
 	if total < support {
-		return total, sets, exts
+		return total, sets, nil
 	}
-	for i := range pattern.V {
-		u := &pattern.V[i]
-		for _, e := range dt.Indices.EdgesFromColor[u.Color] {
-			for j := range pattern.V {
-				v := &pattern.V[j]
-				if v.Color == e.TargColor {
-					ep := subgraph.NewExt(
-						subgraph.Vertex{Idx: i, Color: e.SrcColor},
-						subgraph.Vertex{Idx: j, Color: e.TargColor},
-						e.EdgeColor)
-					if !pattern.HasExtension(ep) {
-						exts.Add(ep)
-					}
-				}
-			}
-			ep := subgraph.NewExt(
-				subgraph.Vertex{Idx: i, Color: u.Color},
-				subgraph.Vertex{Idx: len(pattern.V), Color: e.TargColor},
-				e.EdgeColor)
-			if !pattern.HasExtension(ep) {
-				exts.Add(ep)
-			}
-		}
-		for _, e := range dt.Indices.EdgesToColor[u.Color] {
-			ep := subgraph.NewExt(
-				subgraph.Vertex{Idx: len(pattern.V), Color: e.SrcColor},
-				subgraph.Vertex{Idx: i, Color: u.Color},
-				e.EdgeColor)
-			if !pattern.HasExtension(ep) {
-				exts.Add(ep)
-			}
-		}
-	}
-	return total, sets, exts
+	return total, sets, <-done
 }
 
 // unique extensions and supported embeddings
@@ -254,7 +262,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 		}
 	} else if mode&ExtFromFreqEdges == ExtFromFreqEdges {
 		total, sets, exts = extensionsFromFreqEdges(dt, pattern, ei, seen)
-		if total == 0 {
+		if total < dt.Support() {
 			return 0, nil, nil, nil, nil
 		}
 	} else {
