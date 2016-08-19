@@ -74,6 +74,10 @@ Global Options
                               NB: will overwrite contents of dir
     -c, --cache=<path>        path to cache directory (optional)
                               NB: will overwrite contents of dir
+    -p, --parallelism=<int>   Parallelism level to use. Defaults to
+                              the number of CPU cores you have. Set to
+                              0 to turn off parallelism.
+    --support=<int>           minimum support of patterns (required)
     --skip-log=<level>        don't output the given log level.
 
 Developer Options

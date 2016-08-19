@@ -80,6 +80,9 @@ Global Options
                               NB: will overwrite contents of dir
     -c, --cache=<path>        path to cache directory (optional)
                               NB: will overwrite contents of dir
+    -p, --parallelism=<int>   Parallelism level to use. Defaults to
+                              the number of CPU cores you have. Set to
+                              0 to turn off parallelism.
     --samples=<int>           number of samples to collect (required)
     --support=<int>           minimum support of patterns (required)
     --non-unique              by default, sfp collects only unique samples. This

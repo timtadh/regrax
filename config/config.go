@@ -48,12 +48,11 @@ func (c *Config) Copy() *Config {
 func (c *Config) Workers() int {
 	if c.Parallelism == 0 {
 		return 1
-	} else if c.Parallelism == -1 {
+	} else if c.Parallelism < 0 {
 		return runtime.NumCPU()
 	} else {
 		return c.Parallelism
 	}
-
 }
 
 func (c *Config) Randstr() string {
