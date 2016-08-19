@@ -298,7 +298,7 @@ func run() int {
 
 	args, optargs, err := getopt.GetOpt(
 		os.Args[1:],
-		"ho:c:",
+		"ho:c:p:",
 		[]string{
 			"help",
 			"output=", "cache=",
@@ -308,6 +308,7 @@ func run() int {
 			"samples=",
 			"skip-log=",
 			"cpu-profile=",
+			"parallelism=",
 		},
 	)
 	if err != nil {
@@ -323,6 +324,7 @@ func run() int {
 	support := 0
 	samples := 0
 	cpuProfile := ""
+	parallelism := -1
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -331,6 +333,8 @@ func run() int {
 			output = cmd.EmptyDir(oa.Arg())
 		case "-c", "--cache":
 			cache = cmd.EmptyDir(oa.Arg())
+		case "-p", "--parallelism":
+			parallelism = cmd.ParseInt(oa.Arg())
 		case "--support":
 			support = cmd.ParseInt(oa.Arg())
 		case "--samples":
@@ -416,6 +420,7 @@ func run() int {
 		Support: support,
 		Samples: samples,
 		Unique:  unique,
+		Parallelism: parallelism,
 	}
 	return cmd.Main(args, conf, modes)
 }

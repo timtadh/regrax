@@ -8,6 +8,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/pool"
 	"github.com/timtadh/goiso"
 )
 
@@ -49,6 +50,7 @@ type Digraph struct {
 	CanonKidCount            bytes_int.MultiMap
 	Frequency                bytes_int.MultiMap
 	Indices                  *subgraph.Indices
+	pool                     *pool.Pool
 	lock                     sync.RWMutex
 }
 
@@ -141,6 +143,7 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 			EdgeCounts: make(map[subgraph.Colors]int),
 		},
 		config: config,
+		pool: pool.New(config.Workers()),
 	}
 	return g, nil
 }

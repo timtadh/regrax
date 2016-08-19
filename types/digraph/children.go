@@ -2,13 +2,11 @@ package digraph
 
 import (
 	"sync"
-	"runtime"
 )
 
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/hashtable"
-	"github.com/timtadh/data-structures/pool"
 	"github.com/timtadh/data-structures/set"
 )
 
@@ -19,11 +17,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
-var workPool *pool.Pool
-
-func init() {
-	workPool = pool.New(runtime.NumCPU())
-}
 
 type Node interface {
 	lattice.Node
@@ -142,7 +135,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		}
 	}()
 	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
-		err := workPool.Do(func(pattern *subgraph.SubGraph, i *extInfo) func() {
+		err := dt.pool.Do(func(pattern *subgraph.SubGraph, i *extInfo) func() {
 			wg.Add(1)
 			return func() {
 				if allow != nil {

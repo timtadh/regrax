@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"path/filepath"
 	"sync"
+	"runtime"
 )
 
 import (
@@ -30,6 +31,7 @@ type Config struct {
 	Output           string
 	Support, Samples int
 	Unique           bool
+	Parallelism      int
 	AsyncTasks       sync.WaitGroup
 }
 
@@ -41,6 +43,17 @@ func (c *Config) Copy() *Config {
 		Samples: c.Samples,
 		Unique:  c.Unique,
 	}
+}
+
+func (c *Config) Workers() int {
+	if c.Parallelism == 0 {
+		return 1
+	} else if c.Parallelism == -1 {
+		return runtime.NumCPU()
+	} else {
+		return c.Parallelism
+	}
+
 }
 
 func (c *Config) Randstr() string {

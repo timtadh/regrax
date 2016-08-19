@@ -1,7 +1,6 @@
 package vsigram
 
 import (
-	"runtime"
 	"sync"
 )
 
@@ -72,7 +71,7 @@ func (m *Miner) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.For
 
 func (m *Miner) mine() (err error) {
 	var wg sync.WaitGroup
-	pool := pool.New(runtime.NumCPU())
+	pool := pool.New(m.Config.Workers())
 	errors.Logf("DEBUG", "pool %v", pool)
 	stack := NewStack()
 	stack.Push(m.Dt.Root())
