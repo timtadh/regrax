@@ -5,10 +5,12 @@ import json
 
 def get(data, item):
     if item in data:
-        return data[item]
+        n, i = data[item]
+        data[item] = (n, i+1)
+        return n
     else:
         n = len(data)
-        data[item] = n
+        data[item] = (n, 1)
         return n
 
 def getlabel(labels, label):
@@ -48,6 +50,12 @@ def process(fin, fout):
         if not line:
             continue
         process_line(vertices, labels, fout, line)
+    print >>sys.stderr, "total labels", len(labels)
+    labels = list((label, n, i) for label, (n,i) in labels.iteritems())
+    labels.sort(key=lambda x: x[2])
+    for (label, n,i) in labels:
+        print >>sys.stderr, label, n, i
+
 
 def main(argv):
     fin = sys.stdin
