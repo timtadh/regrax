@@ -135,13 +135,6 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 		CanonKids:     canonKids,
 		CanonKidCount: canonKidCount,
 		Frequency:     frequency,
-		Indices: &subgraph.Indices{
-			ColorIndex: make(map[int][]int),
-			SrcIndex:   make(map[subgraph.IdColorColor][]int),
-			TargIndex:  make(map[subgraph.IdColorColor][]int),
-			EdgeIndex:  make(map[subgraph.Edge]*goiso.Edge),
-			EdgeCounts: make(map[subgraph.Colors]int),
-		},
 		config: config,
 		pool: pool.New(config.Workers()),
 	}
@@ -151,9 +144,9 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 	dt.lock.Lock()
 	dt.G = G
-	dt.Indices.G = G
-	dt.Indices.InitVertexIndices(G)
-	dt.Indices.InitEdgeIndices(G, dt.Support())
+	dt.Indices = subgraph.NewIndices(G)
+	dt.Indices.InitVertexIndices()
+	dt.Indices.InitEdgeIndices(dt.Support())
 	dt.lock.Unlock()
 
 	for color := range dt.Indices.ColorIndex {
