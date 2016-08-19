@@ -591,6 +591,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"count-mode=",
 			"overlap-pruning",
 			"extension-pruning",
+			"unsup-embs-pruning",
 			"extend-from-embeddings",
 			"extend-from-freq-edges",
 			"no-caching",
@@ -611,6 +612,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	modeStr := "optimistic-pruning"
 	overlapPruning := false
 	extensionPruning := false
+	unsupEmbsPruning := false
 	extendFromEmb := false
 	extendFromEdges := false
 	caching := true
@@ -632,6 +634,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			overlapPruning = true
 		case "--extension-pruning":
 			extensionPruning = true
+		case "--unsup-embs-pruning":
+			unsupEmbsPruning = true
 		case "--no-caching":
 			caching = false
 		case "--min-edges":
@@ -685,6 +689,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 	if extensionPruning {
 		mode |= digraph.ExtensionPruning
+	}
+	if unsupEmbsPruning {
+		mode |= digraph.EmbeddingPruning
 	}
 	if caching {
 		mode |= digraph.Caching

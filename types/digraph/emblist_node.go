@@ -6,7 +6,9 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
+	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
 
@@ -20,24 +22,25 @@ type EmbListNode struct {
 	extensions []*subgraph.Extension
 	embeddings []*subgraph.Embedding
 	overlap    []map[int]bool
+	unsupEmbs  []*subgraph.Embedding
 }
 
 type Embedding struct {
 	sg *goiso.SubGraph
 }
 
-func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) *EmbListNode {
+func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs []*subgraph.Embedding) *EmbListNode {
 	if embs != nil {
 		if exts == nil {
 			panic("nil exts")
 		}
-		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap}
+		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap, unsupEmbs}
 	}
-	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil}
+	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil}
 }
 
-func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) Node {
-	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap)
+func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs []*subgraph.Embedding) Node {
+	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap, unsupEmbs)
 }
 
 func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
@@ -45,7 +48,7 @@ func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	has, _, exts, embs, overlap, err := loadCachedExtsEmbs(dt, sg)
+	has, _, exts, embs, overlap, unsupEmbs, err := loadCachedExtsEmbs(dt, sg)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +61,7 @@ func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
 		extensions:      exts,
 		embeddings:      embs,
 		overlap:         overlap,
+		unsupEmbs:       unsupEmbs,
 	}
 	return n, nil
 }
@@ -95,7 +99,7 @@ func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
 	return u, nil
 }
 
-func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet) error {
+func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.SortedSet) error {
 	if n.Dt.UnsupExts == nil {
 		return nil
 	}
@@ -114,6 +118,15 @@ func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet
 		}
 	}
 	return nil
+}
+
+func (n *EmbListNode) UnsupportedEmbs() (types.Set, error) {
+	u := set.NewSetMap(hashtable.NewLinearHash())
+	for _, emb := range n.unsupEmbs {
+		u.Add(emb)
+	}
+
+	return u, nil
 }
 
 func (n *EmbListNode) String() string {
