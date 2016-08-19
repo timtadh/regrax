@@ -95,27 +95,33 @@ func (m *Miner) mine() (err error) {
 			wg.Done()
 		}
 	}()
+	outer:
 	for {
 		n := stack.Pop()
-		if n == nil {
-			pool.WaitLock()
-			if stack.Empty() {
-				pool.Unlock()
-				break
+		for n == nil {
+			i := pool.WaitCount()
+			if i <= 0 && stack.Empty() {
+				break outer
 			}
-			pool.Unlock()
 			n = stack.Pop()
 		}
-		wg.Add(1)
+		if n == nil {
+			panic("nil")
+		}
 		err := pool.Do(func(n lattice.Node) func() {
+			if n == nil {
+				panic("nil")
+			}
 			return func() {
+				if n == nil {
+					panic("nil")
+				}
 				var err error
 				err = m.step(&wg, n, reports, stack)
 				if err != nil {
 					wg.Add(1)
 					errs <- err
 				}
-				wg.Done()
 			}
 		}(n))
 		if err != nil {

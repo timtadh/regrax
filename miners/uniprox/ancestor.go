@@ -92,7 +92,7 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 		MaxEdges: maxE,
 		MinVertices: 0,
 		MaxVertices: maxV,
-		Mode: digraph.OptimisticPruning | digraph.OverlapPruning,
+		Mode: digraph.OptimisticPruning | digraph.OverlapPruning | digraph.ExtFromEmb,
 	})
 	if err != nil {
 		return nil, err
