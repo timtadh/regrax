@@ -591,6 +591,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"count-mode=",
 			"overlap-pruning",
 			"extension-pruning",
+			"extend-from-embeddings",
+			"extend-from-freq-edges",
 			"no-caching",
 			"min-edges=",
 			"max-edges=",
@@ -609,6 +611,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	modeStr := "optimistic-pruning"
 	overlapPruning := false
 	extensionPruning := false
+	extendFromEmb := false
+	extendFromEdges := false
 	caching := true
 	minE := 0
 	maxE := int(math.MaxInt32)
@@ -638,6 +642,10 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			minV = ParseInt(oa.Arg())
 		case "--max-vertices":
 			maxV = ParseInt(oa.Arg())
+		case "--extend-from-embeddings":
+			extendFromEmb = true
+		case "--extend-from-freq-edges":
+			extendFromEdges = true
 		case "-i", "--include":
 			includes = append(includes, "(" + AssertRegex(oa.Arg()) + ")")
 		case "-e", "--exclude":
@@ -649,13 +657,24 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 
 	var mode digraph.Mode
+	if extendFromEmb && extendFromEdges {
+		fmt.Fprintf(os.Stderr, "Cannot have both --extend-from-embeddings and --extend-from-freq-edges\n")
+		Usage(ErrorCodes["opts"])
+	} else if extendFromEmb {
+		mode |= digraph.ExtFromEmb
+	} else if extendFromEdges {
+		mode |= digraph.ExtFromFreqEdges
+	} else {
+		mode |= digraph.ExtFromEmb
+	}
+
 	switch modeStr {
 	case "automorphs":
-		mode = digraph.Automorphs | digraph.OverlapPruning
+		mode |= digraph.Automorphs | digraph.OverlapPruning
 	case "no-automorphs":
-		mode = digraph.NoAutomorphs
+		mode |= digraph.NoAutomorphs
 	case "optimistic-pruning":
-		mode = digraph.OptimisticPruning
+		mode |= digraph.OptimisticPruning
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown mode '%v'\n", modeStr)
 		fmt.Fprintf(os.Stderr, "modes: automorphs, no-automorphs, optimistic-pruning\n")

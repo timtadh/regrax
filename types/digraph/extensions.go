@@ -26,6 +26,8 @@ const (
 	OverlapPruning
 	ExtensionPruning
 	Caching
+	ExtFromEmb
+	ExtFromFreqEdges
 )
 
 // YOU ARE HERE:
@@ -96,6 +98,110 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 	}
 }
 
+func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, sets []*hashtable.LinearHash, exts types.Set) {
+	exts = set.NewSetMap(hashtable.NewLinearHash())
+	sets = make([]*hashtable.LinearHash, len(pattern.V))
+	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
+		exts.Add(ext)
+	})
+	for emb, next := ei(); next != nil; emb, next = next() {
+		for idx, id := range emb.Ids {
+			if seen != nil {
+				seen[id] = true
+			}
+			if sets[idx] == nil {
+				sets[idx] = hashtable.NewLinearHash()
+			}
+			set := sets[idx]
+			if !set.Has(types.Int(id)) {
+				set.Put(types.Int(id), emb)
+			}
+			for _, e := range dt.G.Kids[id] {
+				add(emb, e, idx, -1)
+			}
+			for _, e := range dt.G.Parents[id] {
+				add(emb, e, -1, idx)
+			}
+		}
+		total++
+	}
+	return total, sets, exts
+}
+
+func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, sets []*hashtable.LinearHash, exts types.Set) {
+	sets = make([]*hashtable.LinearHash, len(pattern.V))
+	support := dt.Support()
+	done := make(chan types.Set)
+	go func(done chan types.Set) {
+		exts := make(chan *subgraph.Extension, len(pattern.V))
+		go func() {
+			hash := set.NewSetMap(hashtable.NewLinearHash())
+			for ext := range exts {
+				if !pattern.HasExtension(ext) {
+					hash.Add(ext)
+				}
+			}
+			done<-hash
+			close(done)
+		}()
+		for i := range pattern.V {
+			u := &pattern.V[i]
+			for _, e := range dt.Indices.EdgesFromColor[u.Color] {
+				for j := range pattern.V {
+					v := &pattern.V[j]
+					if v.Color == e.TargColor {
+						ep := subgraph.NewExt(
+							subgraph.Vertex{Idx: i, Color: e.SrcColor},
+							subgraph.Vertex{Idx: j, Color: e.TargColor},
+							e.EdgeColor)
+						exts <-ep
+					}
+				}
+				ep := subgraph.NewExt(
+					subgraph.Vertex{Idx: i, Color: u.Color},
+					subgraph.Vertex{Idx: len(pattern.V), Color: e.TargColor},
+					e.EdgeColor)
+				exts <-ep
+			}
+			for _, e := range dt.Indices.EdgesToColor[u.Color] {
+				ep := subgraph.NewExt(
+					subgraph.Vertex{Idx: len(pattern.V), Color: e.SrcColor},
+					subgraph.Vertex{Idx: i, Color: u.Color},
+					e.EdgeColor)
+				exts <-ep
+			}
+		}
+		close(exts)
+	}(done)
+	for emb, next := ei(); next != nil; emb, next = next() {
+		min := -1
+		for idx, id := range emb.Ids {
+			if seen != nil {
+				seen[id] = true
+			}
+			if sets[idx] == nil {
+				sets[idx] = hashtable.NewLinearHash()
+			}
+			set := sets[idx]
+			if !set.Has(types.Int(id)) {
+				set.Put(types.Int(id), emb)
+			}
+			size := set.Size()
+			if min == -1 || size < min {
+				min = size
+			}
+		}
+		total++
+		if min >= support {
+			break
+		}
+	}
+	if total < support {
+		return total, sets, nil
+	}
+	return total, sets, <-done
+}
+
 // unique extensions and supported embeddings
 func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[int]bool, unsupported types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
 	if !debug {
@@ -135,54 +241,41 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 				return true
 			})
 	default:
-		return 0, nil, nil, nil, errors.Errorf("Unknown mode %v", mode)
+		return 0, nil, nil, nil, errors.Errorf("Unknown embedding search strategy %v", mode)
 	}
 	if err != nil {
 		return 0, nil, nil, nil, err
 	}
 
-	exts := set.NewSetMap(hashtable.NewLinearHash())
-	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
-		if unsupported != nil && unsupported.Has(ext) {
-			return
+	// find the actual embeddings and compute the extensions
+	// the extensions are stored in exts
+	// the embeddings are stored in sets
+	var exts types.Set
+	var sets []*hashtable.LinearHash
+	var total int
+	if mode&ExtFromEmb == ExtFromEmb {
+		// add the supported embeddings to the vertex sets
+		// add the extensions to the extensions set
+		total, sets, exts = extensionsFromEmbeddings(dt, pattern, ei, seen)
+		if total == 0 {
+			return 0, nil, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
 		}
-		exts.Add(ext)
-	})
-	sets := make([]*hashtable.LinearHash, len(pattern.V))
-
-	// add the supported embeddings to the vertex sets
-	// add the extensions to the extensions set
-	total := 0
-	for emb, next := ei(); next != nil; emb, next = next() {
-		for idx, id := range emb.Ids {
-			if seen != nil {
-				seen[id] = true
-			}
-			if sets[idx] == nil {
-				sets[idx] = hashtable.NewLinearHash()
-			}
-			set := sets[idx]
-			if !set.Has(types.Int(id)) {
-				set.Put(types.Int(id), emb)
-			}
-			for _, e := range dt.G.Kids[id] {
-				add(emb, e, idx, -1)
-			}
-			for _, e := range dt.G.Parents[id] {
-				add(emb, e, -1, idx)
-			}
+	} else if mode&ExtFromFreqEdges == ExtFromFreqEdges {
+		total, sets, exts = extensionsFromFreqEdges(dt, pattern, ei, seen)
+		if total < dt.Support() {
+			return 0, nil, nil, nil, nil
 		}
-		total++
-	}
-
-	if total == 0 {
-		return 0, nil, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
+	} else {
+		return 0, nil, nil, nil, errors.Errorf("Unknown extension strategy %v", mode)
 	}
 
 	// construct the extensions output slice
 	extensions := make([]*subgraph.Extension, 0, exts.Size())
 	for i, next := exts.Items()(); next != nil; i, next = next() {
 		ext := i.(*subgraph.Extension)
+		if unsupported != nil && unsupported.Has(ext) {
+			continue
+		}
 		extensions = append(extensions, ext)
 	}
 
