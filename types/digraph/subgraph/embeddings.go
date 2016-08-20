@@ -77,9 +77,13 @@ func FilterAutomorphs(it EmbIterator, dropped *[]*Embedding, err error) (ei EmbI
 	return ei, dropped,  nil
 }
 
-type IdNode struct {
+type VrtEmb struct {
 	Id   int
 	Idx  int
+}
+
+type IdNode struct {
+	VrtEmb
 	Prev *IdNode
 }
 
@@ -115,7 +119,7 @@ func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
 			return ids
 		}
 	}
-	return &IdNode{Id: id, Idx: idx, Prev: ids}
+	return &IdNode{VrtEmb:VrtEmb{Id: id, Idx: idx}, Prev: ids}
 }
 
 func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints types.Set, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *[]*Embedding, err error) {
@@ -334,7 +338,7 @@ func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 	color := sg.V[startIdx].Color
 	embs := make([]*IdNode, 0, indices.G.ColorFrequency(color))
 	for _, gIdx := range indices.ColorIndex[color] {
-		embs = append(embs, &IdNode{Id: gIdx, Idx: startIdx})
+		embs = append(embs, &IdNode{VrtEmb:VrtEmb{Id: gIdx, Idx: startIdx}})
 	}
 	return embs
 }
@@ -478,9 +482,9 @@ func (ids *IdNode) String() string {
 func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []map[int]bool, do func(*IdNode)) {
 	doNew := func(newIdx, newId int) {
 		if o == nil || len(o[newIdx]) == 0 {
-			do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
+			do(&IdNode{VrtEmb:VrtEmb{Id: newId, Idx: newIdx}, Prev: cur})
 		} else if o[newIdx] != nil && o[newIdx][newId] {
-			do(&IdNode{Id: newId, Idx: newIdx, Prev: cur})
+			do(&IdNode{VrtEmb:VrtEmb{Id: newId, Idx: newIdx}, Prev: cur})
 		}
 	}
 	srcId, targId := cur.ids(e.Src, e.Targ)
@@ -525,7 +529,7 @@ outer:
 		}
 		for _, id := range indices.ColorIndex[sg.V[idx].Color] {
 			if overlap == nil || len(overlap[idx]) == 0 || overlap[idx][id] {
-				sg.extendEmbedding(indices, &IdNode{Id: id, Idx: idx}, e, overlap, func(_ *IdNode) {
+				sg.extendEmbedding(indices, &IdNode{VrtEmb:VrtEmb{Id: id, Idx: idx}}, e, overlap, func(_ *IdNode) {
 					total++
 				})
 			}
