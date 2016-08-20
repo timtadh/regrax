@@ -134,11 +134,13 @@ func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.Sorte
 }
 
 func (n *EmbListNode) UnsupportedEmbs() (types.Set, error) {
+	if n.Dt.Config.Mode&EmbeddingPruning == 0 {
+		return set.NewSortedSet(0), nil
+	}
 	u := set.NewSetMap(hashtable.NewLinearHash())
 	for _, emb := range n.unsupEmbs {
 		u.Add(emb)
 	}
-
 	return u, nil
 }
 

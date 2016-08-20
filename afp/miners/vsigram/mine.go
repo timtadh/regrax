@@ -133,9 +133,6 @@ func (m *Miner) mine() (err error) {
 	close(errs)
 	wg.Wait()
 	if len(errList) > 0 {
-		for _, err := range errList {
-			errors.Logf("ERROR", "err: %v", err)
-		}
 		return errList[0]
 	}
 	return nil

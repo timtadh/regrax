@@ -281,7 +281,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 		}
 	}
 
-	if unsupEmbs != nil {
+	if mode&EmbeddingPruning == EmbeddingPruning && unsupEmbs != nil {
 		for i, next := unsupEmbs.Items()(); next != nil; i, next = next() {
 			emb := i.(*subgraph.Embedding)
 			*dropped = append(*dropped, emb)
