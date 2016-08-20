@@ -95,23 +95,35 @@ func (m *Miner) mine() (err error) {
 			wg.Done()
 		}
 	}()
+	outer:
 	for {
-		if stack.Empty() {
-			pool.WaitLock()
-			if stack.Empty() {
-				pool.Unlock()
-				break
+		n := stack.Pop()
+		for n == nil {
+			i := pool.WaitCount()
+			if i <= 0 && stack.Empty() {
+				break outer
 			}
-			pool.Unlock()
+			n = stack.Pop()
 		}
-		err := pool.Do(func() {
-			var err error
-			err = m.step(&wg, reports, stack)
-			if err != nil {
-				wg.Add(1)
-				errs <- err
+		if n == nil {
+			panic("nil")
+		}
+		err := pool.Do(func(n lattice.Node) func() {
+			if n == nil {
+				panic("nil")
 			}
-		})
+			return func() {
+				if n == nil {
+					panic("nil")
+				}
+				var err error
+				err = m.step(&wg, n, reports, stack)
+				if err != nil {
+					wg.Add(1)
+					errs <- err
+				}
+			}
+		}(n))
 		if err != nil {
 			return err
 		}
@@ -129,11 +141,7 @@ func (m *Miner) mine() (err error) {
 	return nil
 }
 
-func (m *Miner) step(wg *sync.WaitGroup, reports chan lattice.Node, stack *Stack) (err error) {
-	n := stack.Pop()
-	if n == nil {
-		return nil
-	}
+func (m *Miner) step(wg *sync.WaitGroup, n lattice.Node, reports chan lattice.Node, stack *Stack) (err error) {
 	if m.Dt.Acceptable(n) {
 		wg.Add(1)
 		reports<-n

@@ -46,9 +46,17 @@ func (w *Walker) Init(dt lattice.DataType, rptr miners.Reporter) (err error) {
 func (w *Walker) Close() error {
 	errors := make(chan error)
 	go func() {
+		if w == nil || w.Dt == nil {
+			errors<-nil
+			return
+		}
 		errors <- w.Dt.Close()
 	}()
 	go func() {
+		if w == nil || w.Rptr == nil {
+			errors<-nil
+			return
+		}
 		errors <- w.Rptr.Close()
 	}()
 	for i := 0; i < 2; i++ {
