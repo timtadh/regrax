@@ -48,7 +48,7 @@ func (sg *SubGraph) DoEmbeddings(indices *Indices, do func(*Embedding) error) er
 	return nil
 }
 
-func FilterAutomorphs(it EmbIterator, dropped *[]*Embedding, err error) (ei EmbIterator, _ *[]*Embedding, _ error) {
+func FilterAutomorphs(it EmbIterator, dropped *VertexEmbeddings, err error) (ei EmbIterator, _ *VertexEmbeddings, _ error) {
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,6 +80,62 @@ func FilterAutomorphs(it EmbIterator, dropped *[]*Embedding, err error) (ei EmbI
 type VrtEmb struct {
 	Id   int
 	Idx  int
+}
+
+func (v *VrtEmb) Equals(o types.Equatable) bool {
+	a := v
+	switch b := o.(type) {
+	case *VrtEmb:
+		return a.Id == b.Id && a.Idx == b.Idx
+	default:
+		return false
+	}
+}
+
+func (v *VrtEmb) Less(o types.Sortable) bool {
+	a := v
+	switch b := o.(type) {
+	case *VrtEmb:
+		return a.Id < b.Id || (a.Id == b.Id && a.Idx < b.Idx)
+	default:
+		return false
+	}
+}
+
+func (v *VrtEmb) Hash() int {
+	return v.Id*3 + v.Idx*5
+}
+
+func (v *VrtEmb) Translate(orgLen int, vord []int) *VrtEmb {
+	idx := v.Idx
+	if idx >= orgLen {
+		idx = len(vord) + (idx - orgLen)
+	}
+	if idx < len(vord) {
+		idx = vord[idx]
+	}
+	return &VrtEmb{
+		Idx: idx,
+		Id: v.Id,
+	}
+}
+
+type VertexEmbeddings []*VrtEmb
+
+func (embs VertexEmbeddings) Translate(orgLen int, vord []int) (VertexEmbeddings) {
+	translated := make(VertexEmbeddings, len(embs))
+	for i := range embs {
+		translated[i] = embs[i].Translate(orgLen, vord)
+	}
+	return translated
+}
+
+func (embs VertexEmbeddings) Set() map[VrtEmb]bool {
+	s := make(map[VrtEmb]bool, len(embs))
+	for _, emb := range embs {
+		s[*emb] = true
+	}
+	return s
 }
 
 type IdNode struct {
@@ -122,7 +178,7 @@ func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
 	return &IdNode{VrtEmb:VrtEmb{Id: id, Idx: idx}, Prev: ids}
 }
 
-func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints types.Set, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *[]*Embedding, err error) {
+func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints map[VrtEmb]bool, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *VertexEmbeddings, err error) {
 	if len(sg.V) == 0 {
 		ei = func() (*Embedding, EmbIterator) {
 			return nil, nil
@@ -132,24 +188,56 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints types.Set, over
 	type entry struct {
 		ids *IdNode
 		eid int
+		proc bool
 	}
 	pop := func(stack []entry) (entry, []entry) {
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
-	dropped := make([]*Embedding, 0, 10)
+	dropped := make(VertexEmbeddings, 0, 10)
 	startIdx := sg.leastExts(indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
+	seen := make([]map[VrtEmb]bool, len(chain))
+	for i := range seen {
+		seen[i] = make(map[VrtEmb]bool)
+	}
+	used := make(map[VrtEmb]bool)
 	vembs := sg.startEmbeddings(indices, startIdx)
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
-		stack = append(stack, entry{vemb, 0})
+		// seen[vemb.VrtEmb] = true
+		stack = append(stack, entry{vemb, 0, false})
 	}
+
+	if prunePoints != nil && len(prunePoints) > 0 {
+	//	errors.Logf("DEBUG", "prune points %v", set.SortedFromSet(prunePoints))
+	}
+	pruneLevel := len(chain) + 2
 
 	ei = func() (*Embedding, EmbIterator) {
 		for len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)
+			if !i.proc {
+				stack = append(stack, entry{i.ids, i.eid, true})
+			} else {
+				if prunePoints != nil && i.eid < len(chain) && i.eid < 3 {
+					if !used[i.ids.VrtEmb] {
+						seen[i.eid][i.ids.VrtEmb] = true
+						// dropped = append(dropped, &i.ids.VrtEmb)
+					}
+				}
+				continue
+			}
+			if prunePoints != nil && prunePoints[i.ids.VrtEmb] {
+				if i.eid < pruneLevel {
+					pruneLevel = i.eid
+				}
+				continue
+			}
 			if prune != nil && prune(i.ids) {
+				if i.eid < pruneLevel {
+					pruneLevel = i.eid
+				}
 				continue
 			}
 			// otherwise success we have an embedding we haven't seen
@@ -159,6 +247,9 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints types.Set, over
 					SG:  sg,
 					Ids: i.ids.list(len(sg.V)),
 				}
+				for c := i.ids; c != nil; c = c.Prev {
+					used[c.VrtEmb] = true
+				}
 				if !emb.Exists(indices.G) {
 					errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", i.ids, emb, emb.SG)
 					panic("wat")
@@ -166,28 +257,26 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints types.Set, over
 				if sg.Equals(emb) {
 					// sweet we can yield this embedding!
 					return emb, ei
-				} else {
-					// nope wasn't an embedding drop it
-					dropped = append(dropped, emb)
 				}
+				// nope wasn't an embedding drop it
+				// this should never happen
 			} else {
-				var part *Embedding = nil
-				if prunePoints != nil || len(sg.E) < 2 {
-				// errors.Logf("DEBUG", "prunePoints %v", prunePoints)
-					part = sg.partial(chain[:i.eid], i.ids)
-					if prunePoints != nil && prunePoints.Has(part) {
-						// errors.Logf("DEBUG", "pruned %v", part)
-						continue
-					}
-				}
 				// ok extend the embedding
-				size := len(stack)
+				// size := len(stack)
 				sg.extendEmbedding(indices, i.ids, &sg.E[chain[i.eid]], overlap, func(ext *IdNode) {
-					stack = append(stack, entry{ext, i.eid + 1})
+					stack = append(stack, entry{ext, i.eid + 1, false})
 				})
-				if size == len(stack) && part != nil {
-					// errors.Logf("DEBUG", "dropping %v", part)
-					dropped = append(dropped, part)
+				// if size == len(stack) && prunePoints != nil && i.ids.Prev == nil {
+					// dropped = append(dropped, &i.ids.VrtEmb)
+				// }
+			}
+		}
+		if prunePoints != nil {
+			for i := 0; i < pruneLevel && i < len(seen); i++ {
+				for ve := range seen[i] {
+					if !used[ve] {
+						dropped = append(dropped, &ve)
+					}
 				}
 			}
 		}

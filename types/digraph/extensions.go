@@ -190,7 +190,7 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 }
 
 // unique extensions and supported embeddings
-func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[int]bool, unsupExts, unsupEmbs types.Set, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, []*subgraph.Embedding, error) {
+func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[int]bool, unsupExts types.Set, unsupEmbs map[subgraph.VrtEmb]bool, mode Mode, debug bool) (int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, subgraph.VertexEmbeddings, error) {
 	if !debug {
 		if has, support, exts, embs, overlap, unsupEmbs, err := loadCachedExtsEmbs(dt, pattern); err != nil {
 			return 0, nil, nil, nil, nil, err
@@ -209,7 +209,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	var seen map[int]bool = nil
 	var err error
 	var ei subgraph.EmbIterator
-	var dropped *[]*subgraph.Embedding
+	var dropped *subgraph.VertexEmbeddings
 	switch {
 	case mode&Automorphs == Automorphs:
 		ei, dropped, err = pattern.IterEmbeddings(dt.Indices, unsupEmbs, patternOverlap, nil)
@@ -282,10 +282,12 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	}
 
 	if mode&EmbeddingPruning == EmbeddingPruning && unsupEmbs != nil {
-		for i, next := unsupEmbs.Items()(); next != nil; i, next = next() {
-			emb := i.(*subgraph.Embedding)
-			*dropped = append(*dropped, emb)
-		}
+		//for i, next := unsupEmbs.Items()(); next != nil; i, next = next() {
+		// for emb, ok := range unsupEmbs {
+		// 	if ok {
+		// 		*dropped = append(*dropped, &emb)
+		// 	}
+		// }
 	}
 
 	// compute the minimally supported vertex
@@ -312,7 +314,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	return len(embeddings), extensions, embeddings, overlap, *dropped, nil
 }
 
-func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs []*subgraph.Embedding) error {
+func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs subgraph.VertexEmbeddings) error {
 	if dt.Mode & Caching == 0 && len(pattern.E) > 0 {
 		return nil
 	}
@@ -356,17 +358,17 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 		}
 	}
 	if dt.UnsupEmbs != nil {
-		for _, emb := range unsupEmbs {
-			err = dt.UnsupEmbs.Add(pattern, emb)
-			if err != nil {
-				return err
-			}
-		}
+		// for _, emb := range unsupEmbs {
+		// 	err = dt.UnsupEmbs.Add(pattern, emb)
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
 	}
 	return nil
 }
 
-func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, []*subgraph.Embedding, error) {
+func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, subgraph.VertexEmbeddings, error) {
 	if dt.Mode & Caching == 0 && len(pattern.E) > 0 {
 		return false, 0, nil, nil, nil, nil, nil
 	}
@@ -416,16 +418,16 @@ func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*
 			return false, 0, nil, nil, nil, nil, err
 		}
 	}
-	var unsupEmbs []*subgraph.Embedding = nil
+	var unsupEmbs subgraph.VertexEmbeddings = nil
 	if dt.UnsupEmbs != nil {
-		unsupEmbs = make([]*subgraph.Embedding, 0, 10)
-		err = dt.Embeddings.DoFind(pattern, func(_ *subgraph.SubGraph, emb *subgraph.Embedding) error {
-			unsupEmbs = append(unsupEmbs, emb)
-			return nil
-		})
-		if err != nil {
-			return false, 0, nil, nil, nil, nil, err
-		}
+		// unsupEmbs = make([]*subgraph.Embedding, 0, 10)
+		// err = dt.Embeddings.DoFind(pattern, func(_ *subgraph.SubGraph, emb *subgraph.Embedding) error {
+		// 	unsupEmbs = append(unsupEmbs, emb)
+		// 	return nil
+		// })
+		// if err != nil {
+		// 	return false, 0, nil, nil, nil, nil, err
+		// }
 	}
 
 	return true, support, exts, embs, overlap, unsupEmbs, nil

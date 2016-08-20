@@ -6,9 +6,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
-	"github.com/timtadh/data-structures/types"
 	"github.com/timtadh/goiso"
 )
 
@@ -22,7 +20,7 @@ type EmbListNode struct {
 	extensions []*subgraph.Extension
 	embeddings []*subgraph.Embedding
 	overlap    []map[int]bool
-	unsupEmbs  []*subgraph.Embedding
+	unsupEmbs  subgraph.VertexEmbeddings
 	unsupExts  *set.SortedSet
 }
 
@@ -30,7 +28,7 @@ type Embedding struct {
 	sg *goiso.SubGraph
 }
 
-func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs []*subgraph.Embedding) *EmbListNode {
+func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs subgraph.VertexEmbeddings) *EmbListNode {
 	if embs != nil {
 		if exts == nil {
 			panic("nil exts")
@@ -40,7 +38,7 @@ func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Ex
 	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil, nil}
 }
 
-func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs []*subgraph.Embedding) Node {
+func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs subgraph.VertexEmbeddings) Node {
 	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap, unsupEmbs)
 }
 
@@ -133,15 +131,11 @@ func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.Sorte
 	return nil
 }
 
-func (n *EmbListNode) UnsupportedEmbs() (types.Set, error) {
+func (n *EmbListNode) UnsupportedEmbs() (subgraph.VertexEmbeddings, error) {
 	if n.Dt.Config.Mode&EmbeddingPruning == 0 {
-		return set.NewSortedSet(0), nil
+		return nil, nil
 	}
-	u := set.NewSetMap(hashtable.NewLinearHash())
-	for _, emb := range n.unsupEmbs {
-		u.Add(emb)
-	}
-	return u, nil
+	return n.unsupEmbs, nil
 }
 
 func (n *EmbListNode) String() string {
