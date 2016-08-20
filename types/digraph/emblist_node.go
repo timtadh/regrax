@@ -23,6 +23,7 @@ type EmbListNode struct {
 	embeddings []*subgraph.Embedding
 	overlap    []map[int]bool
 	unsupEmbs  []*subgraph.Embedding
+	unsupExts  *set.SortedSet
 }
 
 type Embedding struct {
@@ -34,9 +35,9 @@ func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Ex
 		if exts == nil {
 			panic("nil exts")
 		}
-		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap, unsupEmbs}
+		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap, unsupEmbs, nil}
 	}
-	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil}
+	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil, nil}
 }
 
 func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs []*subgraph.Embedding) Node {
@@ -83,7 +84,10 @@ func (n *EmbListNode) Overlap() ([]map[int]bool, error) {
 }
 
 func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
-	if n.Dt.UnsupExts == nil {
+	if n.unsupExts != nil && n.Dt.Config.Mode&ExtensionPruning == ExtensionPruning {
+		return n.unsupExts, nil
+	}
+	if n.Dt.UnsupExts == nil || n.Dt.Config.Mode&Caching == 0 {
 		return set.NewSortedSet(0), nil
 	}
 	n.Dt.lock.RLock()
@@ -96,11 +100,21 @@ func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
 	if err != nil {
 		return nil, err
 	}
+	n.unsupExts = u
 	return u, nil
 }
 
 func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.SortedSet) error {
-	if n.Dt.UnsupExts == nil {
+	if n.Dt.Config.Mode&ExtensionPruning == 0 {
+		return nil
+	}
+	n.unsupExts = set.NewSortedSet(eps.Size())
+	for x, next := eps.Items()(); next != nil; x, next = next() {
+		ep := x.(*subgraph.Extension)
+		ept := ep.Translate(orgLen, vord)
+		n.unsupExts.Add(ept)
+	}
+	if n.Dt.UnsupExts == nil || n.Dt.Config.Mode&Caching == 0 {
 		return nil
 	}
 	n.Dt.lock.Lock()
@@ -109,9 +123,8 @@ func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.Sorte
 		return nil
 	}
 	label := n.Label()
-	for x, next := eps.Items()(); next != nil; x, next = next() {
-		ep := x.(*subgraph.Extension)
-		ept := ep.Translate(orgLen, vord)
+	for x, next := n.unsupExts.Items()(); next != nil; x, next = next() {
+		ept := x.(*subgraph.Extension)
 		err := n.Dt.UnsupExts.Add(label, ept)
 		if err != nil {
 			return err
