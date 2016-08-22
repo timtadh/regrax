@@ -187,17 +187,17 @@ Types
                                  extensions for one or more rotation.
 
         --overlap-pruning        this is an extra flag. It is safe to use with
-                                 "automorphs" (and is turned on automatically).
-                                 However, for other counting modes it may cause
-                                 some embeddings to not be discovered as it
-                                 prunes potenial embeddings of the current node
-                                 based on the overlap of the embeddings of the
-                                 parent node. Since not all rotations of the
-                                 parent are included in the overlap for
-                                 "no-automorphs" and "optimistic-pruning" some
-                                 nodes may be spuriously unsupported. For some
-                                 datasets, with high amounts of automorphism you
-                                 may want to uses this flag in conjuction with
+                                 "automorphs".  However, for other counting
+                                 modes it may cause some embeddings to not be
+                                 discovered as it prunes potenial embeddings of
+                                 the current node based on the overlap of the
+                                 embeddings of the parent node. Since not all
+                                 rotations of the parent are included in the
+                                 overlap for "no-automorphs" and
+                                 "optimistic-pruning" some nodes may be
+                                 spuriously unsupported. For some datasets, with
+                                 high amounts of automorphism you may want to
+                                 uses this flag in conjuction with
                                  "optimistic-pruning" to get the best
                                  performance (at the cost of completeness).
 
@@ -206,8 +206,11 @@ Types
                                  nodes. This is a safe mode to use with all
                                  counting options. However, it may cause a high
                                  amount of file IO depending on the mining mode
-                                 used. It has been observed to not play as well
-                                 with fastmax for certain datasets.
+                                 used. You can use --no-caching to turn off the
+                                 caching layer. This is only recommended when
+                                 using the vsigram mode. It has been observed to
+                                 not play as well with fastmax for certain
+                                 datasets.
 
 
     digraph Loaders
@@ -591,6 +594,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"count-mode=",
 			"overlap-pruning",
 			"extension-pruning",
+			"unsup-embs-pruning",
 			"extend-from-embeddings",
 			"extend-from-freq-edges",
 			"no-caching",
@@ -611,6 +615,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	modeStr := "optimistic-pruning"
 	overlapPruning := false
 	extensionPruning := false
+	unsupEmbsPruning := false
 	extendFromEmb := false
 	extendFromEdges := false
 	caching := true
@@ -632,6 +637,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			overlapPruning = true
 		case "--extension-pruning":
 			extensionPruning = true
+		case "--unsup-embs-pruning":
+			unsupEmbsPruning = true
 		case "--no-caching":
 			caching = false
 		case "--min-edges":
@@ -670,7 +677,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 
 	switch modeStr {
 	case "automorphs":
-		mode |= digraph.Automorphs | digraph.OverlapPruning
+		mode |= digraph.Automorphs
 	case "no-automorphs":
 		mode |= digraph.NoAutomorphs
 	case "optimistic-pruning":
@@ -685,6 +692,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 	if extensionPruning {
 		mode |= digraph.ExtensionPruning
+	}
+	if unsupEmbsPruning {
+		mode |= digraph.EmbeddingPruning
 	}
 	if caching {
 		mode |= digraph.Caching

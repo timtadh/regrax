@@ -20,6 +20,7 @@ type EmbListNode struct {
 	extensions []*subgraph.Extension
 	embeddings []*subgraph.Embedding
 	overlap    []map[int]bool
+	unsupEmbs  subgraph.VertexEmbeddings
 	unsupExts  *set.SortedSet
 }
 
@@ -27,18 +28,18 @@ type Embedding struct {
 	sg *goiso.SubGraph
 }
 
-func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) *EmbListNode {
+func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs subgraph.VertexEmbeddings) *EmbListNode {
 	if embs != nil {
 		if exts == nil {
 			panic("nil exts")
 		}
-		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap, nil}
+		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap, unsupEmbs, nil}
 	}
-	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil}
+	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil, nil}
 }
 
-func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) Node {
-	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap)
+func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs subgraph.VertexEmbeddings) Node {
+	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap, unsupEmbs)
 }
 
 func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
@@ -46,7 +47,7 @@ func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	has, _, exts, embs, overlap, err := loadCachedExtsEmbs(dt, sg)
+	has, _, exts, embs, overlap, unsupEmbs, err := loadCachedExtsEmbs(dt, sg)
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +60,7 @@ func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
 		extensions:      exts,
 		embeddings:      embs,
 		overlap:         overlap,
+		unsupEmbs:       unsupEmbs,
 	}
 	return n, nil
 }
@@ -100,7 +102,7 @@ func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
 	return u, nil
 }
 
-func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet) error {
+func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.SortedSet) error {
 	if n.Dt.Config.Mode&ExtensionPruning == 0 {
 		return nil
 	}
@@ -127,6 +129,13 @@ func (n *EmbListNode) SaveUnsupported(orgLen int, vord []int, eps *set.SortedSet
 		}
 	}
 	return nil
+}
+
+func (n *EmbListNode) UnsupportedEmbs() (subgraph.VertexEmbeddings, error) {
+	if n.Dt.Config.Mode&EmbeddingPruning == 0 {
+		return nil, nil
+	}
+	return n.unsupEmbs, nil
 }
 
 func (n *EmbListNode) String() string {

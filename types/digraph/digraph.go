@@ -39,6 +39,7 @@ type Digraph struct {
 	FrequentVertices         [][]byte
 	NodeAttrs                int_json.MultiMap
 	Embeddings               subgraph_embedding.MultiMap
+	UnsupEmbs                subgraph_embedding.MultiMap
 	Overlap                  subgraph_overlap.MultiMap
 	Extensions               bytes_extension.MultiMap
 	UnsupExts                bytes_extension.MultiMap
@@ -99,6 +100,13 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 	if err != nil {
 		return nil, err
 	}
+	var unsupEmbs subgraph_embedding.MultiMap = nil
+	if dc.Mode&EmbeddingPruning == EmbeddingPruning {
+		unsupEmbs, err = config.SubgraphEmbeddingMultiMap("digraph-unsupported-embeddings")
+		if err != nil {
+			return nil, err
+		}
+	}
 	var overlap subgraph_overlap.MultiMap = nil
 	if dc.Mode&OverlapPruning == OverlapPruning {
 		overlap, err = config.SubgraphOverlapMultiMap("digraph-overlap")
@@ -125,6 +133,7 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 		Config: *dc,
 		NodeAttrs:     nodeAttrs,
 		Embeddings:    embeddings,
+		UnsupEmbs:     unsupEmbs,
 		Overlap:       overlap,
 		Extensions:    exts,
 		UnsupExts:     unexts,
@@ -160,7 +169,7 @@ func (dt *Digraph) Init(G *goiso.Graph) (err error) {
 		dt.lock.Unlock()
 
 		// done for the side effect of saving the Nodes.
-		_, _, _, _, err := ExtsAndEmbs(dt, sg, nil, nil, dt.Mode, false)
+		_, _, _, _, _, err := ExtsAndEmbs(dt, sg, nil, nil, nil, dt.Mode, false)
 		if err != nil {
 			return err
 		}
@@ -186,7 +195,7 @@ func (g *Digraph) MinimumLevel() int {
 }
 
 func RootEmbListNode(g *Digraph) *EmbListNode {
-	return NewEmbListNode(g, subgraph.EmptySubGraph(), nil, nil, nil)
+	return NewEmbListNode(g, subgraph.EmptySubGraph(), nil, nil, nil, nil)
 }
 
 func (g *Digraph) Root() lattice.Node {

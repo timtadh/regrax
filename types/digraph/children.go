@@ -19,13 +19,14 @@ import (
 
 type Node interface {
 	lattice.Node
-	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool) Node
+	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, subgraph.VertexEmbeddings) Node
 	Label() []byte
 	Extensions() ([]*subgraph.Extension, error)
 	Embeddings() ([]*subgraph.Embedding, error)
 	Overlap() ([]map[int]bool, error)
 	UnsupportedExts() (*set.SortedSet, error)
-	SaveUnsupported(int, []int, *set.SortedSet) error
+	SaveUnsupportedExts(int, []int, *set.SortedSet) error
+	UnsupportedEmbs() (subgraph.VertexEmbeddings, error)
 	SubGraph() *subgraph.SubGraph
 	loadFrequentVertices() ([]lattice.Node, error)
 	isRoot() bool
@@ -95,11 +96,15 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	if err != nil {
 		return nil, err
 	}
-	unsupported, err := n.UnsupportedExts()
+	unsupEmbs, err := n.UnsupportedEmbs()
 	if err != nil {
 		return nil, err
 	}
-	newUnsupported := unsupported.Copy()
+	unsupExts, err := n.UnsupportedExts()
+	if err != nil {
+		return nil, err
+	}
+	newUnsupportedExts := unsupExts.Copy()
 	nOverlap, err := n.Overlap()
 	if err != nil {
 		return nil, err
@@ -121,7 +126,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	epCh := make(chan *subgraph.Extension)
 	go func() {
 		for ep := range epCh {
-			newUnsupported.Add(ep)
+			newUnsupportedExts.Add(ep)
 			wg.Done()
 		}
 	}()
@@ -149,11 +154,12 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 				ep := i.ep
 				vord := i.vord
 				tu := set.NewSetMap(hashtable.NewLinearHash())
-				for i, next := unsupported.Items()(); next != nil; i, next = next() {
+				for i, next := unsupExts.Items()(); next != nil; i, next = next() {
 					tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
 				}
 				pOverlap := translateOverlap(nOverlap, vord)
-				support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
+				tUnsupEmbs := unsupEmbs.Translate(len(sg.V), vord).Set()
+				support, exts, embs, overlap, dropped, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, tUnsupEmbs, dt.Mode, debug)
 				if err != nil {
 					errorCh <- err
 					return
@@ -162,7 +168,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 					errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
 				}
 				if support >= dt.Support() {
-					nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap), vord}
+					nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap, dropped), vord}
 				} else {
 					epCh <- ep
 				}
@@ -184,7 +190,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		return nil, e
 	}
 	for i, newNode := range nodes {
-		err := newNode.(Node).SaveUnsupported(len(sg.V), vords[i], newUnsupported)
+		err := newNode.(Node).SaveUnsupportedExts(len(sg.V), vords[i], newUnsupportedExts)
 		if err != nil {
 			return nil, err
 		}
