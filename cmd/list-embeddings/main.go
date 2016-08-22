@@ -155,9 +155,9 @@ func run() int {
 				return 1
 			}
 			errors.Logf("INFO", "cur sg: %v", sg)
-			ei := sg.IterEmbeddings(graph.Indices, nil, nil)
+			ei, _ := sg.IterEmbeddings(graph.Indices, nil, nil, nil)
 			c := 0
-			for emb := ei.Next(); emb != nil; emb = ei.Next() {
+			for _, next := ei(false); next != nil; _, next = next(false) {
 				c++
 			}
 			errors.Logf("EMB", "total embs: %v", c)

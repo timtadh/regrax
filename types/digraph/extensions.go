@@ -208,17 +208,16 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 
 	// compute the embeddings
 	var seen map[int]bool = nil
-	var err error
 	var ei subgraph.EmbIterator
 	var dropped *subgraph.VertexEmbeddings
 	switch {
 	case mode&Automorphs == Automorphs:
-		ei, dropped, err = pattern.IterEmbeddings(dt.Indices, unsupEmbs, patternOverlap, nil)
+		ei, dropped = pattern.IterEmbeddings(dt.Indices, unsupEmbs, patternOverlap, nil)
 	case mode&NoAutomorphs == NoAutomorphs:
-		ei, dropped, err = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, unsupEmbs, patternOverlap, nil))
+		ei, dropped = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, unsupEmbs, patternOverlap, nil))
 	case mode&OptimisticPruning == OptimisticPruning:
 		seen = make(map[int]bool)
-		ei, dropped, err = pattern.IterEmbeddings(
+		ei, dropped = pattern.IterEmbeddings(
 			dt.Indices,
 			unsupEmbs,
 			patternOverlap,
@@ -232,9 +231,6 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 			})
 	default:
 		return 0, nil, nil, nil, nil, errors.Errorf("Unknown embedding search strategy %v", mode)
-	}
-	if err != nil {
-		return 0, nil, nil, nil, nil, err
 	}
 
 	// find the actual embeddings and compute the extensions
@@ -307,7 +303,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.G.Colors))
 	}
 	if !debug {
-		err = cacheExtsEmbs(dt, pattern, len(embeddings), extensions, embeddings, overlap, *dropped)
+		err := cacheExtsEmbs(dt, pattern, len(embeddings), extensions, embeddings, overlap, *dropped)
 		if err != nil {
 			return 0, nil, nil, nil, nil, err
 		}
