@@ -19,7 +19,7 @@ import (
 // "github.com/timtadh/sfp/stats"
 )
 
-type EmbIterator func() (*Embedding, EmbIterator)
+type EmbIterator func(bool) (*Embedding, EmbIterator)
 
 func (sg *SubGraph) Embeddings(indices *Indices) ([]*Embedding, error) {
 	embeddings := make([]*Embedding, 0, 10)
@@ -39,7 +39,7 @@ func (sg *SubGraph) DoEmbeddings(indices *Indices, do func(*Embedding) error) er
 	if err != nil {
 		return err
 	}
-	for emb, next := ei(); next != nil; emb, next = next() {
+	for emb, next := ei(false); next != nil; emb, next = next(false) {
 		err := do(emb)
 		if err != nil {
 			return err
@@ -60,11 +60,11 @@ func FilterAutomorphs(it EmbIterator, dropped *VertexEmbeddings, err error) (ei 
 		return ids
 	}
 	seen := hashtable.NewLinearHash()
-	ei = func() (emb *Embedding, _ EmbIterator) {
+	ei = func(stop bool) (emb *Embedding, _ EmbIterator) {
 		if it == nil {
 			return nil, nil
 		}
-		for emb, it = it(); it != nil; emb, it = it() {
+		for emb, it = it(stop); it != nil; emb, it = it(stop) {
 			ids := idSet(emb)
 			// errors.Logf("AUTOMORPH-DEBUG", "emb %v ids %v has %v", emb, ids, seen.Has(ids))
 			if !seen.Has(ids) {
@@ -180,7 +180,7 @@ func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
 
 func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints map[VrtEmb]bool, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *VertexEmbeddings, err error) {
 	if len(sg.V) == 0 {
-		ei = func() (*Embedding, EmbIterator) {
+		ei = func(bool) (*Embedding, EmbIterator) {
 			return nil, nil
 		}
 		return ei, nil, nil
@@ -194,7 +194,10 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints map[VrtEmb]bool
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
 	dropped := make(VertexEmbeddings, 0, 10)
-	startIdx := sg.leastExts(indices, overlap)
+	//startIdx := sg.mostExts(indices, overlap)
+	//startIdx := sg.leastExts(indices, overlap)
+	//startIdx := sg.leastConnectedAndExts(indices, overlap)
+	startIdx := sg.mostConnected()
 	chain := sg.edgeChain(indices, overlap, startIdx)
 	seen := make([]map[VrtEmb]bool, len(chain))
 	for i := range seen {
@@ -213,14 +216,14 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints map[VrtEmb]bool
 	}
 	pruneLevel := len(chain) + 2
 
-	ei = func() (*Embedding, EmbIterator) {
-		for len(stack) > 0 {
+	ei = func(stop bool) (*Embedding, EmbIterator) {
+		for !stop && len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)
 			if !i.proc {
 				stack = append(stack, entry{i.ids, i.eid, true})
 			} else {
-				if prunePoints != nil && i.eid < len(chain) && i.eid < 3 {
+				if prunePoints != nil && i.eid < len(chain) && i.eid <= pruneLevel { //&& i.eid < 3 {
 					if !used[i.ids.VrtEmb] {
 						seen[i.eid][i.ids.VrtEmb] = true
 						// dropped = append(dropped, &i.ids.VrtEmb)
@@ -228,10 +231,8 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints map[VrtEmb]bool
 				}
 				continue
 			}
-			if prunePoints != nil && prunePoints[i.ids.VrtEmb] {
-				if i.eid < pruneLevel {
-					pruneLevel = i.eid
-				}
+			if prunePoints != nil && i.eid < pruneLevel && prunePoints[i.ids.VrtEmb] {
+				pruneLevel = i.eid
 				continue
 			}
 			if prune != nil && prune(i.ids) {

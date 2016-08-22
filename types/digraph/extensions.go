@@ -91,7 +91,7 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
 		exts.Add(ext)
 	})
-	for emb, next := ei(); next != nil; emb, next = next() {
+	for emb, next := ei(false); next != nil; emb, next = next(false) {
 		for idx, id := range emb.Ids {
 			if seen != nil {
 				seen[id] = true
@@ -160,7 +160,8 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 		}
 		close(exts)
 	}(done)
-	for emb, next := ei(); next != nil; emb, next = next() {
+	stop := false
+	for emb, next := ei(stop); next != nil; emb, next = next(stop) {
 		min := -1
 		for idx, id := range emb.Ids {
 			if seen != nil {
@@ -180,7 +181,7 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 		}
 		total++
 		if min >= support {
-			break
+			stop = true
 		}
 	}
 	if total < support {
@@ -282,12 +283,12 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	}
 
 	if mode&EmbeddingPruning == EmbeddingPruning && unsupEmbs != nil {
-		//for i, next := unsupEmbs.Items()(); next != nil; i, next = next() {
-		// for emb, ok := range unsupEmbs {
-		// 	if ok {
-		// 		*dropped = append(*dropped, &emb)
-		// 	}
-		// }
+		// for i, next := unsupEmbs.Items()(); next != nil; i, next = next() {
+		for emb, ok := range unsupEmbs {
+			if ok {
+				*dropped = append(*dropped, &emb)
+			}
+		}
 	}
 
 	// compute the minimally supported vertex
