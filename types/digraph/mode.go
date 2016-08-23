@@ -3,7 +3,7 @@ package digraph
 type Mode uint64
 
 const (
-	Automorphs = 1 << iota // allow automorphic embeddings
+	Automorphs Mode = 1 << iota // allow automorphic embeddings
 	NoAutomorphs           // filter out the automorphs
 	OptimisticPruning      // optimistically prune search space containing automorphs
 	OverlapPruning         // prune embedding search based on parents embeddings

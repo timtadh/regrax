@@ -54,6 +54,7 @@ import (
 	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/types/digraph"
+	"github.com/timtadh/sfp/types/digraph/subgraph"
 	"github.com/timtadh/sfp/types/itemset"
 )
 
@@ -598,6 +599,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"extend-from-embeddings",
 			"extend-from-freq-edges",
 			"no-caching",
+			"emb-search-starting-point=",
 			"min-edges=",
 			"max-edges=",
 			"min-vertices=",
@@ -618,6 +620,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	unsupEmbsPruning := false
 	extendFromEmb := false
 	extendFromEdges := false
+	embSearchStartingPoint := subgraph.MostConnected
 	caching := true
 	minE := 0
 	maxE := int(math.MaxInt32)
@@ -639,6 +642,32 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			extensionPruning = true
 		case "--unsup-embs-pruning":
 			unsupEmbsPruning = true
+		case "--emb-search-starting-point":
+			switch oa.Arg() {
+			case "random-start":
+				embSearchStartingPoint = subgraph.RandomStart
+			case "most-connected":
+				embSearchStartingPoint = subgraph.MostConnected
+			case "least-connected":
+				embSearchStartingPoint = subgraph.LeastConnected
+			case "most-frequent":
+				embSearchStartingPoint = subgraph.MostFrequent
+			case "least-frequent":
+				embSearchStartingPoint = subgraph.LeastFrequent
+			case "most-extensions":
+				embSearchStartingPoint = subgraph.MostExtensions
+			case "fewest-extensions":
+				embSearchStartingPoint = subgraph.FewestExtensions
+			case "lowest-cardinality":
+				embSearchStartingPoint = subgraph.LowestCardinality
+			case "highest-cardinality":
+				embSearchStartingPoint = subgraph.HighestCardinality
+			default:
+				fmt.Fprintf(os.Stderr, "unknown mode for --emb-search-starting-point %v", oa.Arg())
+				fmt.Fprintln(os.Stderr, "valid modes: random-start, (most|least)-connected, (most|least)-frequent")
+				fmt.Fprintln(os.Stderr, "             (most|fewest)-extensions, (lowest|highest)-cardinality")
+				Usage(ErrorCodes["opts"])
+			}
 		case "--no-caching":
 			caching = false
 		case "--min-edges":
@@ -719,6 +748,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		Mode: mode,
 		Include: include,
 		Exclude: exclude,
+		EmbSearchStartPoint: embSearchStartingPoint,
 	}
 
 	var loader lattice.Loader

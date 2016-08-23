@@ -212,12 +212,16 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	var dropped *subgraph.VertexEmbeddings
 	switch {
 	case mode&Automorphs == Automorphs:
-		ei, dropped = pattern.IterEmbeddings(dt.Indices, unsupEmbs, patternOverlap, nil)
+		ei, dropped = pattern.IterEmbeddings(
+			dt.EmbSearchStartPoint, dt.Indices, unsupEmbs, patternOverlap, nil)
 	case mode&NoAutomorphs == NoAutomorphs:
-		ei, dropped = subgraph.FilterAutomorphs(pattern.IterEmbeddings(dt.Indices, unsupEmbs, patternOverlap, nil))
+		ei, dropped = subgraph.FilterAutomorphs(
+			pattern.IterEmbeddings(
+				dt.EmbSearchStartPoint, dt.Indices, unsupEmbs, patternOverlap, nil))
 	case mode&OptimisticPruning == OptimisticPruning:
 		seen = make(map[int]bool)
 		ei, dropped = pattern.IterEmbeddings(
+			dt.EmbSearchStartPoint,
 			dt.Indices,
 			unsupEmbs,
 			patternOverlap,

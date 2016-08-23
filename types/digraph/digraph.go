@@ -30,6 +30,7 @@ type Config struct {
 	MinVertices, MaxVertices int
 	Mode                     Mode
 	Include, Exclude         *regexp.Regexp
+	EmbSearchStartPoint      subgraph.EmbSearchStartPoint
 }
 
 type Digraph struct {

@@ -51,7 +51,7 @@ func (sg *SubGraph) Embedded(indices *Indices) (found bool, edgeChain []int, lar
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
 	for startIdx := 0; startIdx < len(sg.V); startIdx++ {
-		startIdx := sg.mostExts(indices, nil)
+		startIdx := sg.searchStartingPoint(MostExtensions, indices, nil)
 		chain := sg.edgeChain(indices, nil, startIdx)
 		vembs := sg.startEmbeddings(indices, startIdx)
 		stack := make([]entry, 0, len(vembs)*2)

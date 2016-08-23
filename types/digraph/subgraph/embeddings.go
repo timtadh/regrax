@@ -2,7 +2,7 @@ package subgraph
 
 import (
 	"fmt"
-	// "math/rand"
+	"math/rand"
 	"strings"
 )
 
@@ -17,6 +17,20 @@ import (
 
 import (
 // "github.com/timtadh/sfp/stats"
+)
+
+type EmbSearchStartPoint uint64
+
+const (
+	RandomStart EmbSearchStartPoint = 1 << iota
+	LeastFrequent
+	MostFrequent
+	LeastConnected
+	MostConnected
+	FewestExtensions
+	MostExtensions
+	LowestCardinality
+	HighestCardinality
 )
 
 type EmbIterator func(bool) (*Embedding, EmbIterator)
@@ -35,7 +49,7 @@ func (sg *SubGraph) Embeddings(indices *Indices) ([]*Embedding, error) {
 }
 
 func (sg *SubGraph) DoEmbeddings(indices *Indices, do func(*Embedding) error) error {
-	ei, _ := sg.IterEmbeddings(indices, nil, nil, nil)
+	ei, _ := sg.IterEmbeddings(RandomStart, indices, nil, nil, nil)
 	for emb, next := ei(false); next != nil; emb, next = next(false) {
 		err := do(emb)
 		if err != nil {
@@ -172,7 +186,32 @@ func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
 	return &IdNode{VrtEmb:VrtEmb{Id: id, Idx: idx}, Prev: ids}
 }
 
-func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints map[VrtEmb]bool, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *VertexEmbeddings) {
+func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *Indices, overlap []map[int]bool) int {
+	switch mode {
+	case LeastFrequent:
+		return argMin(len(sg.V), sg.vertexFrequency(indices))
+	case MostFrequent:
+		return argMax(len(sg.V), sg.vertexFrequency(indices))
+	case LeastConnected:
+		return argMin(len(sg.V), sg.vertexConnectedness)
+	case MostConnected:
+		return argMax(len(sg.V), sg.vertexConnectedness)
+	case FewestExtensions:
+		return argMin(len(sg.V), sg.vertexExtensions(indices, overlap))
+	case MostExtensions:
+		return argMax(len(sg.V), sg.vertexExtensions(indices, overlap))
+	case LowestCardinality:
+		return argMin(len(sg.V), sg.vertexCardinality(indices))
+	case HighestCardinality:
+		return argMax(len(sg.V), sg.vertexCardinality(indices))
+	case RandomStart:
+		fallthrough
+	default:
+		return rand.Intn(len(sg.V))
+	}
+}
+
+func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *Indices, prunePoints map[VrtEmb]bool, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *VertexEmbeddings) {
 	if len(sg.V) == 0 {
 		ei = func(bool) (*Embedding, EmbIterator) {
 			return nil, nil
@@ -188,10 +227,7 @@ func (sg *SubGraph) IterEmbeddings(indices *Indices, prunePoints map[VrtEmb]bool
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
 	dropped := make(VertexEmbeddings, 0, 10)
-	// startIdx := sg.mostExts(indices, overlap)
-	// startIdx := sg.leastExts(indices, overlap)
-	// startIdx := sg.leastConnectedAndExts(indices, overlap)
-	startIdx := sg.mostConnected()
+	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
 	seen := make([]map[VrtEmb]bool, len(chain))
 	for i := range seen {
@@ -304,118 +340,52 @@ func (sg *SubGraph) partial(edgeChain []int, ids *IdNode) *Embedding {
 	return b.Build()
 }
 
-func (sg *SubGraph) leastFrequentVertex(indices *Indices) int {
-	minFreq := -1
-	minIdx := -1
-	for idx := range sg.V {
-		freq := indices.G.ColorFrequency(sg.V[idx].Color)
-		if minIdx < 0 || minFreq > freq {
-			minFreq = freq
-			minIdx = idx
+func argMin(length int, f func(int) int) (arg int) {
+	min := 0
+	arg = -1
+	for i := 0; i < length; i++ {
+		x := f(i)
+		if arg == -1 || x < min {
+			min = x
+			arg = i
 		}
 	}
-	return minIdx
+	return arg
 }
 
-func (sg *SubGraph) mostConnected() int {
-	maxAdj := 0
-	maxIdx := 0
-	for idx, adj := range sg.Adj {
-		if maxAdj < len(adj) {
-			maxAdj = len(adj)
-			maxIdx = idx
+func argMax(length int, f func(int) int) (arg int) {
+	max := 0
+	arg = -1
+	for i := 0; i < length; i++ {
+		x := f(i)
+		if arg == -1 || x > max {
+			max = x
+			arg = i
 		}
 	}
-	return maxIdx
+	return arg
 }
 
-func (sg *SubGraph) mostCard(indices *Indices) int {
-	maxCard := 0
-	maxIdx := 0
-	for idx := range sg.V {
-		card := sg.vertexCard(indices, idx)
-		if maxCard < card {
-			maxCard = card
-			maxIdx = idx
-		}
+func (sg *SubGraph) vertexFrequency(indices *Indices) func(int) int {
+	return func(idx int) int {
+		return indices.G.ColorFrequency(sg.V[idx].Color)
 	}
-	return maxIdx
 }
 
-func (sg *SubGraph) leastConnectedAndFrequent(indices *Indices) int {
-	minAdj := 0
-	minIdx := -1
-	minFreq := -1
-	for idx, adj := range sg.Adj {
-		f := indices.G.ColorFrequency(sg.V[idx].Color)
-		if minIdx < 0 || minAdj > len(adj) || (minAdj == len(adj) && minFreq > f) {
-			minAdj = len(adj)
-			minFreq = f
-			minIdx = idx
-		}
-	}
-	return minIdx
+func (sg *SubGraph) vertexConnectedness(idx int) int {
+	return len(sg.Adj[idx])
 }
 
-func (sg *SubGraph) leastConnected() []int {
-	minAdj := 0
-	minIdx := make([]int, 0, 10)
-	for idx, adj := range sg.Adj {
-		if len(minIdx) == 0 || minAdj > len(adj) {
-			minAdj = len(adj)
-			minIdx = minIdx[:0]
-		}
-		if minAdj == len(adj) {
-			minIdx = append(minIdx, idx)
-		}
+func (sg *SubGraph) vertexCardinality(indices *Indices) func(int) int {
+	return func(idx int) int {
+		return sg.vertexCard(indices, idx)
 	}
-	return minIdx
 }
 
-func (sg *SubGraph) leastConnectedAndExts(indices *Indices, overlap []map[int]bool) int {
-	c := sg.leastConnected()
-	if len(c) == 1 {
-		return c[0]
+func (sg *SubGraph) vertexExtensions(indices *Indices, overlap []map[int]bool) func(int) int {
+	return func(idx int) int {
+		return sg.extensionsFrom(indices, overlap, idx)
 	}
-	minExts := -1
-	minIdx := -1
-	for _, idx := range c {
-		exts := sg.extensionsFrom(indices, overlap, idx)
-		if minIdx == -1 || minExts > exts {
-			minExts = exts
-			minIdx = idx
-		}
-	}
-	return minIdx
-}
-
-func (sg *SubGraph) leastExts(indices *Indices, overlap []map[int]bool) int {
-	minExts := -1
-	minFreq := -1
-	minIdx := -1
-	for idx := range sg.V {
-		freq := indices.G.ColorFrequency(sg.V[idx].Color)
-		exts := sg.extensionsFrom(indices, overlap, idx)
-		if minIdx == -1 || minExts > exts || (minExts == exts && minFreq > freq) {
-			minExts = exts
-			minFreq = freq
-			minIdx = idx
-		}
-	}
-	return minIdx
-}
-
-func (sg *SubGraph) mostExts(indices *Indices, overlap []map[int]bool) int {
-	maxExts := -1
-	maxIdx := -1
-	for idx := range sg.V {
-		exts := sg.extensionsFrom(indices, overlap, idx)
-		if maxIdx == -1 || maxExts < exts {
-			maxExts = exts
-			maxIdx = idx
-		}
-	}
-	return maxIdx
 }
 
 func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
