@@ -6,6 +6,7 @@ const (
 	Automorphs Mode = 1 << iota // allow automorphic embeddings
 	NoAutomorphs           // filter out the automorphs
 	OptimisticPruning      // optimistically prune search space containing automorphs
+	FullyOptimistic
 	OverlapPruning         // prune embedding search based on parents embeddings
 	EmbeddingPruning       // prune embedding search based on unsupported partial embeddings found during parent search
 	ExtensionPruning       // prune extensions based on whether the extensions was unsupported by the parent

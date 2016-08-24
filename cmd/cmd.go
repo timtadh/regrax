@@ -593,6 +593,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		[]string{"help",
 			"loader=",
 			"count-mode=",
+			"fully-optimistic",
 			"overlap-pruning",
 			"extension-pruning",
 			"unsup-embs-pruning",
@@ -620,6 +621,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	unsupEmbsPruning := false
 	extendFromEmb := false
 	extendFromEdges := false
+	fullyOptimistic := false
 	embSearchStartingPoint := subgraph.MostConnected
 	caching := true
 	minE := 0
@@ -636,6 +638,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			loaderType = oa.Arg()
 		case "-c", "--count-mode":
 			modeStr = oa.Arg()
+		case "--fully-optimistic":
+			fullyOptimistic = true
 		case "--overlap-pruning":
 			overlapPruning = true
 		case "--extension-pruning":
@@ -711,6 +715,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		mode |= digraph.NoAutomorphs
 	case "optimistic-pruning":
 		mode |= digraph.OptimisticPruning
+		if fullyOptimistic {
+			mode |= digraph.FullyOptimistic
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown mode '%v'\n", modeStr)
 		fmt.Fprintf(os.Stderr, "modes: automorphs, no-automorphs, optimistic-pruning\n")

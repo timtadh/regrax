@@ -226,12 +226,21 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 			unsupEmbs,
 			patternOverlap,
 			func(ids *subgraph.IdNode) bool {
-				for c := ids; c != nil; c = c.Prev {
-					if _, has := seen[c.Id]; !has {
-						return false
+				if mode&FullyOptimistic == FullyOptimistic {
+					for c := ids; c != nil; c = c.Prev {
+						if _, has := seen[c.Id]; has {
+							return true
+						}
 					}
+					return false
+				} else {
+					for c := ids; c != nil; c = c.Prev {
+						if _, has := seen[c.Id]; !has {
+							return false
+						}
+					}
+					return true
 				}
-				return true
 			})
 	default:
 		return 0, nil, nil, nil, nil, errors.Errorf("Unknown embedding search strategy %v", mode)
