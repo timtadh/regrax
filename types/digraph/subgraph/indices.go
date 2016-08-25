@@ -57,6 +57,15 @@ func (i *Indices) Degree(id int) int {
 	return len(i.G.Kids[id]) + len(i.G.Parents[id])
 }
 
+func (i *Indices) InDegree(id int) int {
+	return len(i.G.Parents[id])
+}
+
+func (i *Indices) OutDegree(id int) int {
+	return len(i.G.Kids[id])
+}
+
+
 func (sg *SubGraph) AsIndices(myIndices *Indices, support int) *Indices {
 	x := goiso.NewGraph(len(sg.V),len(sg.E))
 	g := &x

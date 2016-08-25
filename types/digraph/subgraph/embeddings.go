@@ -550,19 +550,21 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 			do(cur)
 		}
 	} else if srcId != -1 {
-		deg := len(sg.Adj[e.Targ])
+		outDeg := sg.OutDeg[e.Targ]
+		inDeg := sg.InDeg[e.Targ]
 		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur, func(targId int) {
 			// TIM YOU ARE HERE:
 			// filter these potential targId by ensuring they have adequate degree
-			if deg <= indices.Degree(targId) {
+			if outDeg <= indices.OutDegree(targId) && inDeg <= indices.InDegree(targId) {
 				doNew(e.Targ, targId)
 			}
 		})
 	} else if targId != -1 {
-		deg := len(sg.Adj[e.Src])
+		outDeg := sg.OutDeg[e.Src]
+		inDeg := sg.InDeg[e.Src]
 		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur, func(srcId int) {
 			// filter these potential srcId by ensuring they have adequate degree
-			if deg <= indices.Degree(srcId) {
+			if outDeg <= indices.OutDegree(srcId) && inDeg <= indices.InDegree(srcId) {
 				doNew(e.Src, srcId)
 			}
 		})

@@ -233,6 +233,8 @@ func (b *Builder) BuildFromPermutation(vord, eord []int) *SubGraph {
 		V:   make([]Vertex, len(b.V)),
 		E:   make([]Edge, len(b.E)),
 		Adj: make([][]int, len(b.V)),
+		InDeg: make([]int, len(b.V)),
+		OutDeg: make([]int, len(b.V)),
 	}
 	for i, j := range vord {
 		pat.V[j].Idx = j
@@ -245,6 +247,8 @@ func (b *Builder) BuildFromPermutation(vord, eord []int) *SubGraph {
 		pat.E[j].Color = b.E[i].Color
 		pat.Adj[pat.E[j].Src] = append(pat.Adj[pat.E[j].Src], j)
 		pat.Adj[pat.E[j].Targ] = append(pat.Adj[pat.E[j].Targ], j)
+		pat.OutDeg[pat.E[j].Src]++
+		pat.InDeg[pat.E[j].Targ]++
 	}
 	return pat
 }
