@@ -535,6 +535,20 @@ func (ids *IdNode) String() string {
 
 func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []map[int]bool, do func(*IdNode)) {
 	doNew := func(newIdx, newId int) {
+		// enforce forward consistency
+		// we need a more performant way to do this
+		// for _, xi := range sg.Adj[newIdx] {
+		// 	x := &sg.E[xi]
+		// 	if x.Src == newIdx {
+		// 		if len(indices.SrcIndex[IdColorColor{newId, x.Color, sg.V[x.Targ].Color}]) == 0 {
+		// 			return
+		// 		}
+		// 	} else {
+		// 		if len(indices.TargIndex[IdColorColor{newId, x.Color, sg.V[x.Src].Color}]) == 0 {
+		// 			return
+		// 		}
+		// 	}
+		// }
 		if o == nil || len(o[newIdx]) == 0 {
 			do(&IdNode{VrtEmb:VrtEmb{Id: newId, Idx: newIdx}, Prev: cur})
 		} else if o[newIdx] != nil && o[newIdx][newId] {
@@ -553,8 +567,6 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 		outDeg := sg.OutDeg[e.Targ]
 		inDeg := sg.InDeg[e.Targ]
 		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur, func(targId int) {
-			// TIM YOU ARE HERE:
-			// filter these potential targId by ensuring they have adequate degree
 			if outDeg <= indices.OutDegree(targId) && inDeg <= indices.InDegree(targId) {
 				doNew(e.Targ, targId)
 			}
@@ -563,7 +575,6 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 		outDeg := sg.OutDeg[e.Src]
 		inDeg := sg.InDeg[e.Src]
 		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur, func(srcId int) {
-			// filter these potential srcId by ensuring they have adequate degree
 			if outDeg <= indices.OutDegree(srcId) && inDeg <= indices.InDegree(srcId) {
 				doNew(e.Src, srcId)
 			}

@@ -20,9 +20,9 @@ type SubGraph struct {
 	V          Vertices
 	E          Edges
 	Adj        [][]int
-	labelCache []byte
 	InDeg      []int
 	OutDeg     []int
+	labelCache []byte
 }
 
 type Vertices []Vertex
