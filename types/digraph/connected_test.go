@@ -4,6 +4,7 @@ import "testing"
 import "github.com/stretchr/testify/assert"
 
 import (
+	"fmt"
 	"bytes"
 	"encoding/binary"
 	"math/rand"
@@ -47,7 +48,12 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 		vidxs = append(vidxs, v.Idx)
 	}
 	for i := 0; i < E; i++ {
-		G.AddEdge(vertices[rand.Intn(len(vertices))], vertices[rand.Intn(len(vertices))], elabels[rand.Intn(len(elabels))])
+		src := rand.Intn(len(vertices))
+		targ := rand.Intn(len(vertices))
+		elabel := rand.Intn(len(elabels))
+		if !G.HasEdge(vertices[src], vertices[targ], elabels[elabel]) {
+			G.AddEdge(vertices[src], vertices[targ], elabels[elabel])
+		}
 	}
 
 	sg, _ := G.SubGraph(vidxs, nil)
@@ -55,6 +61,7 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 	// make config
 	conf := &config.Config{
 		Support: 2,
+		Parallelism: -1,
 	}
 
 	// make the *Digraph
@@ -63,7 +70,8 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 		MaxEdges: len(G.E),
 		MinVertices: 0,
 		MaxVertices: len(G.V),
-		Mode: Automorphs,
+		Mode: Automorphs | Caching | ExtensionPruning | EmbeddingPruning | ExtFromFreqEdges,
+		EmbSearchStartPoint: subgraph.RandomStart,
 	})
 	if err != nil {
 		errors.Logf("ERROR", "%v", err)
@@ -73,6 +81,12 @@ func randomGraph(t testing.TB, V, E int, vlabels, elabels []string) (*Digraph, *
 	err = dt.Init(G)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	f, err := os.Create("/tmp/random-graph.dot")
+	if err == nil {
+		fmt.Fprintf(f, "%v", G)
+		f.Close()
 	}
 
 	return dt, G, sg, subgraph.FromEmbedding(sg), RootEmbListNode(dt)
@@ -97,8 +111,8 @@ func BenchmarkEmbList(b *testing.B) {
 func TestVerifyEmbList(t *testing.T) {
 	x := assert.New(t)
 	vlabels := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
-	elabels := []string{""}
-	V := 150
+	elabels := []string{"j", "k"}
+	V := 350
 	_, _, _, _, eroot := randomGraph(t, V, int(float64(V)*1.5), vlabels, elabels)
 	dfs(t, x, eroot)
 }

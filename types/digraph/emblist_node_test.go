@@ -41,7 +41,8 @@ func graph(t *testing.T) (*Digraph, *goiso.Graph, *goiso.SubGraph, *subgraph.Sub
 		MaxEdges: len(G.E),
 		MinVertices: 0,
 		MaxVertices: len(G.V),
-		Mode: Automorphs,
+		Mode: Automorphs | ExtFromEmb,
+		EmbSearchStartPoint: subgraph.RandomStart,
 	})
 	if err != nil {
 		t.Fatal(err)
