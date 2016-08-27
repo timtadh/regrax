@@ -46,6 +46,13 @@ func (sg *SubGraph) HasExtension(ext *Extension) bool {
 }
 
 func (emb *Embedding) Exists(G *goiso.Graph) bool {
+	seen := make(map[int]bool, len(emb.Ids))
+	for _, id := range emb.Ids {
+		if seen[id] {
+			return false
+		}
+		seen[id] = true
+	}
 	for i := range emb.SG.E {
 		e := &emb.SG.E[i]
 		found := false

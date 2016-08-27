@@ -281,16 +281,17 @@ func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *Indices,
 				for c := i.ids; c != nil; c = c.Prev {
 					used[c.VrtEmb] = true
 				}
-				if !emb.Exists(indices.G) {
-					errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", i.ids, emb, emb.SG)
-					panic("wat")
+				if false {
+					if !emb.Exists(indices.G) {
+						errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", i.ids, emb, emb.SG)
+						panic("wat")
+					}
+					if !sg.Equals(emb) {
+						errors.Logf("FOUND", "NOT AN EMB\n  builder %v\n    built %v\n  pattern %v", i.ids, emb, emb.SG)
+						panic("wat")
+					}
 				}
-				if sg.Equals(emb) {
-					// sweet we can yield this embedding!
-					return emb, ei
-				}
-				// nope wasn't an embedding drop it
-				// this should never happen
+				return emb, ei
 			} else {
 				// ok extend the embedding
 				// size := len(stack)
