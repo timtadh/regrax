@@ -229,6 +229,9 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 				if mode&FullyOptimistic == FullyOptimistic {
 					for c := ids; c != nil; c = c.Prev {
 						if _, has := seen[c.Id]; has {
+							for c := ids; c != nil; c = c.Prev {
+								seen[c.Id] = true
+							}
 							return true
 						}
 					}
