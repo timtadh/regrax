@@ -88,21 +88,25 @@ var CommonUsage string = TypesUsage + ReportersUsage
 
 var TypesUsage string = `
 Types
+
     itemset                   sets of items, treated as sets of integers
     digraph                   large directed graphs
 
     itemset Exmaple
+
         $ sfp -o /tmp/sfp --support=1000 --samples=10 \
             itemset --min-items=4 --max-items=4  ./data/transactions.dat.gz \
             graple
 
     itemset Options
+
         -h, help                 view this message
         -l, loader=<loader-name> the loader to use (default int)
         --min-items=<int>        minimum items in a samplable set
         --max-items=<int>        maximum items in a samplable set
 
     itemset Loaders
+
        int                         each line is a transaction
                                    the items are integers
                                    the items are space separated
@@ -113,24 +117,26 @@ Types
             23 1 4 5 7
             3 4 1
 
+
     digraph Example
+
         $ sfp -o /tmp/sfp --support=5 --samples=100 \
             digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
                 ./data/digraph.veg.gz \
             graple
 
     digraph Options
+
         -h, help                 view this message
         -l, loader=<loader-name> the loader to use (default: veg)
-        -c, count-mode=<cmode>   strategy for counting embeddings with
-                                 minimum image support.
-                                 (default: optimistic-pruning)
-        --overlap-pruning        prune potential embeddings of lattice nodes
-                                 based on the overlap of embeddings of their
-                                 parents
-        --extension-pruning      prune potential extensions by removing
-                                 extensions which had no support in ancestor
-                                 nodes
+        -c, count-mode=<cmode>   strategy for support counting
+                                 (default: MNI minimum image support)
+        --extend-from-freq-edges (see below)
+        --extend-from-embeddings (see below) (the default)
+        --unsup-embs-pruning     (see below)
+        --overlap-pruning        (see below)
+        --extension-pruning      (see below)
+        --no-caching             do not cache any lattice nodes.
         --min-edges=<int>        minimum edges in a samplable digraph
         --max-edges=<int>        maximum edges in a samplable digraph
         --min-vertices=<int>     minimum vertices in a samplable digraph
@@ -156,65 +162,162 @@ Types
             include: (^github\.com/timtadh)|(^$)
             exclude: (sfp)|(fs2)
 
-    digraph Counting Modes
-        Digraph support is always counted using the Minimum Image Support [1].
-        However, for performance reasons it can be helpful for certain datasets
-        to prevent automorphic rotations from being considered as seperate
-        embeddings. However, it removing the rotations can results in a
-        violation of the Downward Closure Property causing structural
-        irregularities in the lattice structure. This can be undesirable. Thus,
-        continuing to count all minimum image supported embeddings is included
-        as an option: "automorphs".
+    digraph Support Counting Modes
+
+        Digraph support is usually counted using the Minimum Image Support (MNI)
+        [1] which satisifies the Downward Closure Property (DCP). Support
+        counting modes which satisfy DCP are called sound those that do not are
+        unsound. If a counting mode satisfies DCP on some but not all mining
+        sequences it is partially unsound.
 
         [1] B. Bringmann and S. Nijssen, “What is frequent in a single graph?,”
             in Lecture Notes in Computer Science (including subseries Lecture
             Notes in Artificial Intelligence and Lecture Notes in
             Bioinformatics), 2008, vol.  5012 LNAI, pp. 858–863.
 
-        automorphs               allow automorphic rotations to be counted as
-                                 separate embeddings. This is the usual way
-                                 Minimum Image Support works.
+        MNI (Minimum Image)      For the full definition see the Bringmann
+                                 paper. Intuitively, the support of a subgraph
+                                 is the minimum number of embeddings a
+                                 particular vertex of the subgraph has. This
+                                 allows fully automorphic to rotations to
+                                 count towards the support of the subgraph.
 
-        no-automorphs            do not allow automorphs by filtering them out
-                                 after the full embedding has been found. May
-                                 fail to find support for graphs which are
-                                 rotatable on their embedding.
+        FIS (Fully Indep.)       Fully independent subgraphs requires that each
+                                 disconnected component of the *embedding graph*
+                                 is counted once towards support. FIS is a
+                                 partially unsound method of counting support.
+                                 It is sound when mining using every extension
+                                 path (e.g. for: DFS, QSPLOR, GRAPLE, and
+                                 FASTMAX) but unsound when only the canonical
+                                 paths are used (e.g. for: VSIGRAM, UNIPROX).
 
-        optimistic-pruning       optimistically prune automorphs by removing
-                                 fully overlapping partial embeddings as they
-                                 discovered. Fastest (and default) option. May
-                                 fail to find support for graphs with subgraphs
-                                 which have automorphic rotations with unique
-                                 extensions for one or more rotation.
+        GIS (Greedy Indep.)      Greedy independent subgraphs is a greedy
+                                 approximation of FIS. It optimistically prunes
+                                 parts of the embedding search tree if only of
+                                 the vertex emeddings in the current search
+                                 branch has been seen previously. For long
+                                 overlapping embedding chains it will return a
+                                 higher support number than FIS but is otherwise
+                                 equivalent. GIS is an unsound counting mode.
 
-        --overlap-pruning        this is an extra flag. It is safe to use with
-                                 "automorphs".  However, for other counting
-                                 modes it may cause some embeddings to not be
-                                 discovered as it prunes potenial embeddings of
-                                 the current node based on the overlap of the
-                                 embeddings of the parent node. Since not all
-                                 rotations of the parent are included in the
-                                 overlap for "no-automorphs" and
-                                 "optimistic-pruning" some nodes may be
-                                 spuriously unsupported. For some datasets, with
-                                 high amounts of automorphism you may want to
-                                 uses this flag in conjuction with
-                                 "optimistic-pruning" to get the best
-                                 performance (at the cost of completeness).
+        Notes on support:
 
-        --extension-pruning      prune potential extensions by removing
-                                 extensions which had no support in ancestor
-                                 nodes. This is a safe mode to use with all
-                                 counting options. However, it may cause a high
-                                 amount of file IO depending on the mining mode
-                                 used. You can use --no-caching to turn off the
-                                 caching layer. This is only recommended when
-                                 using the vsigram mode. It has been observed to
-                                 not play as well with fastmax for certain
-                                 datasets.
+            Most of the time the best support option to use is MNI and it is the
+            default. However, MNI is an inefficient choice when mining graphs
+            which contain frequent subgraphs with many automorphisms. In those
+            cases it is more appropriate to use FIS. However, depending on the
+            number of automorphic rotations FIS may be too slow as it still
+            needs to find all of them. If this is the case, one should use GIS.
+            GIS will skip sections of the search tree which FIS must explore at
+            the cost of reporting higher support for long embedding chains such
+            as following chain:
 
+                pattern:    x -- o
+
+                graph:      o -- x -- o -- x -- o -- x -- o -- x -- o
+
+                FIS support: 1
+                GIS support: 4
+                MNI support: 4
+
+            FIS is a partially unsound support counting metric. Here is an
+            example where it will violate downward closure. Downward closure
+            states that subgraphs of the of a frequent subgraph must have
+            support greater or equal to the frequent subgraph.
+
+                             1    2    3    4    5    6    7
+                graph:       z -- o -- x -- o -- x -- o -- z
+
+                pattern 1:   o -- x
+                pattern 2:   z -- o -- x
+
+                embs of 1:   o -- x
+                  MNI: 2     2    3
+                  GIS: 2     4    3
+                  FIS: 1     4    5
+                             6    5
+
+                embs of 2:   z -- o -- x
+                  MNI: 2     1    2    3
+                  GIS: 2     7    6    5
+                  FIS: 2
+                       ^
+                       violation of DCP for FIS
+
+
+    digraph Candidate Extention Generation Options
+
+        Candidate extentions are potential subgraphs for the graph being mined.
+        These options control the method for generating candidates. There is no
+        "one-size-fits-all" method.
+
+        --extend-from-embeddings Compute candidate extensions from the
+                                 embeddings of the current subgraph. This
+                                 extension method is best for mining with low
+                                 support values. When using minimum support is
+                                 higher than the number of frequent edges in the
+                                 mined graph using --extend-from-freq-edges is
+                                 better.
+
+        --extend-from-freq-edges Compute candidate extensions from frequent
+                                 edges in the graph being mined. This may
+                                 compute extensions which are not subgraphs of
+                                 the mined graph (spurious candidates). However,
+                                 if the number of frequent labels is very low
+                                 (in comparison to the embedding frequency) it
+                                 may be more efficient than extending from
+                                 embeddings.
+
+
+    digraph Pruning Options
+
+        --unsup-embs-pruning Prune the embedding search by excluding embedding
+                             points for subgraph vertices which were proven by a
+                             parent subgraph to be invalid.  It is safe to use
+                             with all support counting options. It is a much
+                             more conservative pruning strategy than overlap
+                             pruning (below).  It is unhelpful to use both this
+                             option and overlap-pruning as overlap pruning will
+                             prune everything that unsupported embedding points
+                             pruning will prune.
+
+        --overlap-pruning    Prune the embedding search by only looking for
+                             embeddings when fully overlap the parent subgraph
+                             of the currently being explored supergraph.  It is
+                             safe to use with sound support counting options
+                             (such as MNI) when candidate extensions are
+                             computed from the embeddings.  However, for other
+                             support counting modes it may cause some embeddings
+                             to not be discovered as it prunes potenial
+                             embeddings of the current node based on the overlap
+                             of the embeddings of the parent node.  Since not
+                             all rotations of the parent are included in the
+                             overlap for FIS and GIS some nodes may be
+                             spuriously unsupported. For some datasets, with
+                             high amounts of automorphism you may want to uses
+                             this flag in conjuction with "optimistic-pruning"
+                             to get the best performance (at the cost of
+                             completeness).
+
+                             NOTE: Overlap pruning is unsuitable for use with
+                                --extend-from-freq-edges as this will mode will
+                                terminate embedding search early when sufficient
+                                support has been found.
+
+        --extension-pruning  Prune potential extensions by removing extensions
+                             which had no support in ancestor nodes. This is a
+                             safe mode to use with sound support counting
+                             options. With unsound counting modes it may cause
+                             the miner to miss frequent subgraphs which have
+                             subgraphs with less support (this can only happen
+                             when DCP is violated). It may cause a high amount
+                             of file IO depending on the mining mode used.  You
+                             can use --no-caching to turn off the caching layer.
+                             Turning off caching is only recommended when mining
+                             all subgraphs (and then it is encouraged).
 
     digraph Loaders
+
         veg File Format
             The veg file format is a line delimited format with vertex lines and
             edge lines. For example:
