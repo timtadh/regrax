@@ -85,23 +85,45 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 	}
 }
 
-func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, sets []*hashtable.LinearHash, exts types.Set) {
+func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
+	if dt.Mode&FIS == FIS {
+		seen = make(map[int]bool)
+		fisEmbs = make([]*subgraph.Embedding, 0, 10)
+	} else {
+		sets = make([]*hashtable.LinearHash, len(pattern.V))
+	}
+	if dt.Mode&OverlapPruning == OverlapPruning {
+		overlap = make([]map[int]bool, len(pattern.V))
+	}
 	exts = set.NewSetMap(hashtable.NewLinearHash())
-	sets = make([]*hashtable.LinearHash, len(pattern.V))
 	add := validExtChecker(dt, func(emb *subgraph.Embedding, ext *subgraph.Extension) {
 		exts.Add(ext)
 	})
 	for emb, next := ei(false); next != nil; emb, next = next(false) {
+		seenIt := false
 		for idx, id := range emb.Ids {
+			if fisEmbs != nil {
+				if seen[id] {
+					seenIt = true
+				}
+			}
+			if overlap != nil {
+				if overlap[idx] == nil {
+					overlap[idx] = make(map[int]bool)
+				}
+				overlap[idx][id] = true
+			}
 			if seen != nil {
 				seen[id] = true
 			}
-			if sets[idx] == nil {
-				sets[idx] = hashtable.NewLinearHash()
-			}
-			set := sets[idx]
-			if !set.Has(types.Int(id)) {
-				set.Put(types.Int(id), emb)
+			if sets != nil {
+				if sets[idx] == nil {
+					sets[idx] = hashtable.NewLinearHash()
+				}
+				set := sets[idx]
+				if !set.Has(types.Int(id)) {
+					set.Put(types.Int(id), emb)
+				}
 			}
 			for _, e := range dt.G.Kids[id] {
 				add(emb, e, idx, -1)
@@ -110,13 +132,24 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 				add(emb, e, -1, idx)
 			}
 		}
+		if fisEmbs != nil && !seenIt {
+			fisEmbs = append(fisEmbs, emb)
+		}
 		total++
 	}
-	return total, sets, exts
+	return total, overlap, fisEmbs, sets, exts
 }
 
-func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, sets []*hashtable.LinearHash, exts types.Set) {
-	sets = make([]*hashtable.LinearHash, len(pattern.V))
+func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
+	if dt.Mode&FIS == FIS {
+		seen = make(map[int]bool)
+		fisEmbs = make([]*subgraph.Embedding, 0, 10)
+	} else {
+		sets = make([]*hashtable.LinearHash, len(pattern.V))
+	}
+	if dt.Mode&OverlapPruning == OverlapPruning {
+		overlap = make([]map[int]bool, len(pattern.V))
+	}
 	support := dt.Support()
 	done := make(chan types.Set)
 	go func(done chan types.Set) {
@@ -163,21 +196,39 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 	stop := false
 	for emb, next := ei(stop); next != nil; emb, next = next(stop) {
 		min := -1
+		seenIt := false
 		for idx, id := range emb.Ids {
+			if fisEmbs != nil {
+				if seen[id] {
+					seenIt = true
+				}
+			}
+			if overlap != nil {
+				if overlap[idx] == nil {
+					overlap[idx] = make(map[int]bool)
+				}
+				overlap[idx][id] = true
+			}
 			if seen != nil {
 				seen[id] = true
 			}
-			if sets[idx] == nil {
-				sets[idx] = hashtable.NewLinearHash()
+			if sets != nil {
+				if sets[idx] == nil {
+					sets[idx] = hashtable.NewLinearHash()
+				}
+				set := sets[idx]
+				if !set.Has(types.Int(id)) {
+					set.Put(types.Int(id), emb)
+				}
+				size := set.Size()
+				if min == -1 || size < min {
+					min = size
+				}
 			}
-			set := sets[idx]
-			if !set.Has(types.Int(id)) {
-				set.Put(types.Int(id), emb)
-			}
-			size := set.Size()
-			if min == -1 || size < min {
-				min = size
-			}
+		}
+		if fisEmbs != nil && !seenIt {
+			fisEmbs = append(fisEmbs, emb)
+			min = len(fisEmbs)
 		}
 		total++
 		if min >= support {
@@ -185,9 +236,9 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 		}
 	}
 	if total < support {
-		return total, sets, nil
+		return total, overlap, fisEmbs, sets, nil
 	}
-	return total, sets, <-done
+	return total, overlap, fisEmbs, sets, <-done
 }
 
 // unique extensions and supported embeddings
@@ -211,14 +262,10 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	var ei subgraph.EmbIterator
 	var dropped *subgraph.VertexEmbeddings
 	switch {
-	case mode&Automorphs == Automorphs:
+	case mode&(MNI|FIS) != 0:
 		ei, dropped = pattern.IterEmbeddings(
 			dt.EmbSearchStartPoint, dt.Indices, unsupEmbs, patternOverlap, nil)
-	case mode&NoAutomorphs == NoAutomorphs:
-		ei, dropped = subgraph.FilterAutomorphs(
-			pattern.IterEmbeddings(
-				dt.EmbSearchStartPoint, dt.Indices, unsupEmbs, patternOverlap, nil))
-	case mode&OptimisticPruning == OptimisticPruning:
+	case mode&(GIS) == GIS:
 		seen = make(map[int]bool)
 		ei, dropped = pattern.IterEmbeddings(
 			dt.EmbSearchStartPoint,
@@ -226,44 +273,37 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 			unsupEmbs,
 			patternOverlap,
 			func(ids *subgraph.IdNode) bool {
-				if mode&FullyOptimistic == FullyOptimistic {
-					for c := ids; c != nil; c = c.Prev {
-						if _, has := seen[c.Id]; has {
-							for c := ids; c != nil; c = c.Prev {
-								seen[c.Id] = true
-							}
-							return true
+				for c := ids; c != nil; c = c.Prev {
+					if _, has := seen[c.Id]; has {
+						for c := ids; c != nil; c = c.Prev {
+							seen[c.Id] = true
 						}
+						return true
 					}
-					return false
-				} else {
-					for c := ids; c != nil; c = c.Prev {
-						if _, has := seen[c.Id]; !has {
-							return false
-						}
-					}
-					return true
 				}
+				return false
 			})
 	default:
-		return 0, nil, nil, nil, nil, errors.Errorf("Unknown embedding search strategy %v", mode)
+		return 0, nil, nil, nil, nil, errors.Errorf("Unknown support counting strategy %v", mode)
 	}
 
 	// find the actual embeddings and compute the extensions
 	// the extensions are stored in exts
 	// the embeddings are stored in sets
 	var exts types.Set
+	var fisEmbs []*subgraph.Embedding
 	var sets []*hashtable.LinearHash
+	var overlap []map[int]bool
 	var total int
 	if mode&ExtFromEmb == ExtFromEmb {
 		// add the supported embeddings to the vertex sets
 		// add the extensions to the extensions set
-		total, sets, exts = extensionsFromEmbeddings(dt, pattern, ei, seen)
+		total, overlap, fisEmbs, sets, exts = extensionsFromEmbeddings(dt, pattern, ei, seen)
 		if total == 0 {
 			return 0, nil, nil, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
 		}
 	} else if mode&ExtFromFreqEdges == ExtFromFreqEdges {
-		total, sets, exts = extensionsFromFreqEdges(dt, pattern, ei, seen)
+		total, overlap, fisEmbs, sets, exts = extensionsFromFreqEdges(dt, pattern, ei, seen)
 		if total < dt.Support() {
 			return 0, nil, nil, nil, nil, nil
 		}
@@ -281,19 +321,6 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 		extensions = append(extensions, ext)
 	}
 
-	// construct the overlap
-	var overlap []map[int]bool = nil
-	if dt.Overlap != nil {
-		overlap = make([]map[int]bool, 0, len(pattern.V))
-		for _, s := range sets {
-			o := make(map[int]bool, s.Size())
-			for x, next := s.Keys()(); next != nil; x, next = next() {
-				o[int(x.(types.Int))] = true
-			}
-			overlap = append(overlap, o)
-		}
-	}
-
 	if mode&EmbeddingPruning == EmbeddingPruning && unsupEmbs != nil {
 		// for i, next := unsupEmbs.Items()(); next != nil; i, next = next() {
 		for emb, ok := range unsupEmbs {
@@ -303,16 +330,22 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 		}
 	}
 
-	// compute the minimally supported vertex
-	arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
-		return float64(sets[i].Size())
-	})
-
-	// construct the embeddings output slice
-	embeddings := make([]*subgraph.Embedding, 0, int(size)+1)
-	for i, next := sets[arg].Values()(); next != nil; i, next = next() {
-		emb := i.(*subgraph.Embedding)
-		embeddings = append(embeddings, emb)
+	var embeddings []*subgraph.Embedding
+	if mode&(MNI|GIS) != 0 {
+		// compute the minimally supported vertex
+		arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
+			return float64(sets[i].Size())
+		})
+		// construct the embeddings output slice
+		embeddings = make([]*subgraph.Embedding, 0, int(size)+1)
+		for i, next := sets[arg].Values()(); next != nil; i, next = next() {
+			emb := i.(*subgraph.Embedding)
+			embeddings = append(embeddings, emb)
+		}
+	} else if mode&(FIS) == FIS {
+		embeddings = fisEmbs
+	} else {
+		return 0, nil, nil, nil, nil, errors.Errorf("Unknown support counting strategy %v", mode)
 	}
 
 	if CACHE_DEBUG || debug {

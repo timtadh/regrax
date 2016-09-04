@@ -615,13 +615,12 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 
 	loaderType := "veg"
-	modeStr := "optimistic-pruning"
+	modeStr := "MNI"
 	overlapPruning := false
 	extensionPruning := false
 	unsupEmbsPruning := false
 	extendFromEmb := false
 	extendFromEdges := false
-	fullyOptimistic := false
 	embSearchStartingPoint := subgraph.MostConnected
 	caching := true
 	minE := 0
@@ -638,8 +637,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			loaderType = oa.Arg()
 		case "-c", "--count-mode":
 			modeStr = oa.Arg()
-		case "--fully-optimistic":
-			fullyOptimistic = true
 		case "--overlap-pruning":
 			overlapPruning = true
 		case "--extension-pruning":
@@ -709,18 +706,16 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 
 	switch modeStr {
-	case "automorphs":
-		mode |= digraph.Automorphs
-	case "no-automorphs":
-		mode |= digraph.NoAutomorphs
-	case "optimistic-pruning":
-		mode |= digraph.OptimisticPruning
-		if fullyOptimistic {
-			mode |= digraph.FullyOptimistic
-		}
+	case "MNI":
+		mode |= digraph.MNI
+	case "FIS":
+		mode |= digraph.FIS
+	case "GIS":
+		mode |= digraph.GIS
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown mode '%v'\n", modeStr)
-		fmt.Fprintf(os.Stderr, "modes: automorphs, no-automorphs, optimistic-pruning\n")
+		fmt.Fprintf(os.Stderr, "Unknown support mode '%v'\n", modeStr)
+		fmt.Fprintf(os.Stderr, "support modes: MNI (min-image support), FIS (fully independent subgraphs)\n")
+		fmt.Fprintf(os.Stderr, "               GIS (greedy independent subgraphs)\n")
 		Usage(ErrorCodes["opts"])
 	}
 	if overlapPruning {
