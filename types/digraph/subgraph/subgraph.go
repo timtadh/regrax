@@ -194,7 +194,6 @@ func ParsePretty(str string, colors *[]string, labels map[string]int) (*SubGraph
 		vertices[i].Color = labels[label]
 	}
 	edges := make(Edges, E)
-	adj := make([][]int, V)
 	for i := range edges {
 		matches := edge.FindStringSubmatch(str[idx:])
 		src, err := strconv.ParseInt(matches[1], 10, 64)
@@ -223,11 +222,9 @@ func ParsePretty(str string, colors *[]string, labels map[string]int) (*SubGraph
 		edges[i].Src = int(src)
 		edges[i].Targ = int(targ)
 		edges[i].Color = labels[label]
-		adj[src] = append(adj[src], i)
-		adj[targ] = append(adj[targ], i)
 	}
-	sg := &SubGraph{V: vertices, E: edges, Adj: adj}
-	return sg, nil
+	sg := &Builder{V: vertices, E: edges}
+	return sg.Build(), nil
 }
 
 func (sg *SubGraph) Builder() *Builder {

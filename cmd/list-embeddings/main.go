@@ -154,13 +154,20 @@ func run() int {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 				return 1
 			}
-			errors.Logf("INFO", "cur sg: %v", sg)
-			ei, _ := sg.IterEmbeddings(graph.Indices, nil, nil, nil)
+			if sg.Pretty(graph.G.Colors) != pattern {
+				errors.Logf("ERROR", "bad load of pattern")
+				errors.Logf("ERROR", "expected %v", pattern)
+				errors.Logf("ERROR", "got      %v", sg.Pretty(graph.G.Colors))
+				return 1
+			}
+			errors.Logf("INFO", "cur sg: %v", sg.Pretty(graph.G.Colors))
+			ei, _ := sg.IterEmbeddings(subgraph.MostConnected, graph.Indices, nil, nil, nil)
 			c := 0
 			for _, next := ei(false); next != nil; _, next = next(false) {
 				c++
 			}
 			errors.Logf("EMB", "total embs: %v", c)
+			fmt.Println(sg.Dotty(graph.G.Colors, nil, nil))
 		}
 	}
 
