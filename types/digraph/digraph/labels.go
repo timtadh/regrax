@@ -1,11 +1,15 @@
 package digraph
 
-type ColorStore struct {
+import (
+	"fmt"
+)
+
+type Labels struct {
 	colors map[string]int
 	labels []string
 }
 
-func (c *ColorStore) Color(label string) int {
+func (c *Labels) Color(label string) int {
 	if color, has := c.colors[label]; has {
 		return color
 	} else {
@@ -16,10 +20,9 @@ func (c *ColorStore) Color(label string) int {
 	}
 }
 
-func (c *ColorStore) Label(color int) string {
-	if color >= len(c.labels) {
-		return "---no-label---"
+func (c *Labels) Label(color int) string {
+	if color < 0 || color >= len(c.labels) {
+		return fmt.Sprintf("color-[%d]", color)
 	}
 	return c.labels[color]
 }
-
