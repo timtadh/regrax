@@ -70,7 +70,7 @@ func (n *SubgraphPattern) String() string {
 		V = append(V, fmt.Sprintf(
 			"(%v:%v)",
 			v.Idx,
-			n.Dt.G.Colors[v.Color],
+			n.Dt.Labels.Label(v.Color),
 		))
 	}
 	for _, e := range sg.E {
@@ -78,7 +78,7 @@ func (n *SubgraphPattern) String() string {
 			"[%v->%v:%v]",
 			e.Src,
 			e.Targ,
-			n.Dt.G.Colors[e.Color],
+			n.Dt.Labels.Label(e.Color),
 		))
 	}
 	return fmt.Sprintf("<SubgraphPattern %v:%v%v%v>", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))

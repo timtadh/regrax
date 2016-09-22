@@ -5,7 +5,11 @@ import (
 	"github.com/timtadh/data-structures/exc"
 )
 
-func (sg *SubGraph) EstimateMatch(indices *Indices) (match float64, csg *SubGraph, err error) {
+import (
+	"github.com/timtadh/sfp/types/digraph/digraph"
+)
+
+func (sg *SubGraph) EstimateMatch(indices *digraph.Indices) (match float64, csg *SubGraph, err error) {
 	csg = sg
 	for len(csg.E) >= 0 {
 		found, chain, maxEid, _ := csg.Embedded(indices)
@@ -42,7 +46,7 @@ func (sg *SubGraph) EstimateMatch(indices *Indices) (match float64, csg *SubGrap
 	return 0, EmptySubGraph(), nil
 }
 
-func (sg *SubGraph) Embedded(indices *Indices) (found bool, edgeChain []int, largestEid int, longest *IdNode) {
+func (sg *SubGraph) Embedded(indices *digraph.Indices) (found bool, edgeChain []int, largestEid int, longest *IdNode) {
 	type entry struct {
 		ids *IdNode
 		eid int
@@ -82,9 +86,9 @@ func (sg *SubGraph) Embedded(indices *Indices) (found bool, edgeChain []int, lar
 	return false, edgeChain, largestEid, longest
 }
 
-func (sg *SubGraph) VisualizeEmbedding(indices *Indices) (dotty string, err error) {
+func (sg *SubGraph) VisualizeEmbedding(indices *digraph.Indices, labels *digraph.Labels) (dotty string, err error) {
 	err = exc.Try(func(){
-		g := FromGraph(indices.G)
+		g := FromGraph(indices.G).Build()
 		edge := func(eid int, vids map[int]int) int {
 			e := &sg.E[eid]
 			for eid := range g.E {
@@ -123,7 +127,7 @@ func (sg *SubGraph) VisualizeEmbedding(indices *Indices) (dotty string, err erro
 				he[eidx] = true
 			}
 		}
-		dotty = g.Dotty(indices.G.Colors, hv, he)
+		dotty = g.Dotty(labels, hv, he)
 	}).Error()
 	return dotty, err
 }

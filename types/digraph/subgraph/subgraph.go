@@ -10,11 +10,16 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
 	"github.com/timtadh/goiso/bliss"
 )
 
-import ()
+import (
+	"github.com/timtadh/sfp/types/digraph/digraph"
+)
+
+type Labels interface {
+	Label(int) string
+}
 
 type SubGraph struct {
 	V          Vertices
@@ -73,68 +78,6 @@ func (E Edges) Iterate() (ei bliss.EdgeIterator) {
 	return ei
 }
 
-// Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
-// canonical ordering. This is a necessary assumption for Embeddings() to
-// work properly.
-func FromEmbedding(sg *goiso.SubGraph) *SubGraph {
-	if sg == nil {
-		return &SubGraph{
-			V:   make([]Vertex, 0),
-			E:   make([]Edge, 0),
-			Adj: make([][]int, 0),
-		}
-	}
-	pat := &SubGraph{
-		V:   make([]Vertex, len(sg.V)),
-		E:   make([]Edge, len(sg.E)),
-		Adj: make([][]int, len(sg.V)),
-	}
-	for i := range sg.V {
-		pat.V[i].Idx = i
-		pat.V[i].Color = sg.V[i].Color
-		pat.Adj[i] = make([]int, 0, 5)
-	}
-	for i := range sg.E {
-		pat.E[i].Src = sg.E[i].Src
-		pat.E[i].Targ = sg.E[i].Targ
-		pat.E[i].Color = sg.E[i].Color
-		pat.Adj[pat.E[i].Src] = append(pat.Adj[pat.E[i].Src], i)
-		pat.Adj[pat.E[i].Targ] = append(pat.Adj[pat.E[i].Targ], i)
-	}
-	return pat
-}
-
-// Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
-// canonical ordering. This is a necessary assumption for Embeddings() to
-// work properly.
-func FromGraph(g *goiso.Graph) *SubGraph {
-	if g == nil {
-		return &SubGraph{
-			V:   make([]Vertex, 0),
-			E:   make([]Edge, 0),
-			Adj: make([][]int, 0),
-		}
-	}
-	pat := &SubGraph{
-		V:   make([]Vertex, len(g.V)),
-		E:   make([]Edge, len(g.E)),
-		Adj: make([][]int, len(g.V)),
-	}
-	for i := range g.V {
-		pat.V[i].Idx = i
-		pat.V[i].Color = g.V[i].Color
-		pat.Adj[i] = make([]int, 0, 5)
-	}
-	for i := range g.E {
-		pat.E[i].Src = g.E[i].Src
-		pat.E[i].Targ = g.E[i].Targ
-		pat.E[i].Color = g.E[i].Color
-		pat.Adj[pat.E[i].Src] = append(pat.Adj[pat.E[i].Src], i)
-		pat.Adj[pat.E[i].Targ] = append(pat.Adj[pat.E[i].Targ], i)
-	}
-	return pat
-}
-
 func LoadSubGraph(label []byte) (*SubGraph, error) {
 	sg := new(SubGraph)
 	err := sg.UnmarshalBinary(label)
@@ -144,7 +87,7 @@ func LoadSubGraph(label []byte) (*SubGraph, error) {
 	return sg, nil
 }
 
-func ParsePretty(str string, colors *[]string, labels map[string]int) (*SubGraph, error) {
+func ParsePretty(str string, labels *digraph.Labels) (*SubGraph, error) {
 	size := regexp.MustCompile(`^\{([0-9]+):([0-9]+)\}`)
 	edge := regexp.MustCompile(`^\[([0-9]+)->([0-9]+):`)
 	matches := size.FindStringSubmatch(str)
@@ -187,11 +130,7 @@ func ParsePretty(str string, colors *[]string, labels map[string]int) (*SubGraph
 		}
 		label := string(labelc)
 		vertices[i].Idx = i
-		if _, has := labels[label]; !has {
-			labels[label] = len(*colors)
-			*colors = append(*colors, label)
-		}
-		vertices[i].Color = labels[label]
+		vertices[i].Color = labels.Color(label)
 	}
 	edges := make(Edges, E)
 	for i := range edges {
@@ -221,7 +160,7 @@ func ParsePretty(str string, colors *[]string, labels map[string]int) (*SubGraph
 		label := string(labelc)
 		edges[i].Src = int(src)
 		edges[i].Targ = int(targ)
-		edges[i].Color = labels[label]
+		edges[i].Color = labels.Color(label)
 	}
 	sg := &Builder{V: vertices, E: edges}
 	return sg.Build(), nil
@@ -335,13 +274,13 @@ func (sg *SubGraph) String() string {
 	return fmt.Sprintf("{%v:%v}%v%v", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
 }
 
-func (sg *SubGraph) Pretty(colors []string) string {
+func (sg *SubGraph) Pretty(labels *digraph.Labels) string {
 	V := make([]string, 0, len(sg.V))
 	E := make([]string, 0, len(sg.E))
 	for _, v := range sg.V {
 		V = append(V, fmt.Sprintf(
 			"(%v)",
-			colors[v.Color],
+			labels.Label(v.Color),
 		))
 	}
 	for _, e := range sg.E {
@@ -349,13 +288,13 @@ func (sg *SubGraph) Pretty(colors []string) string {
 			"[%v->%v:%v]",
 			e.Src,
 			e.Targ,
-			colors[e.Color],
+			labels.Label(e.Color),
 		))
 	}
 	return fmt.Sprintf("{%v:%v}%v%v", len(sg.E), len(sg.V), strings.Join(V, ""), strings.Join(E, ""))
 }
 
-func (sg *SubGraph) Dotty(colors []string, highlightVertices, highlightEdges map[int]bool) string {
+func (sg *SubGraph) Dotty(labels *digraph.Labels, highlightVertices, highlightEdges map[int]bool) string {
 	V := make([]string, 0, len(sg.V))
 	E := make([]string, 0, len(sg.E))
 	for vidx, v := range sg.V {
@@ -366,7 +305,7 @@ func (sg *SubGraph) Dotty(colors []string, highlightVertices, highlightEdges map
 		V = append(V, fmt.Sprintf(
 			"n%v [label=\"%v\"%v];",
 			vidx,
-			colors[v.Color],
+			labels.Label(v.Color),
 			highlight,
 		))
 	}
@@ -379,7 +318,7 @@ func (sg *SubGraph) Dotty(colors []string, highlightVertices, highlightEdges map
 			"n%v->n%v [label=\"%v\"%v]",
 			e.Src,
 			e.Targ,
-			colors[e.Color],
+			labels.Label(e.Color),
 			highlight,
 		))
 	}

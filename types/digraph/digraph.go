@@ -9,7 +9,6 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/pool"
-	"github.com/timtadh/goiso"
 )
 
 import (
@@ -21,6 +20,7 @@ import (
 	"github.com/timtadh/sfp/stores/int_json"
 	"github.com/timtadh/sfp/stores/subgraph_embedding"
 	"github.com/timtadh/sfp/stores/subgraph_overlap"
+	"github.com/timtadh/sfp/types/digraph/digraph"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
@@ -36,8 +36,9 @@ type Config struct {
 type Digraph struct {
 	Config
 	config                   *config.Config
-	G                        *goiso.Graph
-	FrequentVertices         [][]byte
+	G                        *digraph.Digraph
+	Labels                   *digraph.Labels
+	FrequentVertices         []*EmbListNode
 	NodeAttrs                int_json.MultiMap
 	Embeddings               subgraph_embedding.MultiMap
 	UnsupEmbs                subgraph_embedding.MultiMap
@@ -51,7 +52,7 @@ type Digraph struct {
 	CanonKids                bytes_bytes.MultiMap
 	CanonKidCount            bytes_int.MultiMap
 	Frequency                bytes_int.MultiMap
-	Indices                  *subgraph.Indices
+	Indices                  *digraph.Indices
 	pool                     *pool.Pool
 	lock                     sync.RWMutex
 }
@@ -151,29 +152,27 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 	return g, nil
 }
 
-func (dt *Digraph) Init(G *goiso.Graph) (err error) {
+func (dt *Digraph) Init(b *digraph.Builder, l *digraph.Labels) (err error) {
 	dt.lock.Lock()
-	dt.G = G
-	dt.Indices = subgraph.NewIndices(G)
-	dt.Indices.InitVertexIndices()
-	dt.Indices.InitEdgeIndices(dt.Support())
+	// i := digraph.NewIndices(b, dt.config.Support, dt.Mode & ExtFromFreqEdges == ExtFromFreqEdges)
+	i := digraph.NewIndices(b, dt.config.Support)
+	errors.Logf("DEBUG", "done building indices")
+	dt.G = i.G
+	dt.Indices = i
+	dt.Labels = l
 	dt.lock.Unlock()
 
-	for color := range dt.Indices.ColorIndex {
-		if G.ColorFrequency(color) < dt.config.Support {
-			continue
-		}
+	errors.Logf("DEBUG", "computing starting points")
+	for color, _ := range dt.Indices.ColorIndex {
 		sg := subgraph.Build(1, 0).FromVertex(color).Build()
-
-		dt.lock.Lock()
-		dt.FrequentVertices = append(dt.FrequentVertices, sg.Label())
-		dt.lock.Unlock()
-
-		// done for the side effect of saving the Nodes.
-		_, _, _, _, _, err := ExtsAndEmbs(dt, sg, nil, nil, nil, dt.Mode, false)
+		_, exts, embs, overlap, dropped, err := ExtsAndEmbs(dt, sg, nil, nil, nil, dt.Mode, false)
 		if err != nil {
 			return err
 		}
+		n := NewEmbListNode(dt, sg, exts, embs, overlap, dropped)
+		dt.lock.Lock()
+		dt.FrequentVertices = append(dt.FrequentVertices, n)
+		dt.lock.Unlock()
 	}
 	return nil
 }

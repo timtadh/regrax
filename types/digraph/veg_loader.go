@@ -10,12 +10,12 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/digraph"
 )
 
 type ErrorList []error
@@ -44,26 +44,30 @@ func NewVegLoader(config *config.Config, dc *Config) (lattice.Loader, error) {
 }
 
 func (v *VegLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
-	G, err := v.loadDigraph(input)
+	return v.LoadWithLabels(input, digraph.NewLabels())
+}
+
+func (v *VegLoader) LoadWithLabels(input lattice.Input, labels *digraph.Labels) (lattice.DataType, error) {
+	G, err := v.loadDigraph(input, labels)
 	if err != nil {
 		return nil, err
 	}
-	err = v.dt.Init(G)
+	err = v.dt.Init(G, labels)
 	if err != nil {
 		return nil, err
 	}
 	return v.dt, nil
 }
 
-func (v *VegLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err error) {
+func (v *VegLoader) loadDigraph(input lattice.Input, labels *digraph.Labels) (*digraph.Builder, error) {
 	var errs ErrorList
 	V, E, err := graphSize(input)
 	if err != nil {
 		return nil, err
 	}
-	G := goiso.NewGraph(V, E)
-	graph = &G
-	b := newBaseLoader(v.dt, graph)
+	errors.Logf("DEBUG", "Got graph size %v %v", V, E)
+	G := digraph.Build(V, E)
+	b := newBaseLoader(v.dt, G)
 
 	in, closer := input()
 	defer closer()
@@ -74,11 +78,11 @@ func (v *VegLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 		line_type, data := parseLine(line)
 		switch line_type {
 		case "vertex":
-			if err := v.loadVertex(b, data); err != nil {
+			if err := v.loadVertex(labels, b, data); err != nil {
 				errs = append(errs, err)
 			}
 		case "edge":
-			if err := v.loadEdge(b, data); err != nil {
+			if err := v.loadEdge(labels, b, data); err != nil {
 				errs = append(errs, err)
 			}
 		default:
@@ -89,12 +93,12 @@ func (v *VegLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 		return nil, err
 	}
 	if len(errs) == 0 {
-		return graph, nil
+		return G, nil
 	}
-	return graph, errs
+	return nil, errs
 }
 
-func (v *VegLoader) loadVertex(b *baseLoader, data []byte) (err error) {
+func (v *VegLoader) loadVertex(labels *digraph.Labels, b *baseLoader, data []byte) (err error) {
 	obj, err := parseJson(data)
 	if err != nil {
 		return err
@@ -105,10 +109,10 @@ func (v *VegLoader) loadVertex(b *baseLoader, data []byte) (err error) {
 	}
 	label := strings.TrimSpace(obj["label"].(string))
 	id := int32(_id)
-	return b.addVertex(id, label, obj)
+	return b.addVertex(id, labels.Color(label), label, obj)
 }
 
-func (v *VegLoader) loadEdge(b *baseLoader, data []byte) (err error) {
+func (v *VegLoader) loadEdge(labels *digraph.Labels, b *baseLoader, data []byte) (err error) {
 	obj, err := parseJson(data)
 	if err != nil {
 		return err
@@ -124,7 +128,7 @@ func (v *VegLoader) loadEdge(b *baseLoader, data []byte) (err error) {
 	src := int32(_src)
 	targ := int32(_targ)
 	label := strings.TrimSpace(obj["label"].(string))
-	return b.addEdge(src, targ, label)
+	return b.addEdge(src, targ, labels.Color(label), label)
 }
 
 func processLines(in io.Reader, process func([]byte)) error {

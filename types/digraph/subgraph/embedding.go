@@ -8,7 +8,10 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
+)
+
+import (
+	"github.com/timtadh/sfp/types/digraph/digraph"
 )
 
 type Embedding struct {
@@ -45,7 +48,7 @@ func (sg *SubGraph) HasExtension(ext *Extension) bool {
 	return false
 }
 
-func (emb *Embedding) Exists(G *goiso.Graph) bool {
+func (emb *Embedding) Exists(G *digraph.Digraph) bool {
 	seen := make(map[int]bool, len(emb.Ids))
 	for _, id := range emb.Ids {
 		if seen[id] {
@@ -56,7 +59,8 @@ func (emb *Embedding) Exists(G *goiso.Graph) bool {
 	for i := range emb.SG.E {
 		e := &emb.SG.E[i]
 		found := false
-		for _, ke := range G.Kids[emb.Ids[e.Src]] {
+		for _, x := range G.Kids[emb.Ids[e.Src]] {
+			ke := &G.E[x]
 			if ke.Color != e.Color {
 				continue
 			}
@@ -216,9 +220,10 @@ func (emb *Embedding) Pretty(colors []string) string {
 	return fmt.Sprintf("{%v:%v}%v%v", len(emb.SG.E), len(emb.SG.V), strings.Join(V, ""), strings.Join(E, ""))
 }
 
-func (emb *Embedding) Dotty(G *goiso.Graph, attrs map[int]map[string]interface{}) string {
+func (emb *Embedding) Dotty(labels *digraph.Labels, attrs map[int]map[string]interface{}) string {
 	V := make([]string, 0, len(emb.SG.V))
 	E := make([]string, 0, len(emb.SG.E))
+	// TODO: Replace this with strconv.Quote
 	safeStr := func(i interface{}) string {
 		s := fmt.Sprint(i)
 		s = strings.Replace(s, "\n", "\\n", -1)
@@ -227,7 +232,7 @@ func (emb *Embedding) Dotty(G *goiso.Graph, attrs map[int]map[string]interface{}
 	}
 	renderAttrs := func(color, id int) string {
 		a := attrs[id]
-		label := G.Colors[color]
+		label := labels.Label(color)
 		strs := make([]string, 0, len(a)+1)
 		strs = append(strs, fmt.Sprintf(`idx="%v"`, id))
 		if line, has := a["start_line"]; has {
@@ -246,7 +251,7 @@ func (emb *Embedding) Dotty(G *goiso.Graph, attrs map[int]map[string]interface{}
 	for idx, id := range emb.Ids {
 		V = append(V, fmt.Sprintf(
 			"%v [%v];",
-			G.V[id].Id,
+			id,
 			renderAttrs(emb.SG.V[idx].Color, id),
 		))
 	}
@@ -254,9 +259,9 @@ func (emb *Embedding) Dotty(G *goiso.Graph, attrs map[int]map[string]interface{}
 		e := &emb.SG.E[idx]
 		E = append(E, fmt.Sprintf(
 			"%v -> %v [label=\"%v\"];",
-			G.V[emb.Ids[e.Src]].Id,
-			G.V[emb.Ids[e.Targ]].Id,
-			safeStr(G.Colors[e.Color]),
+			emb.Ids[e.Src],
+			emb.Ids[e.Targ],
+			safeStr(labels.Label(e.Color)),
 		))
 	}
 	return fmt.Sprintf(

@@ -139,7 +139,7 @@ func (n *EmbListNode) UnsupportedEmbs() (subgraph.VertexEmbeddings, error) {
 }
 
 func (n *EmbListNode) String() string {
-	return fmt.Sprintf("<EmbListNode %v>", n.Pat.Pretty(n.Dt.G.Colors))
+	return fmt.Sprintf("<EmbListNode %v>", n.Pat.Pretty(n.Dt.Labels))
 	//return fmt.Sprintf("<Node %v %v %v>", len(n.embeddings), len(n.extensions), n.Pat.Pretty(n.Dt.G.Colors))
 }
 
@@ -158,11 +158,7 @@ func (n *EmbListNode) CanonKids() (nodes []lattice.Node, err error) {
 
 func (n *EmbListNode) loadFrequentVertices() ([]lattice.Node, error) {
 	nodes := make([]lattice.Node, 0, len(n.Dt.FrequentVertices))
-	for _, label := range n.Dt.FrequentVertices {
-		node, err := LoadEmbListNode(n.Dt, label)
-		if err != nil {
-			return nil, err
-		}
+	for _, node := range n.Dt.FrequentVertices {
 		nodes = append(nodes, node)
 	}
 	return nodes, nil

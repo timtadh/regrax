@@ -5,6 +5,10 @@ import (
 	"github.com/timtadh/goiso/bliss"
 )
 
+import (
+	"github.com/timtadh/sfp/types/digraph/digraph"
+)
+
 type Builder struct {
 	V Vertices
 	E Edges
@@ -27,6 +31,32 @@ func (b *Builder) From(sg *SubGraph) *Builder {
 	}
 	for i := range sg.E {
 		b.AddEdge(&b.V[sg.E[i].Src], &b.V[sg.E[i].Targ], sg.E[i].Color)
+	}
+	return b
+}
+
+// Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
+// canonical ordering. This is a necessary assumption for Embeddings() to
+// work properly.
+func FromGraph(g *digraph.Digraph) *Builder {
+	if g == nil {
+		return &Builder{
+			V:   make([]Vertex, 0),
+			E:   make([]Edge, 0),
+		}
+	}
+	b := &Builder{
+		V:   make([]Vertex, len(g.V)),
+		E:   make([]Edge, len(g.E)),
+	}
+	for i := range g.V {
+		b.V[i].Idx = i
+		b.V[i].Color = g.V[i].Color
+	}
+	for i := range g.E {
+		b.E[i].Src = g.E[i].Src
+		b.E[i].Targ = g.E[i].Targ
+		b.E[i].Color = g.E[i].Color
 	}
 	return b
 }

@@ -7,7 +7,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/goiso"
 	"github.com/timtadh/dot"
 	"github.com/timtadh/combos"
 )
@@ -15,6 +14,7 @@ import (
 import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/sfp/types/digraph/digraph"
 )
 
 type DotLoader struct {
@@ -33,28 +33,33 @@ func NewDotLoader(config *config.Config, dc *Config) (lattice.Loader, error) {
 }
 
 func (v *DotLoader) Load(input lattice.Input) (dt lattice.DataType, err error) {
-	G, err := v.loadDigraph(input)
+	return v.LoadWithLabels(input, digraph.NewLabels())
+}
+
+func (v *DotLoader) LoadWithLabels(input lattice.Input, labels *digraph.Labels) (lattice.DataType, error) {
+	G, err := v.loadDigraph(input, labels)
 	if err != nil {
 		return nil, err
 	}
-	err = v.dt.Init(G)
+	err = v.dt.Init(G, labels)
 	if err != nil {
 		return nil, err
 	}
 	return v.dt, nil
 }
 
-func (v *DotLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err error) {
+func (v *DotLoader) loadDigraph(input lattice.Input, labels *digraph.Labels) (graph *digraph.Builder, err error) {
 	r, closer := input()
 	text, err := ioutil.ReadAll(r)
 	closer()
 	if err != nil {
 		return nil, err
 	}
-	G := goiso.NewGraph(10, 10)
+	G := digraph.Build(100, 1000)
 	dp := &dotParse{
-		b: newBaseLoader(v.dt, &G),
+		b: newBaseLoader(v.dt, G),
 		d: v,
+		labels: labels,
 		vids: make(map[string]int32),
 	}
 	// s, err := dot.Lexer.Scanner(text)
@@ -66,12 +71,13 @@ func (v *DotLoader) loadDigraph(input lattice.Input) (graph *goiso.Graph, err er
 	if err != nil {
 		return nil, err
 	}
-	return &G, nil
+	return G, nil
 }
 
 type dotParse struct {
 	b *baseLoader
 	d *DotLoader
+	labels *digraph.Labels
 	graphId int
 	curGraph string
 	subgraph int
@@ -132,7 +138,7 @@ func (p *dotParse) loadVertex(n *combos.Node) (err error) {
 	if l, has := attrs["label"]; has {
 		label = l.(string)
 	}
-	return p.b.addVertex(id, label, attrs)
+	return p.b.addVertex(id, p.labels.Color(label), label, attrs)
 }
 
 func (p *dotParse) loadEdge(n *combos.Node) (err error) {
@@ -165,5 +171,5 @@ func (p *dotParse) loadEdge(n *combos.Node) (err error) {
 			break
 		}
 	}
-	return p.b.addEdge(sid, tid, label)
+	return p.b.addEdge(sid, tid, p.labels.Color(label), label)
 }

@@ -16,7 +16,7 @@ import (
 )
 
 import (
-// "github.com/timtadh/sfp/stats"
+	"github.com/timtadh/sfp/types/digraph/digraph"
 )
 
 type EmbSearchStartPoint uint64
@@ -35,7 +35,7 @@ const (
 
 type EmbIterator func(bool) (*Embedding, EmbIterator)
 
-func (sg *SubGraph) Embeddings(indices *Indices) ([]*Embedding, error) {
+func (sg *SubGraph) Embeddings(indices *digraph.Indices) ([]*Embedding, error) {
 	embeddings := make([]*Embedding, 0, 10)
 	err := sg.DoEmbeddings(indices, func(emb *Embedding) error {
 		embeddings = append(embeddings, emb)
@@ -48,7 +48,7 @@ func (sg *SubGraph) Embeddings(indices *Indices) ([]*Embedding, error) {
 
 }
 
-func (sg *SubGraph) DoEmbeddings(indices *Indices, do func(*Embedding) error) error {
+func (sg *SubGraph) DoEmbeddings(indices *digraph.Indices, do func(*Embedding) error) error {
 	ei, _ := sg.IterEmbeddings(RandomStart, indices, nil, nil, nil)
 	for emb, next := ei(false); next != nil; emb, next = next(false) {
 		err := do(emb)
@@ -176,6 +176,15 @@ func (ids *IdNode) has(id, idx int) bool {
 	return false
 }
 
+func (ids *IdNode) hasId(id int) bool {
+	for c := ids; c != nil; c = c.Prev {
+		if id == c.Id {
+			return true
+		}
+	}
+	return false
+}
+
 func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
 	for c := ids; c != nil; c = c.Prev {
 		if idx == c.Idx {
@@ -186,7 +195,7 @@ func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
 	return &IdNode{VrtEmb:VrtEmb{Id: id, Idx: idx}, Prev: ids}
 }
 
-func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *Indices, overlap []map[int]bool) int {
+func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *digraph.Indices, overlap []map[int]bool) int {
 	switch mode {
 	case LeastFrequent:
 		return argMin(len(sg.V), sg.vertexFrequency(indices))
@@ -211,7 +220,7 @@ func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *Indic
 	}
 }
 
-func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *Indices, prunePoints map[VrtEmb]bool, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *VertexEmbeddings) {
+func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.Indices, prunePoints map[VrtEmb]bool, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *VertexEmbeddings) {
 	if len(sg.V) == 0 {
 		ei = func(bool) (*Embedding, EmbIterator) {
 			return nil, nil
@@ -367,9 +376,9 @@ func argMax(length int, f func(int) int) (arg int) {
 	return arg
 }
 
-func (sg *SubGraph) vertexFrequency(indices *Indices) func(int) int {
+func (sg *SubGraph) vertexFrequency(indices *digraph.Indices) func(int) int {
 	return func(idx int) int {
-		return indices.G.ColorFrequency(sg.V[idx].Color)
+		return indices.VertexColorFrequency(sg.V[idx].Color)
 	}
 }
 
@@ -377,21 +386,21 @@ func (sg *SubGraph) vertexConnectedness(idx int) int {
 	return len(sg.Adj[idx])
 }
 
-func (sg *SubGraph) vertexCardinality(indices *Indices) func(int) int {
+func (sg *SubGraph) vertexCardinality(indices *digraph.Indices) func(int) int {
 	return func(idx int) int {
 		return sg.vertexCard(indices, idx)
 	}
 }
 
-func (sg *SubGraph) vertexExtensions(indices *Indices, overlap []map[int]bool) func(int) int {
+func (sg *SubGraph) vertexExtensions(indices *digraph.Indices, overlap []map[int]bool) func(int) int {
 	return func(idx int) int {
 		return sg.extensionsFrom(indices, overlap, idx)
 	}
 }
 
-func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
+func (sg *SubGraph) startEmbeddings(indices *digraph.Indices, startIdx int) []*IdNode {
 	color := sg.V[startIdx].Color
-	embs := make([]*IdNode, 0, indices.G.ColorFrequency(color))
+	embs := make([]*IdNode, 0, indices.VertexColorFrequency(color))
 	for _, gIdx := range indices.ColorIndex[color] {
 		embs = append(embs, &IdNode{VrtEmb:VrtEmb{Id: gIdx, Idx: startIdx}})
 	}
@@ -399,7 +408,7 @@ func (sg *SubGraph) startEmbeddings(indices *Indices, startIdx int) []*IdNode {
 }
 
 // this is really a breadth first search from the given idx
-func (sg *SubGraph) edgeChain(indices *Indices, overlap []map[int]bool, startIdx int) []int {
+func (sg *SubGraph) edgeChain(indices *digraph.Indices, overlap []map[int]bool, startIdx int) []int {
 	other := func(u int, e int) int {
 		s := sg.E[e].Src
 		t := sg.E[e].Targ
@@ -534,7 +543,7 @@ func (ids *IdNode) String() string {
 	return "{" + strings.Join(ritems, ", ") + "}"
 }
 
-func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []map[int]bool, do func(*IdNode)) {
+func (sg *SubGraph) extendEmbedding(indices *digraph.Indices, cur *IdNode, e *Edge, o []map[int]bool, do func(*IdNode)) {
 	doNew := func(newIdx, newId int) {
 		// enforce forward consistency
 		// we need a more performant way to do this
@@ -567,7 +576,7 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 	} else if srcId != -1 {
 		outDeg := sg.OutDeg[e.Targ]
 		inDeg := sg.InDeg[e.Targ]
-		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur, func(targId int) {
+		indices.TargsFromSrc(srcId, e.Color, sg.V[e.Targ].Color, cur.hasId, func(targId int) {
 			if outDeg <= indices.OutDegree(targId) && inDeg <= indices.InDegree(targId) {
 				doNew(e.Targ, targId)
 			}
@@ -575,7 +584,7 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 	} else if targId != -1 {
 		outDeg := sg.OutDeg[e.Src]
 		inDeg := sg.InDeg[e.Src]
-		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur, func(srcId int) {
+		indices.SrcsToTarg(targId, e.Color, sg.V[e.Src].Color, cur.hasId, func(srcId int) {
 			if outDeg <= indices.OutDegree(srcId) && inDeg <= indices.InDegree(srcId) {
 				doNew(e.Src, srcId)
 			}
@@ -585,7 +594,7 @@ func (sg *SubGraph) extendEmbedding(indices *Indices, cur *IdNode, e *Edge, o []
 	}
 }
 
-func (sg *SubGraph) extensionsFrom(indices *Indices, overlap []map[int]bool, idx int, excludeIdxs ...int) int {
+func (sg *SubGraph) extensionsFrom(indices *digraph.Indices, overlap []map[int]bool, idx int, excludeIdxs ...int) int {
 	total := 0
 outer:
 	for _, eid := range sg.Adj[idx] {
@@ -606,13 +615,13 @@ outer:
 	return total
 }
 
-func (sg *SubGraph) vertexCard(indices *Indices, idx int) int {
+func (sg *SubGraph) vertexCard(indices *digraph.Indices, idx int) int {
 	card := 0
 	for _, eid := range sg.Adj[idx] {
 		e := &sg.E[eid]
 		s := sg.V[e.Src].Color
 		t := sg.V[e.Targ].Color
-		card += indices.EdgeCounts[Colors{SrcColor: s, TargColor: t, EdgeColor: e.Color}]
+		card += indices.EdgeCounts[digraph.Colors{SrcColor: s, TargColor: t, EdgeColor: e.Color}]
 	}
 	return card
 }

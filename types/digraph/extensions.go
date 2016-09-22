@@ -7,11 +7,11 @@ import (
 	"github.com/timtadh/data-structures/hashtable"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
-	"github.com/timtadh/goiso"
 )
 
 import (
 	"github.com/timtadh/sfp/stats"
+	"github.com/timtadh/sfp/types/digraph/digraph"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 )
 
@@ -32,7 +32,7 @@ const CACHE_DEBUG = false
 // 5. Add a parallel implementation of extending from embedding list ala original
 //    graple. This will give a benchmarking point of comparison.
 
-func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge, src, targ int) *subgraph.Extension {
+func extensionPoint(G *digraph.Digraph, emb *subgraph.Embedding, e *digraph.Edge, src, targ int) *subgraph.Extension {
 	hasTarg := false
 	hasSrc := false
 	var srcIdx int = len(emb.SG.V)
@@ -64,8 +64,8 @@ func extensionPoint(G *goiso.Graph, emb *subgraph.Embedding, e *goiso.Edge, src,
 		e.Color)
 }
 
-func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extension)) func(*subgraph.Embedding, *goiso.Edge, int, int) int {
-	return func(emb *subgraph.Embedding, e *goiso.Edge, src, targ int) int {
+func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extension)) func(*subgraph.Embedding, *digraph.Edge, int, int) int {
+	return func(emb *subgraph.Embedding, e *digraph.Edge, src, targ int) int {
 		if dt.Indices.EdgeCounts[dt.Indices.Colors(e)] < dt.Support() {
 			return 0
 		}
@@ -126,10 +126,10 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 				}
 			}
 			for _, e := range dt.G.Kids[id] {
-				add(emb, e, idx, -1)
+				add(emb, &dt.G.E[e], idx, -1)
 			}
 			for _, e := range dt.G.Parents[id] {
-				add(emb, e, -1, idx)
+				add(emb, &dt.G.E[e], -1, idx)
 			}
 		}
 		if fisEmbs != nil && !seenIt {
@@ -254,7 +254,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 		}
 	}
 	if CACHE_DEBUG || debug {
-		errors.Logf("CACHE-DEBUG", "ExtsAndEmbs %v", pattern.Pretty(dt.G.Colors))
+		errors.Logf("CACHE-DEBUG", "ExtsAndEmbs %v", pattern.Pretty(dt.Labels))
 	}
 
 	// compute the embeddings
@@ -295,14 +295,17 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	var sets []*hashtable.LinearHash
 	var overlap []map[int]bool
 	var total int
-	if mode&ExtFromEmb == ExtFromEmb {
+	if mode&ExtFromEmb == ExtFromEmb && len(pattern.E) > 0 {
 		// add the supported embeddings to the vertex sets
 		// add the extensions to the extensions set
 		total, overlap, fisEmbs, sets, exts = extensionsFromEmbeddings(dt, pattern, ei, seen)
 		if total == 0 {
-			return 0, nil, nil, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
+			// return 0, nil, nil, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
+			// because we are extending from frequent edges for vertices this
+			// is ok.
+			return 0, nil, nil, nil, nil, nil
 		}
-	} else if mode&ExtFromFreqEdges == ExtFromFreqEdges {
+	} else if mode&ExtFromFreqEdges == ExtFromFreqEdges || len(pattern.E) <= 0 {
 		total, overlap, fisEmbs, sets, exts = extensionsFromFreqEdges(dt, pattern, ei, seen)
 		if total < dt.Support() {
 			return 0, nil, nil, nil, nil, nil
@@ -349,7 +352,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	}
 
 	if CACHE_DEBUG || debug {
-		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.G.Colors))
+		errors.Logf("CACHE-DEBUG", "Caching exts %v embs %v total-embs %v : %v", len(extensions), len(embeddings), total, pattern.Pretty(dt.Labels))
 	}
 	if !debug {
 		err := cacheExtsEmbs(dt, pattern, len(embeddings), extensions, embeddings, overlap, *dropped)

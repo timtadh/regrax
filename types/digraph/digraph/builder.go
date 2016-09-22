@@ -1,6 +1,8 @@
 package digraph
 
-
+import (
+	"github.com/timtadh/data-structures/errors"
+)
 
 type Builder struct {
 	V            Vertices
@@ -31,18 +33,41 @@ func (b *Builder) Build(indexVertex func(*Vertex), indexEdge func(*Edge)) *Digra
 		V: make(Vertices, len(b.V)),
 		E: make(Edges, len(b.E)),
 		Adj: make([][]int, len(b.V)),
+		Kids: make([][]int, len(b.V)),
+		Parents: make([][]int, len(b.V)),
 	}
 	for i := range b.V {
 		g.V[i].Idx = b.V[i].Idx
 		g.V[i].Color = b.V[i].Color
 		g.Adj[i] = make([]int, len(b.Adj[i]))
+		kids := 0
+		parents := 0
 		for j, e := range b.Adj[i] {
 			g.Adj[i][j] = e
+			if b.E[e].Src == i {
+				kids++
+			} else if b.E[e].Targ == i {
+				parents++
+			} else {
+				panic("edge on neither source or target")
+			}
+		}
+		g.Kids[i] = make([]int, 0, kids)
+		g.Parents[i] = make([]int, 0, parents)
+		for _, e := range b.Adj[i] {
+			if b.E[e].Src == i {
+				g.Kids[i] = append(g.Kids[i], e)
+			} else if b.E[e].Targ == i {
+				g.Parents[i] = append(g.Parents[i], e)
+			} else {
+				panic("edge on neither source or target")
+			}
 		}
 		if indexVertex != nil {
 			indexVertex(&g.V[i])
 		}
 	}
+	errors.Logf("DEBUG", "Built vertex indices about to build edge indices")
 	for i := range b.E {
 		g.E[i].Src = b.E[i].Src
 		g.E[i].Targ = b.E[i].Targ
@@ -55,6 +80,9 @@ func (b *Builder) Build(indexVertex func(*Vertex), indexEdge func(*Edge)) *Digra
 }
 
 func (b *Builder) AddVertex(color int) *Vertex {
+	if b == nil {
+		panic("b was nil")
+	}
 	idx := len(b.V)
 	if idx < cap(b.V) {
 		b.V = b.V[:idx+1]

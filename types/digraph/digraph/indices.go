@@ -1,8 +1,8 @@
 package digraph
 
-import ()
-
-import ()
+import (
+	"github.com/timtadh/data-structures/errors"
+)
 
 type IdColorColor struct {
 	Id, EdgeColor, VertexColor int
@@ -22,9 +22,12 @@ type Indices struct {
 	FreqEdges       []Colors               // frequent color triples
 	EdgesFromColor  map[int][]Colors       // freq src-colors -> color triples
 	EdgesToColor    map[int][]Colors       // freq targ-colors -> color triples
+	VertexColors    map[int]int            // the color frequency for vertices
+	EdgeColors      map[int]int            // the color frequency for edges
 }
 
 func NewIndices(b *Builder, minSupport int) *Indices {
+	errors.Logf("DEBUG", "About to build indices %v %v", len(b.V), len(b.E))
 	i := &Indices{
 		ColorIndex:     make(map[int][]int, len(b.VertexColors)),
 		SrcIndex:       make(map[IdColorColor][]int, len(b.E)),
@@ -34,9 +37,14 @@ func NewIndices(b *Builder, minSupport int) *Indices {
 		FreqEdges:      make([]Colors, 0, len(b.E)),
 		EdgesFromColor: make(map[int][]Colors, len(b.VertexColors)),
 		EdgesToColor:   make(map[int][]Colors, len(b.VertexColors)),
+		VertexColors:   b.VertexColors,
+		EdgeColors:     b.EdgeColors,
 	}
 	i.G = b.Build(
 		func(u *Vertex) {
+			if b.VertexColors[u.Color] < minSupport {
+				return
+			}
 			if i.ColorIndex[u.Color] == nil {
 				i.ColorIndex[u.Color] = make([]int, 0, b.VertexColors[u.Color])
 			}
@@ -53,12 +61,6 @@ func NewIndices(b *Builder, minSupport int) *Indices {
 			if i.TargIndex[targKey] == nil {
 				i.TargIndex[targKey] = make([]int, 0, 10)
 			}
-			if i.EdgesFromColor[e.Color] == nil {
-				i.EdgesFromColor[e.Color] = make([]Colors, 0, 10)
-			}
-			if i.EdgesToColor[e.Color] == nil {
-				i.EdgesToColor[e.Color] = make([]Colors, 0, 10)
-			}
 			i.EdgeIndex[edge] = e
 			i.SrcIndex[srcKey] = append(i.SrcIndex[srcKey], e.Targ)
 			i.TargIndex[targKey] = append(i.TargIndex[targKey], e.Src)
@@ -66,6 +68,12 @@ func NewIndices(b *Builder, minSupport int) *Indices {
 			// only add to frequent edges exactly when this colorKey has
 			// surpassed min_support.
 			if i.EdgeCounts[colorKey] == minSupport {
+				if i.EdgesFromColor[e.Color] == nil {
+					i.EdgesFromColor[e.Color] = make([]Colors, 0, 10)
+				}
+				if i.EdgesToColor[e.Color] == nil {
+					i.EdgesToColor[e.Color] = make([]Colors, 0, 10)
+				}
 				i.FreqEdges = append(i.FreqEdges, colorKey)
 				i.EdgesFromColor[colorKey.SrcColor] = append(
 					i.EdgesFromColor[colorKey.SrcColor],
@@ -76,6 +84,14 @@ func NewIndices(b *Builder, minSupport int) *Indices {
 			}
 		})
 	return i
+}
+
+func (i *Indices) VertexColorFrequency(color int) int {
+	return i.VertexColors[color]
+}
+
+func (i *Indices) EdgeColorFrequency(color int) int {
+	return i.VertexColors[color]
 }
 
 func (i *Indices) Colors(e *Edge) Colors {
@@ -94,13 +110,11 @@ func (i *Indices) Degree(id int) int {
 }
 
 func (i *Indices) InDegree(id int) int {
-	panic("re-implement")
-	// return len(i.G.Parents[id])
+	return len(i.G.Parents[id])
 }
 
 func (i *Indices) OutDegree(id int) int {
-	panic("re-implement")
-	// return len(i.G.Kids[id])
+	return len(i.G.Kids[id])
 }
 
 func (indices *Indices) HasEdge(srcId, targId, color int) bool {

@@ -165,7 +165,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 					return
 				}
 				if debug {
-					errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.G.Colors), len(embs), len(exts))
+					errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.Labels), len(embs), len(exts))
 				}
 				if support >= dt.Support() {
 					nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap, dropped), vord}

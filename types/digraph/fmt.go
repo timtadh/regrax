@@ -39,7 +39,7 @@ func (f *Formatter) PatternName(node lattice.Node) string {
 	switch n := node.(type) {
 	case *EmbListNode:
 		if len(n.embeddings) > 0 {
-			return n.Pat.Pretty(n.Dt.G.Colors)
+			return n.Pat.Pretty(n.Dt.Labels)
 		} else {
 			return "0:0"
 		}
@@ -52,7 +52,7 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 	switch n := node.(type) {
 	case *EmbListNode:
 		if len(n.embeddings) > 0 {
-			Pat := n.Pat.Pretty(n.Dt.G.Colors)
+			Pat := n.Pat.Pretty(n.Dt.Labels)
 			allAttrs, err := f.loadAttrs(n.embeddings[0])
 			if err != nil {
 				return "", err
@@ -64,7 +64,7 @@ func (f *Formatter) Pattern(node lattice.Node) (string, error) {
 					attrs[id]["fontsize"] = size
 				}
 			}
-			dot := n.embeddings[0].Dotty(n.Dt.G, attrs)
+			dot := n.embeddings[0].Dotty(n.Dt.Labels, attrs)
 			return fmt.Sprintf("// %s\n\n%s\n", Pat, dot), nil
 		} else {
 			return fmt.Sprintf("// {0:0}\n\ndigraph{}\n"), nil
@@ -90,7 +90,7 @@ func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		embs = append(embs, emb.Dotty(dt.G, allAttrs))
+		embs = append(embs, emb.Dotty(dt.Labels, allAttrs))
 	}
 	return embs, nil
 }
@@ -98,8 +98,9 @@ func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
 func (f *Formatter) loadAttrs(emb *subgraph.Embedding) (map[int]map[string]interface{}, error) {
 	allAttrs := make(map[int]map[string]interface{})
 	for _, id := range emb.Ids {
+		// TIM TODO: This should be .Idx but the NodeAttrs semantics need to be changed to digraph Idx.
 		err := f.g.NodeAttrs.DoFind(
-			int32(f.g.G.V[id].Id),
+			int32(id),
 			func(_ int32, attrs map[string]interface{}) error {
 				allAttrs[id] = attrs
 				return nil

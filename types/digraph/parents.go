@@ -51,7 +51,7 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 			// log and skip?
 			ExtsAndEmbs(dt, parent, nil, set.NewSortedSet(0), nil, dt.Mode, true)
 
-			errors.Logf("WARN", "for node %v parent %v had support %v less than required %v due to automorphism", n, parent.Pretty(dt.G.Colors), support, dt.Support())
+			errors.Logf("WARN", "for node %v parent %v had support %v less than required %v due to automorphism", n, parent.Pretty(dt.Labels), support, dt.Support())
 		} else {
 			nodes = append(nodes, n.New(parent, pexts, pembs, poverlap, punsupEmbs))
 		}
