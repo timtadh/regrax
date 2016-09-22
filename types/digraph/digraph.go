@@ -165,11 +165,11 @@ func (dt *Digraph) Init(b *digraph.Builder, l *digraph.Labels) (err error) {
 	errors.Logf("DEBUG", "computing starting points")
 	for color, _ := range dt.Indices.ColorIndex {
 		sg := subgraph.Build(1, 0).FromVertex(color).Build()
-		_, exts, embs, overlap, dropped, err := ExtsAndEmbs(dt, sg, nil, nil, nil, dt.Mode, false)
+		_, exts, embs, _, _, err := ExtsAndEmbs(dt, sg, nil, nil, nil, dt.Mode, false)
 		if err != nil {
 			return err
 		}
-		n := NewEmbListNode(dt, sg, exts, embs, overlap, dropped)
+		n := NewEmbListNode(dt, sg, exts, embs, nil, nil)
 		dt.lock.Lock()
 		dt.FrequentVertices = append(dt.FrequentVertices, n)
 		dt.lock.Unlock()
