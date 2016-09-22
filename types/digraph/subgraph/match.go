@@ -54,8 +54,9 @@ func (sg *SubGraph) Embedded(indices *digraph.Indices) (found bool, edgeChain []
 	pop := func(stack []entry) (entry, []entry) {
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
+	largestEid = -1
 	for startIdx := 0; startIdx < len(sg.V); startIdx++ {
-		startIdx := sg.searchStartingPoint(MostExtensions, indices, nil)
+		// startIdx := sg.searchStartingPoint(MostExtensions, indices, nil)
 		chain := sg.edgeChain(indices, nil, startIdx)
 		vembs := sg.startEmbeddings(indices, startIdx)
 		stack := make([]entry, 0, len(vembs)*2)
@@ -65,7 +66,6 @@ func (sg *SubGraph) Embedded(indices *digraph.Indices) (found bool, edgeChain []
 		if false {
 			errors.Logf("DEBUG", "stack %v", stack)
 		}
-		largestEid = -1
 		for len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)

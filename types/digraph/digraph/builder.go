@@ -84,7 +84,7 @@ func (b *Builder) AddVertex(color int) *Vertex {
 		panic("b was nil")
 	}
 	idx := len(b.V)
-	if idx < cap(b.V) {
+	if idx < cap(b.V) && idx < cap(b.Adj) {
 		b.V = b.V[:idx+1]
 		b.V[idx].Idx = idx
 		b.V[idx].Color = color
