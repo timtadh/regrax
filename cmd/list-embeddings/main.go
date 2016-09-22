@@ -148,26 +148,26 @@ func run() int {
 	errors.Logf("INFO", "looking for embeddings")
 	for _, graph := range graphs {
 		for _, pattern := range patterns {
-			sg, err := subgraph.ParsePretty(pattern, &graph.G.Colors, graph.G.Labels)
+			sg, err := subgraph.ParsePretty(pattern, graph.Labels)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 				return 1
 			}
-			if sg.Pretty(graph.G.Colors) != pattern {
+			if sg.Pretty(graph.Labels) != pattern {
 				errors.Logf("ERROR", "bad load of pattern")
 				errors.Logf("ERROR", "expected %v", pattern)
-				errors.Logf("ERROR", "got      %v", sg.Pretty(graph.G.Colors))
+				errors.Logf("ERROR", "got      %v", sg.Pretty(graph.Labels))
 				return 1
 			}
-			errors.Logf("INFO", "cur sg: %v", sg.Pretty(graph.G.Colors))
+			errors.Logf("INFO", "cur sg: %v", sg.Pretty(graph.Labels))
 			ei, _ := sg.IterEmbeddings(subgraph.MostConnected, graph.Indices, nil, nil, nil)
 			c := 0
 			for _, next := ei(false); next != nil; _, next = next(false) {
 				c++
 			}
 			errors.Logf("EMB", "total embs: %v", c)
-			fmt.Println(sg.Dotty(graph.G.Colors, nil, nil))
+			fmt.Println(sg.Dotty(graph.Labels, nil, nil))
 		}
 	}
 

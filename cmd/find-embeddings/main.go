@@ -229,7 +229,7 @@ func run() int {
 	totalEdges := 0.0
 	for _, graph := range graphs {
 		for _, pattern := range patterns {
-			sg, err := subgraph.ParsePretty(pattern, &graph.G.Colors, graph.G.Labels)
+			sg, err := subgraph.ParsePretty(pattern, graph.Labels)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "There was error during the parsing the pattern '%v'\n", pattern)
 				fmt.Fprintf(os.Stderr, "%v\n", err)

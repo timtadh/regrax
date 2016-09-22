@@ -9,7 +9,6 @@ import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
-	"github.com/timtadh/goiso"
 )
 
 import (
@@ -18,6 +17,7 @@ import (
 	"github.com/timtadh/sfp/miners/fastmax"
 	"github.com/timtadh/sfp/miners/reporters"
 	"github.com/timtadh/sfp/types/digraph"
+	dg "github.com/timtadh/sfp/types/digraph/digraph"
 	"github.com/timtadh/sfp/types/itemset"
 )
 
@@ -98,28 +98,28 @@ func digraphCommonAncestor(patterns []lattice.Pattern) (lattice.Pattern, error) 
 		return nil, err
 	}
 
+	var labels *dg.Labels = patterns[0].(*digraph.SubgraphPattern).Dt.Labels
 	// construct the digraph from the patterns
-	Graph := goiso.NewGraph(10, 10)
-	G := &Graph
+	b := dg.Build(10, 10)
 	offset := 0
 	for gid, pat := range patterns {
 		sn := pat.(*digraph.SubgraphPattern)
 		for i := range sn.Pat.V {
 			vid := offset + i
-			G.AddVertex(vid, sn.Dt.G.Colors[sn.Pat.V[i].Color])
+			b.AddVertex(sn.Pat.V[i].Color)
 			err := dt.NodeAttrs.Add(int32(vid), map[string]interface{}{"gid": gid})
 			if err != nil {
 				return nil, err
 			}
 		}
 		for i := range sn.Pat.E {
-			G.AddEdge(&G.V[offset+sn.Pat.E[i].Src], &G.V[offset+sn.Pat.E[i].Targ], sn.Dt.G.Colors[sn.Pat.E[i].Color])
+			b.AddEdge(&b.V[offset+sn.Pat.E[i].Src], &b.V[offset+sn.Pat.E[i].Targ], sn.Pat.E[i].Color)
 		}
 		offset += len(sn.Pat.V)
 	}
 
 	// Initialize the *Digraph with the graph G being used.
-	err = dt.Init(G)
+	err = dt.Init(b, labels)
 	if err != nil {
 		return nil, err
 	}
