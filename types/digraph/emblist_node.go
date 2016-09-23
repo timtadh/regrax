@@ -7,7 +7,6 @@ import (
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
-	"github.com/timtadh/goiso"
 )
 
 import (
@@ -22,10 +21,6 @@ type EmbListNode struct {
 	overlap    []map[int]bool
 	unsupEmbs  subgraph.VertexEmbeddings
 	unsupExts  *set.SortedSet
-}
-
-type Embedding struct {
-	sg *goiso.SubGraph
 }
 
 func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs subgraph.VertexEmbeddings) *EmbListNode {

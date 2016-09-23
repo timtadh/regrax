@@ -35,9 +35,6 @@ func (b *Builder) From(sg *SubGraph) *Builder {
 	return b
 }
 
-// Note since *SubGraphs are constructed from *goiso.SubGraphs they are in
-// canonical ordering. This is a necessary assumption for Embeddings() to
-// work properly.
 func FromGraph(g *digraph.Digraph) *Builder {
 	if g == nil {
 		return &Builder{
