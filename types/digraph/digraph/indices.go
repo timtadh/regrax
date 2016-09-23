@@ -30,11 +30,11 @@ func NewIndices(b *Builder, minSupport int) *Indices {
 	errors.Logf("DEBUG", "About to build indices %v %v", len(b.V), len(b.E))
 	i := &Indices{
 		ColorIndex:     make(map[int][]int, len(b.VertexColors)),
-		SrcIndex:       make(map[IdColorColor][]int, len(b.E)),
-		TargIndex:      make(map[IdColorColor][]int, len(b.E)),
+		SrcIndex:       make(map[IdColorColor][]int, len(b.V)),
+		TargIndex:      make(map[IdColorColor][]int, len(b.V)),
 		EdgeIndex:      make(map[Edge]*Edge, len(b.E)),
-		EdgeCounts:     make(map[Colors]int, len(b.E)),
-		FreqEdges:      make([]Colors, 0, len(b.E)),
+		EdgeCounts:     make(map[Colors]int, len(b.EdgeColors)),
+		FreqEdges:      make([]Colors, 0, len(b.EdgeColors)),
 		EdgesFromColor: make(map[int][]Colors, len(b.VertexColors)),
 		EdgesToColor:   make(map[int][]Colors, len(b.VertexColors)),
 		VertexColors:   b.VertexColors,
@@ -56,10 +56,10 @@ func NewIndices(b *Builder, minSupport int) *Indices {
 			targKey := IdColorColor{e.Targ, e.Color, b.V[e.Src].Color}
 			colorKey := Colors{b.V[e.Src].Color, b.V[e.Targ].Color, e.Color}
 			if i.SrcIndex[srcKey] == nil {
-				i.SrcIndex[srcKey] = make([]int, 0, 10)
+				i.SrcIndex[srcKey] = make([]int, 0, len(b.Adj[e.Src]))
 			}
 			if i.TargIndex[targKey] == nil {
-				i.TargIndex[targKey] = make([]int, 0, 10)
+				i.TargIndex[targKey] = make([]int, 0, len(b.Adj[e.Targ]))
 			}
 			i.EdgeIndex[edge] = e
 			i.SrcIndex[srcKey] = append(i.SrcIndex[srcKey], e.Targ)

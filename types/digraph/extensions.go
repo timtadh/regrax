@@ -364,7 +364,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 }
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool, unsupEmbs subgraph.VertexEmbeddings) error {
-	if dt.Mode & Caching == 0 && len(pattern.E) > 0 {
+	if dt.Mode & Caching == 0 {
 		return nil
 	}
 	dt.lock.Lock()
@@ -418,7 +418,7 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 }
 
 func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, subgraph.VertexEmbeddings, error) {
-	if dt.Mode & Caching == 0 && len(pattern.E) > 0 {
+	if dt.Mode & Caching == 0 {
 		return false, 0, nil, nil, nil, nil, nil
 	}
 	dt.lock.RLock()
