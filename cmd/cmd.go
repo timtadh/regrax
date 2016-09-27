@@ -356,6 +356,7 @@ Reporters
     log                       log the samples
     file                      write the samples to a file in the output dir
     dir                       write samples to a nested dir format
+    count                     write the count of samples to a file
     unique                    takes an "inner reporter" but only passes the
                                 unique samples to inner reporter. (useful in
                                 conjunction with --non-unique)
@@ -394,6 +395,10 @@ Reporters
         -d, dir-name=<name>   name of the directory.
         --show-pr             show the selection probability (when applicable)
                               NB: may cause extra (and excessive computation)
+
+    count Options
+        -f, --filename=<name> name of the file to write the count.
+                              (default: count)
 
     unique Options
         --histogram=<name>    if set unique will write the histogram of how many
@@ -1006,6 +1011,40 @@ func dirReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatte
 	return fr, args
 }
 
+func countReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hf:",
+		[]string{
+			"help",
+            "filename=",
+		},
+	)
+	if err != nil {
+		errors.Logf("ERROR", "%v", err)
+		Usage(ErrorCodes["opts"])
+	}
+	filename := "count"
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+        case "-f", "--filename":
+            filename = oa.Arg()
+		default:
+			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	r, err := reporters.NewCount(conf, filename)
+	if err != nil {
+		errors.Logf("ERROR", "There was error creating output files\n")
+		errors.Logf("ERROR", "%v", err)
+		os.Exit(1)
+	}
+	return r, args
+}
+
 func chainReporter(reports map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
@@ -1288,6 +1327,7 @@ var Reporters map[string]Reporter = map[string]Reporter{
 	"log":          logReporter,
 	"file":         fileReporter,
 	"dir":          dirReporter,
+	"count":        countReporter,
 	"chain":        chainReporter,
 	"unique":       uniqueReporter,
 	"max":          maxReporter,
