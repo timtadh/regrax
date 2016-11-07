@@ -38,6 +38,7 @@ import (
 
 import (
 	"github.com/timtadh/sfp/afp/miners/dfs"
+	"github.com/timtadh/sfp/afp/miners/index_speed"
 	"github.com/timtadh/sfp/afp/miners/qsplor"
 	"github.com/timtadh/sfp/afp/miners/vsigram"
 	"github.com/timtadh/sfp/cmd"
@@ -124,7 +125,7 @@ func vsigramMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 func dfsMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hc",
+		"h",
 		[]string{
 			"help",
 		},
@@ -143,6 +144,30 @@ func dfsMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 		}
 	}
 	return dfs.NewMiner(conf), args
+}
+
+func indexSpeedMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"h",
+		[]string{
+			"help",
+		},
+	)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		cmd.Usage(cmd.ErrorCodes["opts"])
+	}
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			cmd.Usage(0)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
+			cmd.Usage(cmd.ErrorCodes["opts"])
+		}
+	}
+	return index_speed.NewMiner(conf), args
 }
 
 func qsplorMode(argv []string, conf *config.Config) (miners.Miner, []string) {
@@ -194,9 +219,10 @@ func main() {
 
 func run() int {
 	modes := map[string]cmd.Mode{
-		"dfs":     dfsMode,
-		"vsigram": vsigramMode,
-		"qsplor":  qsplorMode,
+		"dfs":         dfsMode,
+		"index-speed": indexSpeedMode,
+		"vsigram":     vsigramMode,
+		"qsplor":      qsplorMode,
 	}
 
 	args, optargs, err := getopt.GetOpt(
