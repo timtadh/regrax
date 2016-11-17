@@ -98,7 +98,6 @@ func (f *Formatter) Embeddings(node lattice.Node) ([]string, error) {
 func (f *Formatter) loadAttrs(emb *subgraph.Embedding) (map[int]map[string]interface{}, error) {
 	allAttrs := make(map[int]map[string]interface{})
 	for _, id := range emb.Ids {
-		// TIM TODO: This should be .Idx but the NodeAttrs semantics need to be changed to digraph Idx.
 		err := f.g.NodeAttrs.DoFind(
 			int32(id),
 			func(_ int32, attrs map[string]interface{}) error {

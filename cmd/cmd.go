@@ -1272,6 +1272,52 @@ func skipReporter(reports map[string]Reporter, argv []string, fmtr lattice.Forma
 	return r, args
 }
 
+func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
+	args, optargs, err := getopt.GetOpt(
+		argv,
+		"hf:e:a:",
+		[]string{
+			"help",
+			"filename=",
+			"epsilon=",
+			"attr=",
+		},
+	)
+	if err != nil {
+		errors.Logf("ERROR", "%v", err)
+		Usage(ErrorCodes["opts"])
+	}
+	filename := "clusters"
+	attr := ""
+	epsilon := 0.2
+	for _, oa := range optargs {
+		switch oa.Opt() {
+		case "-h", "--help":
+			Usage(0)
+		case "-f", "--filename":
+			filename = oa.Arg()
+		case "-a", "--attr":
+			attr = oa.Arg()
+		case "-e", "--epsilon":
+			epsilon = ParseFloat(oa.Arg())
+		default:
+			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
+			Usage(ErrorCodes["opts"])
+		}
+	}
+	if attr == "" {
+		errors.Logf("ERROR", "You must supply --attr=<attr> to dbscan")
+		Usage(ErrorCodes["opts"])
+	}
+	r, err := reporters.NewDbScan(conf, filename, attr, epsilon)
+	if err != nil {
+		errors.Logf("ERROR", "There was error creating output files\n")
+		errors.Logf("ERROR", "%v", err)
+		os.Exit(1)
+	}
+	return r, args
+}
+
 func heapProfileReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
@@ -1333,6 +1379,7 @@ var Reporters map[string]Reporter = map[string]Reporter{
 	"max":          maxReporter,
 	"canon-max":    canonMaxReporter,
 	"skip":         skipReporter,
+	"dbscan":       dbscanReporter,
 	"heap-profile": heapProfileReporter,
 }
 
