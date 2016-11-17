@@ -15,7 +15,7 @@ import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners/fastmax"
-	"github.com/timtadh/sfp/miners/reporters"
+	"github.com/timtadh/sfp/reporters"
 	"github.com/timtadh/sfp/types/digraph"
 	dg "github.com/timtadh/sfp/types/digraph/digraph"
 	"github.com/timtadh/sfp/types/itemset"

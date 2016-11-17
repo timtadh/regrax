@@ -14,7 +14,7 @@ import (
 	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/miners/musk"
 	"github.com/timtadh/sfp/miners/ospace"
-	"github.com/timtadh/sfp/miners/reporters"
+	"github.com/timtadh/sfp/reporters"
 	"github.com/timtadh/sfp/miners/walker"
 )
 

@@ -52,7 +52,7 @@ import (
 	"github.com/timtadh/sfp/config"
 	"github.com/timtadh/sfp/lattice"
 	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/miners/reporters"
+	"github.com/timtadh/sfp/reporters"
 	"github.com/timtadh/sfp/types/digraph"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
 	"github.com/timtadh/sfp/types/itemset"
