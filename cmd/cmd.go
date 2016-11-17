@@ -1309,7 +1309,7 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 		errors.Logf("ERROR", "You must supply --attr=<attr> to dbscan")
 		Usage(ErrorCodes["opts"])
 	}
-	r, err := reporters.NewDbScan(conf, filename, attr, epsilon)
+	r, err := reporters.NewDbScan(conf, fmtr, filename, attr, epsilon)
 	if err != nil {
 		errors.Logf("ERROR", "There was error creating output files\n")
 		errors.Logf("ERROR", "%v", err)

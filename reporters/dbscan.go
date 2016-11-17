@@ -1,6 +1,10 @@
 package reporters
 
-import ()
+import (
+	"fmt"
+	"os"
+	"encoding/json"
+)
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -41,14 +45,16 @@ type cluster []*clusterNode
 type DbScan struct {
 	clusters   []cluster
 	config     *config.Config
+	fmtr       lattice.Formatter
 	filename   string
 	attr       string
 	epsilon    float64
 }
 
-func NewDbScan(c *config.Config, filename string, attr string, epsilon float64) (*DbScan, error) {
+func NewDbScan(c *config.Config, fmtr lattice.Formatter, filename string, attr string, epsilon float64) (*DbScan, error) {
 	r := &DbScan{
 		config:    c,
+		fmtr:      fmtr,
 		filename:  filename,
 		attr:      attr,
 		epsilon:   epsilon,
@@ -75,12 +81,26 @@ func (r *DbScan) Report(n lattice.Node) error {
 }
 
 func (r *DbScan) Close() error {
+	f, err := os.Create(r.config.OutputFile(r.filename))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "")
 	for i, cluster := range r.clusters {
-		errors.Logf("DBSCAN", "cluster %d %d", i, len(cluster))
 		for _, cn := range cluster {
-			errors.Logf("DBSCAN", "%d %v %v", i, cn.n, cn.items)
+			x := map[string]interface{}{
+				"cluster": i,
+				"name": r.fmtr.PatternName(cn.n),
+				"items": fmt.Sprintf("%v", cn.items),
+			}
+			err := enc.Encode(x)
+			if err != nil {
+				return err
+			}
 		}
-		errors.Logf("DBSCAN", "")
 	}
 	return nil
 }
