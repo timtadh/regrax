@@ -1291,7 +1291,7 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 	filename := "clusters"
 	attr := ""
 	epsilon := 0.2
-	gamma := 0.2
+	gamma := 1.5
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -1493,7 +1493,6 @@ func Main(args []string, conf *config.Config, modes map[string]Mode) int {
 		fmt.Fprintf(os.Stderr, "unconsumed commandline options: '%v'\n", strings.Join(args, " "))
 		Usage(ErrorCodes["opts"])
 	}
-
 
 	return Run(dt, fmtr, mode, rptr)
 }
