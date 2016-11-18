@@ -62,6 +62,11 @@ func (n *SubgraphPattern) Label() []byte {
 	return n.Pat.Label()
 }
 
+func (n *SubgraphPattern) Distance(p lattice.Pattern) float64 {
+	o := p.(*SubgraphPattern)
+	return n.Pat.Metric(o.Pat)
+}
+
 func (n *SubgraphPattern) String() string {
 	sg := n.Pat
 	V := make([]string, 0, len(sg.V))

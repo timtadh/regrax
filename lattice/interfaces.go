@@ -46,6 +46,7 @@ type Pattern interface {
 	types.Hashable
 	Label() []byte
 	Level() int
+	Distance(Pattern) float64
 }
 
 type Formatter interface {

@@ -41,8 +41,8 @@ func (sg *SubGraph) Metric(o *SubGraph) float64 {
 		log.Fatal(err)
 	}
 	norm := W2.DenseMatrix().TwoNorm()
-	denom := float64(len(rlabels))
-	mean := norm/denom
+	size := float64(len(rlabels)*len(rlabels))
+	mean := norm/size
 	metric := math.Sqrt(mean)
 	return metric
 }
@@ -53,7 +53,7 @@ func (sg *SubGraph) LE(labels map[int]int) (L, E matrix.Matrix) {
 	L = matrix.Zeros(len(labels), VE)
 	E = matrix.Zeros(VE, VE)
 	for i := range sg.V {
-		L.Set(labels[sg.V[i].Color], i, 1)
+		L.Set(labels[sg.V[i].Color], i, 2)
 	}
 	for i := range sg.E {
 		L.Set(labels[sg.E[i].Color], V + i, 1)

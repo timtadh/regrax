@@ -1275,11 +1275,12 @@ func skipReporter(reports map[string]Reporter, argv []string, fmtr lattice.Forma
 func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Formatter, conf *config.Config) (miners.Reporter, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"hf:e:a:",
+		"hf:e:g:a:",
 		[]string{
 			"help",
 			"filename=",
 			"epsilon=",
+			"gamma=",
 			"attr=",
 		},
 	)
@@ -1290,6 +1291,7 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 	filename := "clusters"
 	attr := ""
 	epsilon := 0.2
+	gamma := 0.2
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
@@ -1300,6 +1302,8 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 			attr = oa.Arg()
 		case "-e", "--epsilon":
 			epsilon = ParseFloat(oa.Arg())
+		case "-g", "--gamma":
+			gamma = ParseFloat(oa.Arg())
 		default:
 			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -1309,7 +1313,7 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 		errors.Logf("ERROR", "You must supply --attr=<attr> to dbscan")
 		Usage(ErrorCodes["opts"])
 	}
-	r, err := reporters.NewDbScan(conf, fmtr, filename, attr, epsilon)
+	r, err := reporters.NewDbScan(conf, fmtr, filename, attr, epsilon, gamma)
 	if err != nil {
 		errors.Logf("ERROR", "There was error creating output files\n")
 		errors.Logf("ERROR", "%v", err)

@@ -8,6 +8,7 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/exc"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
 )
@@ -354,6 +355,16 @@ func (i *Pattern) Level() int {
 func (n *Node) Lattice() (*lattice.Lattice, error) {
 	return nil, &lattice.NoLattice{}
 }
+
+func (a *Pattern) Distance(p lattice.Pattern) float64 {
+	b := p.(*Pattern)
+	i, err := a.Items.Intersect(b.Items)
+	exc.ThrowOnError(err)
+	inter := float64(i.Size())
+	return 1.0 - (inter / (float64(a.Items.Size()) + float64(b.Items.Size()) - inter))
+}
+
+
 
 func (i *Pattern) Equals(o types.Equatable) bool {
 	switch b := o.(type) {
