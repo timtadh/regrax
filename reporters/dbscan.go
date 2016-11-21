@@ -148,15 +148,11 @@ func add(clusters []cluster, cn *clusterNode, epsilon float64, sim func(a, b *cl
 	}
 	if near.Size() <= 0 {
 		return append(clusters, cluster{cn})
-	} else {
-		errors.Logf("DBSCAN", "%v %v %v", min_sim, cn.pattern, min_item.pattern)
-		clusters[min_near] = append(clusters[min_near], cn)
 	}
-	// else {
-	// 	errors.Logf("DBSCAN", "%v %v %v", min_sim, cn.pattern, min_item.pattern)
-	// 	clusters[min_near] = append(clusters[min_near], cn)
-	// 	return clusters
-	// }
+	if false {
+		errors.Logf("DBSCAN", "%v %v %v", min_sim, cn.pattern, min_item.pattern)
+	}
+	clusters[min_near] = append(clusters[min_near], cn)
 	prev := -1
 	for x, next := near.ItemsInReverse()(); next != nil; x, next = next() {
 		cur := int(x.(types.Int))
