@@ -1291,7 +1291,7 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 	filename := "clusters"
 	attr := ""
 	epsilon := 0.2
-	gamma := 1.5
+	gamma := 0.2
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":

@@ -6,6 +6,7 @@ import (
 )
 
 import (
+	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/matrix"
 )
 
@@ -44,6 +45,10 @@ func (sg *SubGraph) Metric(o *SubGraph) float64 {
 	size := float64(len(rlabels)*len(rlabels))
 	mean := norm/size
 	metric := math.Sqrt(mean)
+	errors.Logf("SIM", "sg    %v", sg)
+	errors.Logf("SIM", "o     %v", o)
+	errors.Logf("SIM", "score %v", metric)
+	errors.Logf("SIM", "W2 \n%v", W2)
 	return metric
 }
 
@@ -53,7 +58,7 @@ func (sg *SubGraph) LE(labels map[int]int) (L, E matrix.Matrix) {
 	L = matrix.Zeros(len(labels), VE)
 	E = matrix.Zeros(VE, VE)
 	for i := range sg.V {
-		L.Set(labels[sg.V[i].Color], i, 2)
+		L.Set(labels[sg.V[i].Color], i, 1)
 	}
 	for i := range sg.E {
 		L.Set(labels[sg.E[i].Color], V + i, 1)

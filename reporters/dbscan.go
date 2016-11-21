@@ -23,6 +23,7 @@ type clusterNode struct {
 	pattern  lattice.Pattern
 	name     string
 	items    types.Set
+	labels   types.Set
 }
 
 func newClusterNode(fmtr lattice.Formatter, n lattice.Node, attr string) (*clusterNode, error) {
@@ -30,7 +31,11 @@ func newClusterNode(fmtr lattice.Formatter, n lattice.Node, attr string) (*clust
 	if err != nil {
 		return nil, err
 	}
-	cn := &clusterNode{n.Pattern(), fmtr.PatternName(n), items}
+	labels, err := labelset(n)
+	if err != nil {
+		return nil, err
+	}
+	cn := &clusterNode{n.Pattern(), fmtr.PatternName(n), items, labels}
 	return cn, nil
 }
 
@@ -41,6 +46,10 @@ func structureSimilarity(a, b *clusterNode) float64 {
 
 func attrSimilarity(a, b *clusterNode) float64 {
 	return jaccardSetSimilarity(a.items, b.items)
+}
+
+func labelSimilarity(a, b *clusterNode) float64 {
+	return jaccardSetSimilarity(a.labels, b.labels)
 }
 
 func jaccardSetSimilarity(a, b types.Set) float64 {
@@ -79,8 +88,43 @@ func (r *DbScan) Report(n lattice.Node) error {
 	if err != nil {
 		return err
 	}
-	errors.Logf("DBSCAN", "items %v", cn.items)
-	r.clusters = add(r.clusters, cn, r.epsilon, attrSimilarity)
+	// errors.Logf("DBSCAN", "items %v", cn.items)
+	// r.clusters = add(r.clusters, cn, r.epsilon, attrSimilarity)
+	// r.clusters = add(r.clusters, cn, r.gamma, structureSimilarity)
+	r.clusters = add(r.clusters, cn, r.epsilon, labelSimilarity)
+	return nil
+}
+
+func (r *DbScan) Close() error {
+	f, err := os.Create(r.config.OutputFile(r.filename))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "")
+	for i := range r.clusters {
+		groups := make([]cluster, 0, 10)
+		for _, cn := range r.clusters[i] {
+			groups = add(groups, cn, r.gamma, structureSimilarity)
+			// groups = add(groups, cn, r.epsilon, attrSimilarity)
+		}
+		for j, cluster := range groups {
+			for _, cn := range cluster {
+				x := map[string]interface{}{
+					"cluster": i,
+					"group": j,
+					"name": cn.name,
+					"items": fmt.Sprintf("%v", cn.items),
+				}
+				err := enc.Encode(x)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -107,15 +151,15 @@ func add(clusters []cluster, cn *clusterNode, epsilon float64, sim func(a, b *cl
 	} else {
 		errors.Logf("DBSCAN", "%v %v %v", min_sim, cn.pattern, min_item.pattern)
 		clusters[min_near] = append(clusters[min_near], cn)
-		return clusters
 	}
-
+	// else {
+	// 	errors.Logf("DBSCAN", "%v %v %v", min_sim, cn.pattern, min_item.pattern)
+	// 	clusters[min_near] = append(clusters[min_near], cn)
+	// 	return clusters
+	// }
 	prev := -1
 	for x, next := near.ItemsInReverse()(); next != nil; x, next = next() {
 		cur := int(x.(types.Int))
-		if prev == -1 {
-			clusters[cur] = append(clusters[cur], cn)
-		}
 		if prev >= 0 {
 			clusters[cur] = append(clusters[cur], clusters[prev]...)
 			clusters = remove(clusters, prev)
@@ -136,38 +180,6 @@ func remove(list []cluster, i int) []cluster {
 	}
 	list[len(list)-1] = nil
 	return list[:len(list)-1]
-}
-
-func (r *DbScan) Close() error {
-	f, err := os.Create(r.config.OutputFile(r.filename))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	enc := json.NewEncoder(f)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "")
-	for i := range r.clusters {
-		groups := make([]cluster, 0, 10)
-		for _, cn := range r.clusters[i] {
-			groups = add(groups, cn, r.gamma, structureSimilarity)
-		}
-		for j, cluster := range groups {
-			for _, cn := range cluster {
-				x := map[string]interface{}{
-					"cluster": i,
-					"group": j,
-					"name": cn.name,
-					"items": fmt.Sprintf("%v", cn.items),
-				}
-				err := enc.Encode(x)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func itemset(node lattice.Node, attr string) (types.Set, error) {
@@ -210,4 +222,26 @@ func digraphItemset(n *digraph.EmbListNode, attr string) (types.Set, error) {
 	}
 	return s, nil
 }
+
+func labelset(node lattice.Node) (types.Set, error) {
+	switch n := node.(type) {
+	case *digraph.EmbListNode:
+		return digraphLabelset(n)
+	default:
+		return nil, errors.Errorf("DBSCAN does not yet support %T", n)
+	}
+}
+
+func digraphLabelset(n *digraph.EmbListNode) (types.Set, error) {
+	p := n.Pat
+	s := set.NewSortedSet(len(p.V) + len(p.E))
+	for i := range p.V {
+		s.Add(types.Int(p.V[i].Color))
+	}
+	for i := range p.E {
+		s.Add(types.Int(p.E[i].Color))
+	}
+	return s, nil
+}
+
 
