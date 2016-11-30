@@ -231,9 +231,10 @@ func (r *DbScan) metrics(random []cluster) error {
 	enc := json.NewEncoder(f)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "")
-	if len(r.clusters) == r.items {
+	if len(r.clusters) == r.items || len(r.clusters) <= 1 {
 		x := map[string]interface{} {
 			"items": r.items,
+			"clusters": len(r.clusters),
 		}
 		return enc.Encode(x)
 	}
