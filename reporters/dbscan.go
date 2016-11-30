@@ -231,6 +231,12 @@ func (r *DbScan) metrics(random []cluster) error {
 	enc := json.NewEncoder(f)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "")
+	if len(r.clusters) == r.items {
+		x := map[string]interface{} {
+			"items": r.items,
+		}
+		return enc.Encode(x)
+	}
 	intraLabel := intradist(r.clusters, labelSimilarity)
 	interLabel := interdist(r.clusters, labelSimilarity)
 	intraAttr := intradist(r.clusters, attrSimilarity)
