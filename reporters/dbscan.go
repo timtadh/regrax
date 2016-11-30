@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"encoding/json"
+	"math"
+	"math/rand"
 )
 
 import (
@@ -61,21 +63,112 @@ func jaccardSetSimilarity(a, b types.Set) float64 {
 
 type cluster []*clusterNode
 
+func correlation(clusters []cluster, metric func(a, b *clusterNode) float64) float64 {
+	var totalDist float64
+	var totalIncidence float64
+	var totalItems float64
+	for x, X := range clusters {
+		for i := 0; i < len(X); i++ {
+			for y := x; y < len(clusters); y++ {
+				Y := clusters[y]
+				for j := i + 1; j < len(Y); j++ {
+					totalDist += metric(X[i], Y[j])
+					if x == y {
+						totalIncidence++
+					}
+					totalItems++
+				}
+			}
+		}
+	}
+	meanDist := totalDist/totalItems
+	meanIncidence := totalIncidence/totalItems
+	var sumOfSqDist float64
+	var sumOfSqIncidence float64
+	var sumOfProduct float64
+	for x, X := range clusters {
+		for i := 0; i < len(X); i++ {
+			for y := x; y < len(clusters); y++ {
+				Y := clusters[y]
+				for j := i + 1; j < len(Y); j++ {
+					dist := metric(X[i], Y[j])
+					var incidence float64
+					if x == y {
+						incidence = 1.0
+					}
+					distDiff := (dist - meanDist)
+					incidenceDiff := (incidence - meanIncidence)
+					sumOfSqDist += distDiff*distDiff
+					sumOfSqIncidence += incidenceDiff*incidenceDiff
+					sumOfProduct += distDiff*incidenceDiff
+				}
+			}
+		}
+	}
+	return sumOfProduct / (sumOfSqDist * sumOfSqIncidence)
+}
+
+func intradist(clusters []cluster, metric func(a, b *clusterNode) float64) float64 {
+	var totalDist float64
+	for _, X := range clusters {
+		var dist float64
+		for i := 0; i < len(X); i++ {
+			for j := i + 1; j < len(X); j++ {
+				dist += metric(X[i], X[j])
+			}
+		}
+		if len(X) > 0 {
+			totalDist += dist/float64(len(X))
+		}
+	}
+	return totalDist
+}
+
+func interdist(clusters []cluster, metric func(a, b *clusterNode) float64) float64 {
+	var totalDist float64
+	for x, X := range clusters {
+		var dist float64
+		for i := 0; i < len(X); i++ {
+			for y := x; y < len(clusters); y++ {
+				Y := clusters[y]
+				var to float64
+				for j := i + 1; j < len(Y); j++ {
+					if y == x {
+						continue
+					}
+					for j := 0; j < len(Y); j++ {
+						to += metric(X[i], Y[j])
+					}
+				}
+				if len(Y) > 0 {
+					dist += to/float64(len(Y))
+				}
+			}
+		}
+		if len(X) > 0 {
+			totalDist += dist/float64(len(X))
+		}
+	}
+	return totalDist
+}
+
 type DbScan struct {
 	clusters   []cluster
+	items      int
 	config     *config.Config
 	fmtr       lattice.Formatter
-	filename   string
+	clustersName, metricsName   string
 	attr       string
 	epsilon    float64
 	gamma      float64
 }
 
-func NewDbScan(c *config.Config, fmtr lattice.Formatter, filename string, attr string, epsilon, gamma float64) (*DbScan, error) {
+func NewDbScan(c *config.Config, fmtr lattice.Formatter, clusters, metrics string, attr string, epsilon, gamma float64) (*DbScan, error) {
 	r := &DbScan{
 		config:    c,
 		fmtr:      fmtr,
-		filename:  filename,
+		clustersName:  clusters,
+		metricsName:  metrics,
 		attr:      attr,
 		epsilon:   epsilon,
 		gamma:     gamma,
@@ -88,15 +181,13 @@ func (r *DbScan) Report(n lattice.Node) error {
 	if err != nil {
 		return err
 	}
-	// errors.Logf("DBSCAN", "items %v", cn.items)
-	// r.clusters = add(r.clusters, cn, r.epsilon, attrSimilarity)
-	// r.clusters = add(r.clusters, cn, r.gamma, structureSimilarity)
+	r.items++
 	r.clusters = add(r.clusters, cn, r.epsilon, labelSimilarity)
 	return nil
 }
 
 func (r *DbScan) Close() error {
-	f, err := os.Create(r.config.OutputFile(r.filename))
+	f, err := os.Create(r.config.OutputFile(r.clustersName))
 	if err != nil {
 		return err
 	}
@@ -104,11 +195,12 @@ func (r *DbScan) Close() error {
 	enc := json.NewEncoder(f)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "")
+	random := make([]cluster, rand.Intn(int(float64(len(r.clusters))*1.2)) + 2)
 	for i := range r.clusters {
 		groups := make([]cluster, 0, 10)
 		for _, cn := range r.clusters[i] {
-			groups = add(groups, cn, r.gamma, structureSimilarity)
-			// groups = add(groups, cn, r.epsilon, attrSimilarity)
+			// groups = add(groups, cn, r.gamma, structureSimilarity)
+			groups = add(groups, cn, r.epsilon, attrSimilarity)
 		}
 		for j, cluster := range groups {
 			for _, cn := range cluster {
@@ -122,10 +214,71 @@ func (r *DbScan) Close() error {
 				if err != nil {
 					return err
 				}
+				n := rand.Intn(len(random))
+				random[n] = append(random[n], cn)
 			}
 		}
 	}
-	return nil
+	return r.metrics(random)
+}
+
+func (r *DbScan) metrics(random []cluster) error {
+	f, err := os.Create(r.config.OutputFile(r.metricsName))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "")
+	intraLabel := intradist(r.clusters, labelSimilarity)
+	interLabel := interdist(r.clusters, labelSimilarity)
+	intraAttr := intradist(r.clusters, attrSimilarity)
+	interAttr := interdist(r.clusters, attrSimilarity)
+	intraLabelRand := intradist(random, labelSimilarity)
+	interLabelRand := interdist(random, labelSimilarity)
+	intraAttrRand := intradist(random, attrSimilarity)
+	interAttrRand := interdist(random, attrSimilarity)
+	stderr := func(a, b float64) float64 {
+		return math.Sqrt((a-b)*(a-b))
+	}
+	x := map[string]interface{} {
+		"items": r.items,
+		"cluster-metrics": map[string]interface{} {
+			"count": len(r.clusters),
+			"attr-correlation": correlation(r.clusters, attrSimilarity),
+			"label-correlation": correlation(r.clusters, labelSimilarity),
+			"label-intra-distance": intraLabel,
+			"label-inter-distance": interLabel,
+			"label-distance-ratio": intraLabel/interLabel,
+			"attr-intra-distance": intraAttr,
+			"attr-inter-distance": interAttr,
+			"attr-distance-ratio": intraAttr/interAttr,
+		},
+		"random-metrics": map[string]interface{} {
+			"count": len(random),
+			"attr-correlation": correlation(random, attrSimilarity),
+			"label-correlation": correlation(random, labelSimilarity),
+			"label-intra-distance": intraLabelRand,
+			"label-inter-distance": interLabelRand,
+			"label-distance-ratio": intraLabelRand/interLabelRand,
+			"attr-intra-distance": intraAttrRand,
+			"attr-inter-distance": interAttrRand,
+			"attr-distance-ratio": intraAttrRand/interAttrRand,
+		},
+		"standard-error":map[string]interface{} {
+			"count": stderr(float64(len(r.clusters)), float64(len(random))),
+			"attr-correlation": stderr(correlation(r.clusters, attrSimilarity), correlation(random, attrSimilarity)),
+			"label-correlation": stderr(correlation(r.clusters, labelSimilarity), correlation(random, labelSimilarity)),
+			"label-intra-distance": stderr(intraLabel, intraLabelRand),
+			"label-inter-distance": stderr(interLabel, interLabelRand),
+			"label-distance-ratio": stderr(intraLabel/interLabel, intraLabelRand/interLabelRand),
+			"attr-intra-distance": stderr(intraAttr, intraAttrRand),
+			"attr-inter-distance": stderr(interAttr, interAttrRand),
+			"attr-distance-ratio": stderr(intraAttr/interAttr, intraAttrRand/interAttrRand),
+		},
+	}
+	return enc.Encode(x)
 }
 
 func add(clusters []cluster, cn *clusterNode, epsilon float64, sim func(a, b *clusterNode) float64) []cluster {

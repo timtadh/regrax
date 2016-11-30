@@ -1288,7 +1288,8 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 		errors.Logf("ERROR", "%v", err)
 		Usage(ErrorCodes["opts"])
 	}
-	filename := "clusters"
+	clusters := "clusters"
+	metrics := "metrics"
 	attr := ""
 	epsilon := 0.2
 	gamma := 0.2
@@ -1296,8 +1297,10 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
-		case "-f", "--filename":
-			filename = oa.Arg()
+		case "-c", "--clusters-name":
+			clusters = oa.Arg()
+		case "-m", "--metrics-name":
+			metrics = oa.Arg()
 		case "-a", "--attr":
 			attr = oa.Arg()
 		case "-e", "--epsilon":
@@ -1313,7 +1316,7 @@ func dbscanReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Forma
 		errors.Logf("ERROR", "You must supply --attr=<attr> to dbscan")
 		Usage(ErrorCodes["opts"])
 	}
-	r, err := reporters.NewDbScan(conf, fmtr, filename, attr, epsilon, gamma)
+	r, err := reporters.NewDbScan(conf, fmtr, clusters, metrics, attr, epsilon, gamma)
 	if err != nil {
 		errors.Logf("ERROR", "There was error creating output files\n")
 		errors.Logf("ERROR", "%v", err)
