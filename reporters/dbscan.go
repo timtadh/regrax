@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"math"
 	"math/rand"
+	"strings"
 )
 
 import (
@@ -231,7 +232,7 @@ func (r *DbScan) metrics(random []cluster) error {
 	enc := json.NewEncoder(f)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "")
-	if len(r.clusters) == r.items || len(r.clusters) <= 1 {
+	if len(r.clusters) >= r.items || len(r.clusters) <= 1 {
 		x := map[string]interface{} {
 			"items": r.items,
 			"clusters": len(r.clusters),
@@ -285,7 +286,17 @@ func (r *DbScan) metrics(random []cluster) error {
 			"attr-distance-ratio": stderr(intraAttr/interAttr, intraAttrRand/interAttrRand),
 		},
 	}
-	return enc.Encode(x)
+	err = enc.Encode(x)
+	if err != nil && strings.Contains(err.Error(), "NaN") {
+		x := map[string]interface{} {
+			"items": r.items,
+			"clusters": len(r.clusters),
+		}
+		return enc.Encode(x)
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
 
 func add(clusters []cluster, cn *clusterNode, epsilon float64, sim func(a, b *clusterNode) float64) []cluster {
