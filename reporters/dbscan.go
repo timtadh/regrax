@@ -153,6 +153,13 @@ func interdist(clusters []cluster, metric func(a, b *clusterNode) float64) float
 	return totalDist
 }
 
+func noNan(x float64) interface{} {
+	if math.IsNaN(x) {
+		return "nan"
+	}
+	return x
+}
+
 type DbScan struct {
 	clusters   []cluster
 	items      int
@@ -254,36 +261,36 @@ func (r *DbScan) metrics(random []cluster) error {
 		"items": r.items,
 		"cluster-metrics": map[string]interface{} {
 			"count": len(r.clusters),
-			"attr-correlation": correlation(r.clusters, attrSimilarity),
-			"label-correlation": correlation(r.clusters, labelSimilarity),
-			"label-intra-distance": intraLabel,
-			"label-inter-distance": interLabel,
-			"label-distance-ratio": intraLabel/interLabel,
-			"attr-intra-distance": intraAttr,
-			"attr-inter-distance": interAttr,
-			"attr-distance-ratio": intraAttr/interAttr,
+			"attr-correlation": noNan(correlation(r.clusters, attrSimilarity)),
+			"label-correlation": noNan(correlation(r.clusters, labelSimilarity)),
+			"label-intra-distance": noNan(intraLabel),
+			"label-inter-distance": noNan(interLabel),
+			"label-distance-ratio": noNan(intraLabel/interLabel),
+			"attr-intra-distance": noNan(intraAttr),
+			"attr-inter-distance": noNan(interAttr),
+			"attr-distance-ratio": noNan(intraAttr/interAttr),
 		},
 		"random-metrics": map[string]interface{} {
 			"count": len(random),
-			"attr-correlation": correlation(random, attrSimilarity),
-			"label-correlation": correlation(random, labelSimilarity),
-			"label-intra-distance": intraLabelRand,
-			"label-inter-distance": interLabelRand,
-			"label-distance-ratio": intraLabelRand/interLabelRand,
-			"attr-intra-distance": intraAttrRand,
-			"attr-inter-distance": interAttrRand,
-			"attr-distance-ratio": intraAttrRand/interAttrRand,
+			"attr-correlation": noNan(correlation(random, attrSimilarity)),
+			"label-correlation": noNan(correlation(random, labelSimilarity)),
+			"label-intra-distance": noNan(intraLabelRand),
+			"label-inter-distance": noNan(interLabelRand),
+			"label-distance-ratio": noNan(intraLabelRand/interLabelRand),
+			"attr-intra-distance": noNan(intraAttrRand),
+			"attr-inter-distance": noNan(interAttrRand),
+			"attr-distance-ratio": noNan(intraAttrRand/interAttrRand),
 		},
 		"standard-error":map[string]interface{} {
-			"count": stderr(float64(len(r.clusters)), float64(len(random))),
-			"attr-correlation": stderr(correlation(r.clusters, attrSimilarity), correlation(random, attrSimilarity)),
-			"label-correlation": stderr(correlation(r.clusters, labelSimilarity), correlation(random, labelSimilarity)),
-			"label-intra-distance": stderr(intraLabel, intraLabelRand),
-			"label-inter-distance": stderr(interLabel, interLabelRand),
-			"label-distance-ratio": stderr(intraLabel/interLabel, intraLabelRand/interLabelRand),
-			"attr-intra-distance": stderr(intraAttr, intraAttrRand),
-			"attr-inter-distance": stderr(interAttr, interAttrRand),
-			"attr-distance-ratio": stderr(intraAttr/interAttr, intraAttrRand/interAttrRand),
+			"count": noNan(stderr(float64(len(r.clusters)), float64(len(random)))),
+			"attr-correlation": noNan(stderr(correlation(r.clusters, attrSimilarity), correlation(random, attrSimilarity))),
+			"label-correlation": noNan(stderr(correlation(r.clusters, labelSimilarity), correlation(random, labelSimilarity))),
+			"label-intra-distance": noNan(stderr(intraLabel, intraLabelRand)),
+			"label-inter-distance": noNan(stderr(interLabel, interLabelRand)),
+			"label-distance-ratio": noNan(stderr(intraLabel/interLabel, intraLabelRand/interLabelRand)),
+			"attr-intra-distance": noNan(stderr(intraAttr, intraAttrRand)),
+			"attr-inter-distance": noNan(stderr(interAttr, interAttrRand)),
+			"attr-distance-ratio": noNan(stderr(intraAttr/interAttr, intraAttrRand/interAttrRand)),
 		},
 	}
 	err = enc.Encode(x)
