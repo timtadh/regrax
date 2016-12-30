@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 )
 
 import (
@@ -13,7 +14,7 @@ import (
 	"github.com/timtadh/data-structures/list"
 	"github.com/timtadh/data-structures/set"
 	"github.com/timtadh/data-structures/types"
-	"github.com/timtadh/data-structures/pool"
+	poolpkg "github.com/timtadh/data-structures/pool"
 )
 
 import (
@@ -221,7 +222,6 @@ func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *digra
 	}
 }
 
-
 func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.Indices, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator) {
 	if len(sg.V) == 0 {
 		ei = func(bool) (*Embedding, EmbIterator) {
@@ -232,56 +232,82 @@ func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.
 	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
 	vembs := sg.startEmbeddings(indices, startIdx)
-	stack := NewStack()
+
+	N := 1
+	pool := poolpkg.New(N)
+	stack := NewStack(N, prune)
 	for _, vemb := range vembs {
 		stack.Push(vemb, 0)
 	}
 
-	pool := pool.New(24)
+	embs := make(chan *Embedding)
+	var wg sync.WaitGroup
+	var started sync.WaitGroup
+	wg.Add(N)
+	started.Add(N)
+
+	// errors.Logf("DEBUG", "workers start")
+	for x := 0; x < N; x++ {
+		pool.Do(func(id int) func() {
+			return func() {
+				started.Done()
+				// errors.Logf("DEBUG", "worker started %v", id)
+				outer:
+				for {
+					ids, eid := stack.Pop()
+					if ids == nil {
+						break outer
+					}
+					if eid >= len(chain) {
+						// check that this is the subgraph we sought
+						emb := &Embedding{
+							SG:  sg,
+							Ids: ids.list(len(sg.V)),
+						}
+						if false {
+							if !emb.Exists(indices.G) {
+								errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
+								panic("wat")
+							}
+							if !sg.Equals(emb) {
+								errors.Logf("FOUND", "NOT AN EMB\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
+								panic("wat")
+							}
+						}
+						embs<-emb
+					} else {
+						// ok extend the embedding
+						// size := len(stack)
+						sg.extendEmbedding(indices, ids, &sg.E[chain[eid]], overlap, func(ext *IdNode) {
+							stack.Push(ext, eid + 1)
+						})
+					}
+				}
+				wg.Done()
+				// errors.Logf("DEBUG", "worker exit %v", id)
+			}
+		}(x))
+	}
+	go func() {
+		wg.Wait()
+		close(embs)
+		pool.Stop()
+	}()
+
+	started.Wait()
 
 	ei = func(stop bool) (*Embedding, EmbIterator) {
-		for !stop {
-			ids, eid := stack.Pop()
-			for ids == nil {
-				i := pool.WaitCount()
-				if i <= 0 && stack.Empty() {
-					pool.Stop()
-					return nil, nil
-				}
-				ids, eid = stack.Pop()
-			}
-			if prune != nil && prune(ids) {
-				continue
-			}
-			// otherwise success we have an embedding we haven't seen
-			if eid >= len(chain) {
-				// check that this is the subgraph we sought
-				emb := &Embedding{
-					SG:  sg,
-					Ids: ids.list(len(sg.V)),
-				}
-				if false {
-					if !emb.Exists(indices.G) {
-						errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
-						panic("wat")
-					}
-					if !sg.Equals(emb) {
-						errors.Logf("FOUND", "NOT AN EMB\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
-						panic("wat")
-					}
-				}
-				return emb, ei
-			} else {
-				// ok extend the embedding
-				// size := len(stack)
-				pool.Do(func(){
-					sg.extendEmbedding(indices, ids, &sg.E[chain[eid]], overlap, func(ext *IdNode) {
-						stack.Push(ext, eid + 1)
-					})
-				})
-			}
+		if stop {
+			// errors.Logf("DEBUG", "closed stack")
+			stack.Close()
+			go func() { for _ = range embs {} }()
+			return nil, nil
 		}
-		pool.Stop()
+		// errors.Logf("DEBUG", "waiting for emb")
+		for emb := range embs {
+			// errors.Logf("DEBUG", "got %v", emb)
+			return emb, ei
+		}
 		return nil, nil
 	}
 	return ei

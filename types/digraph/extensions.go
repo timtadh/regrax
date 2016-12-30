@@ -326,13 +326,18 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	if mode&(MNI|GIS) != 0 {
 		// compute the minimally supported vertex
 		arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
+			if sets[i] == nil {
+				return 0
+			}
 			return float64(sets[i].Size())
 		})
-		// construct the embeddings output slice
-		embeddings = make([]*subgraph.Embedding, 0, int(size)+1)
-		for i, next := sets[arg].Values()(); next != nil; i, next = next() {
-			emb := i.(*subgraph.Embedding)
-			embeddings = append(embeddings, emb)
+		if sets[arg] != nil {
+			// construct the embeddings output slice
+			embeddings = make([]*subgraph.Embedding, 0, int(size)+1)
+			for i, next := sets[arg].Values()(); next != nil; i, next = next() {
+				emb := i.(*subgraph.Embedding)
+				embeddings = append(embeddings, emb)
+			}
 		}
 	} else if mode&(FIS) == FIS {
 		embeddings = fisEmbs

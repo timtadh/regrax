@@ -145,17 +145,23 @@ func ParsePretty(str string, labels *digraph.Labels) (*SubGraph, error) {
 		}
 		labelc := make([]byte, 0, 10)
 		idx += len(matches[0])
+		sqBrackets := 1
 		for ; idx < len(str); idx++ {
 			if str[idx] == '\\' {
 				continue
 			} else if str[idx-1] == '\\' {
 				labelc = append(labelc, str[idx])
+				continue
+			} else if str[idx] == '[' {
+				sqBrackets++
 			} else if str[idx] == ']' {
-				idx++
-				break
-			} else {
-				labelc = append(labelc, str[idx])
+				sqBrackets--
+				if sqBrackets <= 0 {
+					idx++
+					break
+				}
 			}
+			labelc = append(labelc, str[idx])
 		}
 		label := string(labelc)
 		edges[i].Src = int(src)
