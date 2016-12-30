@@ -54,10 +54,6 @@ func (s *Stack) Push(ids *IdNode, eid int) {
 		s.mu.Unlock()
 		return
 	}
-	if s.prune != nil && s.prune(ids) {
-		s.mu.Unlock()
-		return
-	}
 	s.stack = append(s.stack, embSearchNode{ids, eid})
 	s.mu.Unlock()
 	s.cond.Signal()
@@ -81,6 +77,10 @@ func (s *Stack) Pop() (ids *IdNode, eid int) {
 	s.waiting--
 	item := s.stack[len(s.stack)-1]
 	s.stack = s.stack[:len(s.stack)-1]
+	if s.prune != nil && s.prune(item.ids) {
+		s.mu.Unlock()
+		return s.Pop()
+	}
 	s.mu.Unlock()
 	return item.ids, item.eid
 }

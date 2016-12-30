@@ -1,6 +1,8 @@
 package digraph
 
-import ()
+import (
+	"sync"
+)
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -85,7 +87,7 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 	}
 }
 
-func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
+func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool, seenMu *sync.Mutex) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
 	if dt.Mode&FIS == FIS {
 		seen = make(map[int]bool)
 		fisEmbs = make([]*subgraph.Embedding, 0, 10)
@@ -113,9 +115,11 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 				}
 				overlap[idx][id] = true
 			}
+			seenMu.Lock()
 			if seen != nil {
 				seen[id] = true
 			}
+			seenMu.Unlock()
 			if sets != nil {
 				if sets[idx] == nil {
 					sets[idx] = hashtable.NewLinearHash()
@@ -140,7 +144,7 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 	return total, overlap, fisEmbs, sets, exts
 }
 
-func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
+func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool, seenMu *sync.Mutex) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
 	if dt.Mode&FIS == FIS {
 		seen = make(map[int]bool)
 		fisEmbs = make([]*subgraph.Embedding, 0, 10)
@@ -209,9 +213,11 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 				}
 				overlap[idx][id] = true
 			}
+			seenMu.Lock()
 			if seen != nil {
 				seen[id] = true
 			}
+			seenMu.Unlock()
 			if sets != nil {
 				if sets[idx] == nil {
 					sets[idx] = hashtable.NewLinearHash()
@@ -259,6 +265,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 
 	// compute the embeddings
 	var seen map[int]bool = nil
+	var seenMu sync.Mutex
 	var ei subgraph.EmbIterator
 	switch {
 	case mode&(MNI|FIS) != 0:
@@ -271,6 +278,8 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 			dt.Indices,
 			patternOverlap,
 			func(ids *subgraph.IdNode) bool {
+				seenMu.Lock()
+				defer seenMu.Unlock()
 				for c := ids; c != nil; c = c.Prev {
 					if _, has := seen[c.Id]; has {
 						for c := ids; c != nil; c = c.Prev {
@@ -296,7 +305,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	if mode&ExtFromEmb == ExtFromEmb && len(pattern.E) > 0 {
 		// add the supported embeddings to the vertex sets
 		// add the extensions to the extensions set
-		total, overlap, fisEmbs, sets, exts = extensionsFromEmbeddings(dt, pattern, ei, seen)
+		total, overlap, fisEmbs, sets, exts = extensionsFromEmbeddings(dt, pattern, ei, seen, &seenMu)
 		if total == 0 {
 			// return 0, nil, nil, nil, nil, errors.Errorf("could not find any embedding of %v", pattern)
 			// because we are extending from frequent edges for vertices this
@@ -304,7 +313,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 			return 0, nil, nil, nil, nil
 		}
 	} else if mode&ExtFromFreqEdges == ExtFromFreqEdges || len(pattern.E) <= 0 {
-		total, overlap, fisEmbs, sets, exts = extensionsFromFreqEdges(dt, pattern, ei, seen)
+		total, overlap, fisEmbs, sets, exts = extensionsFromFreqEdges(dt, pattern, ei, seen, &seenMu)
 		if total < dt.Support() {
 			return 0, nil, nil, nil, nil
 		}
