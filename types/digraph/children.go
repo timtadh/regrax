@@ -19,14 +19,13 @@ import (
 
 type Node interface {
 	lattice.Node
-	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, subgraph.VertexEmbeddings) Node
+	New(*subgraph.SubGraph, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool) Node
 	Label() []byte
 	Extensions() ([]*subgraph.Extension, error)
 	Embeddings() ([]*subgraph.Embedding, error)
 	Overlap() ([]map[int]bool, error)
 	UnsupportedExts() (*set.SortedSet, error)
 	SaveUnsupportedExts(int, []int, *set.SortedSet) error
-	UnsupportedEmbs() (subgraph.VertexEmbeddings, error)
 	SubGraph() *subgraph.SubGraph
 	loadFrequentVertices() ([]lattice.Node, error)
 	isRoot() bool
@@ -96,10 +95,6 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	if err != nil {
 		return nil, err
 	}
-	unsupEmbs, err := n.UnsupportedEmbs()
-	if err != nil {
-		return nil, err
-	}
 	unsupExts, err := n.UnsupportedExts()
 	if err != nil {
 		return nil, err
@@ -158,8 +153,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 					tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
 				}
 				pOverlap := translateOverlap(nOverlap, vord)
-				tUnsupEmbs := unsupEmbs.Translate(len(sg.V), vord).Set()
-				support, exts, embs, overlap, dropped, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, tUnsupEmbs, dt.Mode, debug)
+				support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
 				if err != nil {
 					errorCh <- err
 					return
@@ -168,7 +162,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 					errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.Labels), len(embs), len(exts))
 				}
 				if support >= dt.Support() {
-					nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap, dropped), vord}
+					nodeCh <- nodeEp{n.New(pattern, exts, embs, overlap), vord}
 				} else {
 					epCh <- ep
 				}

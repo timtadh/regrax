@@ -704,7 +704,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"fully-optimistic",
 			"overlap-pruning",
 			"extension-pruning",
-			"unsup-embs-pruning",
 			"extend-from-embeddings",
 			"extend-from-freq-edges",
 			"no-caching",
@@ -726,7 +725,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	modeStr := "MNI"
 	overlapPruning := false
 	extensionPruning := false
-	unsupEmbsPruning := false
 	extendFromEmb := false
 	extendFromEdges := false
 	embSearchStartingPoint := subgraph.MostConnected
@@ -749,8 +747,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			overlapPruning = true
 		case "--extension-pruning":
 			extensionPruning = true
-		case "--unsup-embs-pruning":
-			unsupEmbsPruning = true
 		case "--emb-search-starting-point":
 			switch oa.Arg() {
 			case "random-start":
@@ -831,9 +827,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 	if extensionPruning {
 		mode |= digraph.ExtensionPruning
-	}
-	if unsupEmbsPruning {
-		mode |= digraph.EmbeddingPruning
 	}
 	if caching {
 		mode |= digraph.Caching

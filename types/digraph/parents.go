@@ -41,7 +41,7 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 			continue
 		}
 		seen.Add(parent)
-		support, pexts, pembs, poverlap, punsupEmbs, err := ExtsAndEmbs(dt, parent, nil, set.NewSortedSet(0), nil, dt.Mode, false)
+		support, pexts, pembs, poverlap, err := ExtsAndEmbs(dt, parent, nil, set.NewSortedSet(0), dt.Mode, false)
 		if err != nil {
 			return nil, err
 		}
@@ -49,11 +49,11 @@ func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMa
 			// this means this parent support comes from automorphism
 			// it isn't truly supported, and its children may be spurious as well
 			// log and skip?
-			ExtsAndEmbs(dt, parent, nil, set.NewSortedSet(0), nil, dt.Mode, true)
+			ExtsAndEmbs(dt, parent, nil, set.NewSortedSet(0), dt.Mode, true)
 
 			errors.Logf("WARN", "for node %v parent %v had support %v less than required %v due to automorphism", n, parent.Pretty(dt.Labels), support, dt.Support())
 		} else {
-			nodes = append(nodes, n.New(parent, pexts, pembs, poverlap, punsupEmbs))
+			nodes = append(nodes, n.New(parent, pexts, pembs, poverlap))
 		}
 	}
 	if len(nodes) == 0 {

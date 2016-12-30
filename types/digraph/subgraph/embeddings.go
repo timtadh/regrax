@@ -49,7 +49,7 @@ func (sg *SubGraph) Embeddings(indices *digraph.Indices) ([]*Embedding, error) {
 }
 
 func (sg *SubGraph) DoEmbeddings(indices *digraph.Indices, do func(*Embedding) error) error {
-	ei, _ := sg.IterEmbeddings(RandomStart, indices, nil, nil, nil)
+	ei := sg.IterEmbeddings(RandomStart, indices, nil, nil)
 	for emb, next := ei(false); next != nil; emb, next = next(false) {
 		err := do(emb)
 		if err != nil {
@@ -59,7 +59,7 @@ func (sg *SubGraph) DoEmbeddings(indices *digraph.Indices, do func(*Embedding) e
 	return nil
 }
 
-func FilterAutomorphs(it EmbIterator, dropped *VertexEmbeddings) (ei EmbIterator, _ *VertexEmbeddings) {
+func FilterAutomorphs(it EmbIterator) (ei EmbIterator) {
 	idSet := func(emb *Embedding) *list.Sorted {
 		ids := list.NewSorted(len(emb.Ids), true)
 		for _, id := range emb.Ids {
@@ -82,7 +82,7 @@ func FilterAutomorphs(it EmbIterator, dropped *VertexEmbeddings) (ei EmbIterator
 		}
 		return nil, nil
 	}
-	return ei, dropped
+	return ei
 }
 
 type VrtEmb struct {
@@ -220,22 +220,20 @@ func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *digra
 	}
 }
 
-func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.Indices, prunePoints map[VrtEmb]bool, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator, unsup *VertexEmbeddings) {
+func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.Indices, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator) {
 	if len(sg.V) == 0 {
 		ei = func(bool) (*Embedding, EmbIterator) {
 			return nil, nil
 		}
-		return ei, nil
+		return ei
 	}
 	type entry struct {
 		ids *IdNode
 		eid int
-		proc bool
 	}
 	pop := func(stack []entry) (entry, []entry) {
 		return stack[len(stack)-1], stack[0 : len(stack)-1]
 	}
-	dropped := make(VertexEmbeddings, 0, 10)
 	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
 	seen := make([]map[VrtEmb]bool, len(chain))
@@ -247,33 +245,15 @@ func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
 		// seen[vemb.VrtEmb] = true
-		stack = append(stack, entry{vemb, 0, false})
+		stack = append(stack, entry{vemb, 0})
 	}
 
-	if prunePoints != nil && len(prunePoints) > 0 {
-	//	errors.Logf("DEBUG", "prune points %v", set.SortedFromSet(prunePoints))
-	}
 	pruneLevel := len(chain) + 2
 
 	ei = func(stop bool) (*Embedding, EmbIterator) {
 		for !stop && len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)
-			if !i.proc {
-				stack = append(stack, entry{i.ids, i.eid, true})
-			} else {
-				if prunePoints != nil && i.eid < len(chain) && i.eid <= pruneLevel { //&& i.eid < 3 {
-					if !used[i.ids.VrtEmb] {
-						seen[i.eid][i.ids.VrtEmb] = true
-						// dropped = append(dropped, &i.ids.VrtEmb)
-					}
-				}
-				continue
-			}
-			if prunePoints != nil && i.eid < pruneLevel && prunePoints[i.ids.VrtEmb] {
-				pruneLevel = i.eid
-				continue
-			}
 			if prune != nil && prune(i.ids) {
 				if i.eid < pruneLevel {
 					pruneLevel = i.eid
@@ -305,26 +285,13 @@ func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.
 				// ok extend the embedding
 				// size := len(stack)
 				sg.extendEmbedding(indices, i.ids, &sg.E[chain[i.eid]], overlap, func(ext *IdNode) {
-					stack = append(stack, entry{ext, i.eid + 1, false})
+					stack = append(stack, entry{ext, i.eid + 1})
 				})
-				// if size == len(stack) && prunePoints != nil && i.ids.Prev == nil {
-					// dropped = append(dropped, &i.ids.VrtEmb)
-				// }
 			}
 		}
-		if prunePoints != nil {
-			for i := 0; i < pruneLevel && i < len(seen); i++ {
-				for ve := range seen[i] {
-					if !used[ve] {
-						dropped = append(dropped, &ve)
-					}
-				}
-			}
-		}
-		// errors.Logf("DEBUG", "dropped %v", dropped)
 		return nil, nil
 	}
-	return ei, &dropped
+	return ei
 }
 
 

@@ -102,13 +102,6 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 	if err != nil {
 		return nil, err
 	}
-	var unsupEmbs subgraph_embedding.MultiMap = nil
-	if dc.Mode&EmbeddingPruning == EmbeddingPruning {
-		unsupEmbs, err = config.SubgraphEmbeddingMultiMap("digraph-unsupported-embeddings")
-		if err != nil {
-			return nil, err
-		}
-	}
 	var overlap subgraph_overlap.MultiMap = nil
 	if dc.Mode&OverlapPruning == OverlapPruning {
 		overlap, err = config.SubgraphOverlapMultiMap("digraph-overlap")
@@ -135,7 +128,6 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 		Config: *dc,
 		NodeAttrs:     nodeAttrs,
 		Embeddings:    embeddings,
-		UnsupEmbs:     unsupEmbs,
 		Overlap:       overlap,
 		Extensions:    exts,
 		UnsupExts:     unexts,
@@ -165,11 +157,11 @@ func (dt *Digraph) Init(b *digraph.Builder, l *digraph.Labels) (err error) {
 	errors.Logf("DEBUG", "computing starting points")
 	for color, _ := range dt.Indices.ColorIndex {
 		sg := subgraph.Build(1, 0).FromVertex(color).Build()
-		_, exts, embs, _, _, err := ExtsAndEmbs(dt, sg, nil, nil, nil, dt.Mode, false)
+		_, exts, embs, _, err := ExtsAndEmbs(dt, sg, nil, nil, dt.Mode, false)
 		if err != nil {
 			return err
 		}
-		n := NewEmbListNode(dt, sg, exts, embs, nil, nil)
+		n := NewEmbListNode(dt, sg, exts, embs, nil)
 		dt.lock.Lock()
 		dt.FrequentVertices = append(dt.FrequentVertices, n)
 		dt.lock.Unlock()
@@ -195,7 +187,7 @@ func (g *Digraph) MinimumLevel() int {
 }
 
 func RootEmbListNode(g *Digraph) *EmbListNode {
-	return NewEmbListNode(g, subgraph.EmptySubGraph(), nil, nil, nil, nil)
+	return NewEmbListNode(g, subgraph.EmptySubGraph(), nil, nil, nil)
 }
 
 func (g *Digraph) Root() lattice.Node {
