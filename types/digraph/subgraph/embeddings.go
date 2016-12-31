@@ -236,28 +236,17 @@ func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.
 	}
 	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
-	seen := make([]map[VrtEmb]bool, len(chain))
-	for i := range seen {
-		seen[i] = make(map[VrtEmb]bool)
-	}
-	used := make(map[VrtEmb]bool)
 	vembs := sg.startEmbeddings(indices, startIdx)
 	stack := make([]entry, 0, len(vembs)*2)
 	for _, vemb := range vembs {
-		// seen[vemb.VrtEmb] = true
 		stack = append(stack, entry{vemb, 0})
 	}
-
-	pruneLevel := len(chain) + 2
 
 	ei = func(stop bool) (*Embedding, EmbIterator) {
 		for !stop && len(stack) > 0 {
 			var i entry
 			i, stack = pop(stack)
 			if prune != nil && prune(i.ids) {
-				if i.eid < pruneLevel {
-					pruneLevel = i.eid
-				}
 				continue
 			}
 			// otherwise success we have an embedding we haven't seen
@@ -266,9 +255,6 @@ func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.
 				emb := &Embedding{
 					SG:  sg,
 					Ids: i.ids.list(len(sg.V)),
-				}
-				for c := i.ids; c != nil; c = c.Prev {
-					used[c.VrtEmb] = true
 				}
 				if false {
 					if !emb.Exists(indices.G) {
