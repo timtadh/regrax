@@ -154,12 +154,12 @@ func run() int {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 				return 1
 			}
-			if sg.Pretty(graph.Labels) != pattern {
-				errors.Logf("ERROR", "bad load of pattern")
-				errors.Logf("ERROR", "expected %v", pattern)
-				errors.Logf("ERROR", "got      %v", sg.Pretty(graph.Labels))
-				return 1
-			}
+			// if sg.Pretty(graph.Labels) != pattern {
+			// 	errors.Logf("ERROR", "bad load of pattern")
+			// 	errors.Logf("ERROR", "expected %v", pattern)
+			// 	errors.Logf("ERROR", "got      %v", sg.Pretty(graph.Labels))
+			// 	return 1
+			// }
 			errors.Logf("INFO", "cur sg: %v", sg.Pretty(graph.Labels))
 			ei, _ := sg.IterEmbeddings(subgraph.MostConnected, graph.Indices, nil, nil, nil)
 			c := 0
