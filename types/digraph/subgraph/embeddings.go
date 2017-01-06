@@ -323,24 +323,26 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 
 	workItems<-work
 	<-work.started
-	go func() {
-		time.Sleep(100*time.Millisecond)
-		retries := 10
-		for x := 0; x < workers-1 && retries > 0; {
-			if work.stack.Closed() {
-				break
+	if workers > 1 {
+		go func() {
+			time.Sleep(100*time.Millisecond)
+			retries := 10
+			for x := 0; x < workers-1 && retries > 0; {
+				if work.stack.Closed() {
+					break
+				}
+				select {
+					case workItems<-work:
+					<-work.started
+					x++
+				default:
+					retries--
+					time.Sleep(2*time.Second)
+				}
 			}
-			select {
-				case workItems<-work:
-				<-work.started
-				x++
-			default:
-				retries--
-				time.Sleep(2*time.Second)
-			}
-		}
-		close(work.started)
-	}()
+			close(work.started)
+		}()
+	}
 
 	go func() {
 		work.stack.WaitClosed()
