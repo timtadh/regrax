@@ -311,7 +311,7 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 		prune: prune,
 		chain: chain,
 		overlap: overlap,
-		embs: make(chan *Embedding),
+		embs: make(chan *Embedding, 10000),
 		started: make(chan bool),
 		stack: NewStack(),
 	}
@@ -321,7 +321,6 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 		work.stack.Push(vemb, 0)
 	}
 
-	allStarted := make(chan bool, 1)
 	workItems<-work
 	<-work.started
 	go func() {
@@ -341,19 +340,11 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 			}
 		}
 		close(work.started)
-		allStarted<-true
-		close(allStarted)
-	}()
-
-	// errors.Logf("DEBUG", "workers start")
-	go func() {
-		<-allStarted
-		work.complete.Wait()
-		work.stack.Close()
 	}()
 
 	go func() {
 		work.stack.WaitClosed()
+		work.complete.Wait()
 		close(work.embs)
 	}()
 
