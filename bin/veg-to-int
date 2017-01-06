@@ -55,6 +55,7 @@ def process(fin, fout):
     labels.sort(key=lambda x: x[2])
     for (label, n,i) in labels:
         print >>sys.stderr, label, n, i
+    print >>sys.stderr, "total labels", len(labels)
 
 
 def main(argv):

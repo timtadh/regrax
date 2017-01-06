@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
+	"time"
 )
 
 import (
@@ -36,9 +37,9 @@ const (
 
 type EmbIterator func(bool) (*Embedding, EmbIterator)
 
-func (sg *SubGraph) Embeddings(indices *digraph.Indices) ([]*Embedding, error) {
+func (sg *SubGraph) Embeddings(workers int, indices *digraph.Indices) ([]*Embedding, error) {
 	embeddings := make([]*Embedding, 0, 10)
-	err := sg.DoEmbeddings(indices, func(emb *Embedding) error {
+	err := sg.DoEmbeddings(workers, indices, func(emb *Embedding) error {
 		embeddings = append(embeddings, emb)
 		return nil
 	})
@@ -49,8 +50,8 @@ func (sg *SubGraph) Embeddings(indices *digraph.Indices) ([]*Embedding, error) {
 
 }
 
-func (sg *SubGraph) DoEmbeddings(indices *digraph.Indices, do func(*Embedding) error) error {
-	ei := sg.IterEmbeddings(RandomStart, indices, nil, nil)
+func (sg *SubGraph) DoEmbeddings(workers int, indices *digraph.Indices, do func(*Embedding) error) error {
+	ei := sg.IterEmbeddings(workers, RandomStart, indices, nil, nil)
 	for emb, next := ei(false); next != nil; emb, next = next(false) {
 		err := do(emb)
 		if err != nil {
@@ -221,7 +222,80 @@ func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *digra
 	}
 }
 
-func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.Indices, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator) {
+var THREADS = 48
+
+type workItem struct {
+	sg *SubGraph
+	indices *digraph.Indices
+	prune func(*IdNode) bool
+	chain []int
+	overlap []map[int]bool
+	complete sync.WaitGroup
+	embs chan *Embedding
+	started chan bool
+	stack *Stack
+	threads int
+}
+
+var workItems chan *workItem
+
+func init() {
+	workItems = make(chan *workItem)
+	for x := 0; x < THREADS; x++ {
+		go func(id int) {
+			// errors.Logf("DEBUG", "worker started %v", id)
+			for work := range workItems {
+				work.complete.Add(1)
+				work.stack.AddThread()
+				// wid := work.stack.Threads()
+				work.started<-true
+				// errors.Logf("DEBUG", "worker %v starting work item %v %v", id, wid, work.sg)
+				outer:
+				for {
+					ids, eid := work.stack.Pop()
+					if ids == nil {
+						break outer
+					}
+					if work.prune != nil && work.prune(ids) {
+						continue
+					}
+					if eid >= len(work.chain) {
+						// check that this is the subgraph we sought
+						emb := &Embedding{
+							SG:  work.sg,
+							Ids: ids.list(len(work.sg.V)),
+						}
+						if false {
+							if !emb.Exists(work.indices.G) {
+								errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
+								panic("wat")
+							}
+							if !work.sg.Equals(emb) {
+								errors.Logf("FOUND", "NOT AN EMB\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
+								panic("wat")
+							}
+						}
+						work.embs<-emb
+					} else {
+						// ok extend the embedding
+						// size := len(stack)
+						work.sg.extendEmbedding(work.indices, ids, &work.sg.E[work.chain[eid]], work.overlap, func(ext *IdNode) {
+							if work.prune != nil && work.prune(ids) {
+								return
+							}
+							work.stack.Push(ext, eid + 1)
+						})
+					}
+				}
+				work.complete.Done()
+				// errors.Logf("DEBUG", "worker %v finished work item %v %v", id, wid, work.sg)
+			}
+			// errors.Logf("DEBUG", "worker exit %v", id)
+		}(x)
+	}
+}
+
+func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indices *digraph.Indices, overlap []map[int]bool, prune func(*IdNode) bool) (ei EmbIterator) {
 	if len(sg.V) == 0 {
 		ei = func(bool) (*Embedding, EmbIterator) {
 			return nil, nil
@@ -230,79 +304,72 @@ func (sg *SubGraph) IterEmbeddings(spMode EmbSearchStartPoint, indices *digraph.
 	}
 	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
+
+	work := &workItem{
+		sg: sg,
+		indices: indices,
+		prune: prune,
+		chain: chain,
+		overlap: overlap,
+		embs: make(chan *Embedding),
+		started: make(chan bool),
+		stack: NewStack(),
+	}
+
 	vembs := sg.startEmbeddings(indices, startIdx)
-
-	N := 4
-	stack := NewStack(N, prune)
 	for _, vemb := range vembs {
-		stack.Push(vemb, 0)
+		work.stack.Push(vemb, 0)
 	}
 
-	embs := make(chan *Embedding, 100)
-	var wg sync.WaitGroup
-	var started sync.WaitGroup
-	wg.Add(N)
-	started.Add(N)
-
-	// errors.Logf("DEBUG", "workers start")
-	for x := 0; x < N; x++ {
-		go func(id int) {
-			started.Done()
-			// errors.Logf("DEBUG", "worker started %v", id)
-			outer:
-			for {
-				ids, eid := stack.Pop()
-				if ids == nil {
-					break outer
-				}
-				if eid >= len(chain) {
-					// check that this is the subgraph we sought
-					emb := &Embedding{
-						SG:  sg,
-						Ids: ids.list(len(sg.V)),
-					}
-					if false {
-						if !emb.Exists(indices.G) {
-							errors.Logf("FOUND", "NOT EXISTS\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
-							panic("wat")
-						}
-						if !sg.Equals(emb) {
-							errors.Logf("FOUND", "NOT AN EMB\n  builder %v\n    built %v\n  pattern %v", ids, emb, emb.SG)
-							panic("wat")
-						}
-					}
-					embs<-emb
-				} else {
-					// ok extend the embedding
-					// size := len(stack)
-					sg.extendEmbedding(indices, ids, &sg.E[chain[eid]], overlap, func(ext *IdNode) {
-						stack.Push(ext, eid + 1)
-					})
-				}
-			}
-			wg.Done()
-			// errors.Logf("DEBUG", "worker exit %v", id)
-		}(x)
-	}
+	allStarted := make(chan bool, 1)
+	workItems<-work
+	<-work.started
 	go func() {
-		wg.Wait()
-		close(embs)
+		time.Sleep(100*time.Millisecond)
+		retries := 10
+		for x := 0; x < workers-1 && retries > 0; {
+			if work.stack.Closed() {
+				break
+			}
+			select {
+				case workItems<-work:
+				<-work.started
+				x++
+			default:
+				retries--
+				time.Sleep(2*time.Second)
+			}
+		}
+		close(work.started)
+		allStarted<-true
+		close(allStarted)
 	}()
 
-	started.Wait()
+	// errors.Logf("DEBUG", "workers start")
+	go func() {
+		<-allStarted
+		work.complete.Wait()
+		work.stack.Close()
+	}()
+
+	go func() {
+		work.stack.WaitClosed()
+		close(work.embs)
+	}()
 
 	ei = func(stop bool) (*Embedding, EmbIterator) {
 		if stop {
 			// errors.Logf("DEBUG", "closed stack")
-			stack.Close()
-			for _ = range embs {}
+			work.stack.Close()
+			for _ = range work.embs {}
 			return nil, nil
 		}
 		// errors.Logf("DEBUG", "waiting for emb")
-		for emb := range embs {
+		for emb := range work.embs {
 			// errors.Logf("DEBUG", "got %v", emb)
 			return emb, ei
 		}
+		work.stack.Close()
 		return nil, nil
 	}
 	return ei

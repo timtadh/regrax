@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"runtime"
 )
 
 import (
@@ -161,7 +162,7 @@ func run() int {
 			// 	return 1
 			// }
 			errors.Logf("INFO", "cur sg: %v", sg.Pretty(graph.Labels))
-			ei := sg.IterEmbeddings(subgraph.MostConnected, graph.Indices, nil, nil)
+			ei := sg.IterEmbeddings(runtime.NumCPU(), subgraph.MostConnected, graph.Indices, nil, nil)
 			c := 0
 			for _, next := ei(false); next != nil; _, next = next(false) {
 				c++

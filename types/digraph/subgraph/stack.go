@@ -20,18 +20,28 @@ type Stack struct {
 	stack []embSearchNode
 	threads int
 	waiting int
-	prune func(*IdNode) bool
 	closed bool
 }
 
-func NewStack(threads int, prune func(*IdNode) bool) *Stack {
+func NewStack() *Stack {
 	s := &Stack{
 		stack: make([]embSearchNode, 0, 10),
-		threads: threads,
-		prune: prune,
 	}
 	s.cond = sync.NewCond(&s.mu)
 	return s
+}
+
+func (s *Stack) AddThread() {
+	s.mu.Lock()
+	s.threads++
+	s.mu.Unlock()
+}
+
+func (s *Stack) Threads() int {
+	s.mu.RLock()
+	threads := s.threads
+	s.mu.RUnlock()
+	return threads
 }
 
 func (s *Stack) Empty() bool {
@@ -48,6 +58,21 @@ func (s *Stack) Close() {
 	s.cond.Broadcast()
 }
 
+func (s *Stack) Closed() bool {
+	s.mu.RLock()
+	closed := s.closed
+	s.mu.RUnlock()
+	return closed
+}
+
+func (s *Stack) WaitClosed() {
+	s.mu.Lock()
+	for !s.closed {
+		s.cond.Wait()
+	}
+	s.mu.Unlock()
+}
+
 func (s *Stack) Push(ids *IdNode, eid int) {
 	s.mu.Lock()
 	if s.closed {
@@ -56,7 +81,7 @@ func (s *Stack) Push(ids *IdNode, eid int) {
 	}
 	s.stack = append(s.stack, embSearchNode{ids, eid})
 	s.mu.Unlock()
-	s.cond.Signal()
+	s.cond.Broadcast()
 }
 
 func (s *Stack) Pop() (ids *IdNode, eid int) {
@@ -67,8 +92,9 @@ func (s *Stack) Pop() (ids *IdNode, eid int) {
 	}
 	s.waiting++
 	for len(s.stack) == 0 {
-		if s.waiting == s.threads || s.closed {
+		if (s.threads > 0 && s.threads == s.waiting) || s.closed {
 			s.mu.Unlock()
+			s.Close()
 			s.cond.Broadcast()
 			return nil, 0
 		}
@@ -77,10 +103,6 @@ func (s *Stack) Pop() (ids *IdNode, eid int) {
 	s.waiting--
 	item := s.stack[len(s.stack)-1]
 	s.stack = s.stack[:len(s.stack)-1]
-	if s.prune != nil && s.prune(item.ids) {
-		s.mu.Unlock()
-		return s.Pop()
-	}
 	s.mu.Unlock()
 	return item.ids, item.eid
 }
