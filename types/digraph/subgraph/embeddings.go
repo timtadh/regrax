@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"runtime"
 )
 
 import (
@@ -222,7 +223,6 @@ func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *digra
 	}
 }
 
-var THREADS = 48
 
 type workItem struct {
 	sg *SubGraph
@@ -240,6 +240,7 @@ type workItem struct {
 var workItems chan *workItem
 
 func init() {
+	THREADS := runtime.NumCPU()
 	workItems = make(chan *workItem)
 	for x := 0; x < THREADS; x++ {
 		go func(id int) {
@@ -250,11 +251,10 @@ func init() {
 				// wid := work.stack.Threads()
 				work.started<-true
 				// errors.Logf("DEBUG", "worker %v starting work item %v %v", id, wid, work.sg)
-				outer:
 				for {
 					ids, eid := work.stack.Pop()
 					if ids == nil {
-						break outer
+						break
 					}
 					if work.prune != nil && work.prune(ids) {
 						continue
@@ -362,7 +362,6 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 			// errors.Logf("DEBUG", "got %v", emb)
 			return emb, ei
 		}
-		work.stack.Close()
 		return nil, nil
 	}
 	return ei
