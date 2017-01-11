@@ -340,7 +340,7 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 					x++
 				default:
 					retries--
-					time.Sleep(1*time.Millisecond)
+					time.Sleep(2*time.Second)
 				}
 			}
 			close(work.started)
