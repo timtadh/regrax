@@ -241,12 +241,16 @@ var workItems chan *workItem
 var THREADS int
 
 func init() {
-	THREADS = runtime.NumCPU()*2
+	THREADS = runtime.NumCPU()
 	workItems = make(chan *workItem)
 	for x := 0; x < THREADS; x++ {
 		go func(id int) {
 			// errors.Logf("DEBUG", "worker started %v", id)
 			for work := range workItems {
+				if work.stack.Closed() {
+					work.started<-true
+					continue
+				}
 				work.complete.Add(1)
 				tid := work.stack.AddThread()
 				work.started<-true
@@ -303,13 +307,13 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 		return ei
 	}
 	if workers < 0 {
-		workers = THREADS/2
+		workers = THREADS
 	}
 	if workers == 0 {
 		workers = 1
 	}
-	if workers >= THREADS/2 {
-		workers = THREADS/2
+	if workers >= THREADS {
+		workers = THREADS
 	}
 	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
@@ -334,7 +338,7 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 	<-work.started
 	if workers > 1 {
 		go func() {
-			time.Sleep(100*time.Millisecond)
+			// time.Sleep(1*time.Millisecond)
 			retries := 10
 			for x := 0; x < workers-1 && retries > 0; {
 				if work.stack.Closed() {

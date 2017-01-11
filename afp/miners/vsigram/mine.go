@@ -6,7 +6,6 @@ import (
 
 import (
 	"github.com/timtadh/data-structures/errors"
-	"github.com/timtadh/data-structures/pool"
 )
 
 import (
@@ -70,13 +69,12 @@ func (m *Miner) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.For
 }
 
 func (m *Miner) mine() (err error) {
-	var wg sync.WaitGroup
-	pool := pool.New(m.Config.Workers())
-	errors.Logf("DEBUG", "pool %v", pool)
-	stack := NewStack()
-	stack.Push(m.Dt.Root())
+	workers := m.Config.Workers()
+	stack := NewStack(workers)
+	stack.Push(0, m.Dt.Root())
 	errs := make(chan error)
 	reports := make(chan lattice.Node, 100)
+	var wg sync.WaitGroup
 	go func() {
 		for n := range reports {
 			err := m.Rptr.Report(n)
@@ -95,40 +93,35 @@ func (m *Miner) mine() (err error) {
 			wg.Done()
 		}
 	}()
-	outer:
-	for {
-		n := stack.Pop()
-		for n == nil {
-			i := pool.WaitCount()
-			if i <= 0 && stack.Empty() {
-				break outer
-			}
-			n = stack.Pop()
-		}
-		if n == nil {
-			panic("nil")
-		}
-		err := pool.Do(func(n lattice.Node) func() {
-			if n == nil {
-				panic("nil")
-			}
-			return func() {
+	started := make(chan bool)
+	for i := 0; i < workers; i ++ {
+		go func() {
+			tid := stack.AddThread()
+			started<-true
+			for {
+				n := stack.Pop(tid)
 				if n == nil {
-					panic("nil")
+					return
 				}
-				var err error
-				err = m.step(&wg, n, reports, stack)
+				if m.Dt.Acceptable(n) {
+					wg.Add(1)
+					reports<-n
+				}
+				kids, err := n.CanonKids()
 				if err != nil {
 					wg.Add(1)
 					errs <- err
+					continue
+				}
+				for _, k := range kids {
+					stack.Push(tid, k)
 				}
 			}
-		}(n))
-		if err != nil {
-			return err
-		}
+		}()
+		<-started
 	}
-	pool.Stop()
+	close(started)
+	stack.WaitClosed()
 	close(reports)
 	close(errs)
 	wg.Wait()
@@ -138,17 +131,6 @@ func (m *Miner) mine() (err error) {
 	return nil
 }
 
-func (m *Miner) step(wg *sync.WaitGroup, n lattice.Node, reports chan lattice.Node, stack *Stack) (err error) {
-	if m.Dt.Acceptable(n) {
-		wg.Add(1)
-		reports<-n
-	}
-	kids, err := n.CanonKids()
-	if err != nil {
-		return err
-	}
-	for _, k := range kids {
-		stack.Push(k)
-	}
+func (m *Miner) step(tid int, wg *sync.WaitGroup, n lattice.Node, reports chan lattice.Node, stack *Stack) (err error) {
 	return nil
 }
