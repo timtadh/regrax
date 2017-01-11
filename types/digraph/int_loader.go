@@ -93,7 +93,7 @@ func (v *IntLoader) loadVertex(labels *digraph.Labels, b *baseLoader, data []byt
 		return err
 	}
 	label := string(split[1])
-	return b.addVertex(int32(id), labels.Color(label), label, make(map[string]interface{}))
+	return b.addVertex(int32(id), labels.Color(label), label, nil)
 }
 
 func (v *IntLoader) loadEdge(labels *digraph.Labels, b *baseLoader, data []byte) (err error) {

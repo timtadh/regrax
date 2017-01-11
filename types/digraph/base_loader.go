@@ -34,10 +34,10 @@ func (l *baseLoader) addVertex(id int32, color int, label string, attrs map[stri
 		return nil
 	}
 	vertex := l.b.AddVertex(color)
-	attrs["oid"] = id
-	attrs["color"] = color
 	l.vidxs[id] = int32(vertex.Idx)
-	if l.dt.NodeAttrs != nil {
+	if l.dt.NodeAttrs != nil && attrs != nil {
+		attrs["oid"] = id
+		attrs["color"] = color
 		err = l.dt.NodeAttrs.Add(int32(vertex.Idx), attrs)
 		if err != nil {
 			return err
