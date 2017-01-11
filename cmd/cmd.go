@@ -860,6 +860,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		loader, err = digraph.NewVegLoader(conf, dc)
 	case "dot":
 		loader, err = digraph.NewDotLoader(conf, dc)
+	case "int":
+		loader, err = digraph.NewIntLoader(conf, dc)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
 		Usage(ErrorCodes["opts"])
