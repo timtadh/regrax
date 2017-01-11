@@ -44,6 +44,12 @@ func (s *Stack) AddThread() int {
 	}
 	s.mux[tid].Lock()
 	s.stacks = append(s.stacks, make([]embSearchNode, 0, 100))
+	s.mux[0].Lock()
+	if len(s.stacks[0]) > 0 {
+		s.stacks[tid] = append(s.stacks[tid], s.stacks[0][len(s.stacks[0]) - 1])
+		s.stacks[0] = s.stacks[0][:len(s.stacks[0])-1]
+	}
+	s.mux[0].Unlock()
 	s.mux[tid].Unlock()
 	s.threads++
 	s.mu.Unlock()

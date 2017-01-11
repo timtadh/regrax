@@ -88,8 +88,10 @@ func validExtChecker(dt *Digraph, do func(*subgraph.Embedding, *subgraph.Extensi
 }
 
 func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool, seenMu *sync.Mutex) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
-	if dt.Mode&FIS == FIS {
-		seen = make(map[int]bool)
+	if dt.Mode&FIS == FIS || dt.Mode&GIS == GIS {
+		if seen == nil {
+			seen = make(map[int]bool)
+		}
 		fisEmbs = make([]*subgraph.Embedding, 0, 10)
 	} else {
 		sets = make([]*hashtable.LinearHash, len(pattern.V))
@@ -105,9 +107,11 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 		seenIt := false
 		for idx, id := range emb.Ids {
 			if fisEmbs != nil {
+				seenMu.Lock()
 				if seen[id] {
 					seenIt = true
 				}
+				seenMu.Unlock()
 			}
 			if overlap != nil {
 				if overlap[idx] == nil {
@@ -145,8 +149,10 @@ func extensionsFromEmbeddings(dt *Digraph, pattern *subgraph.SubGraph, ei subgra
 }
 
 func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgraph.EmbIterator, seen map[int]bool, seenMu *sync.Mutex) (total int, overlap []map[int]bool, fisEmbs []*subgraph.Embedding, sets []*hashtable.LinearHash, exts types.Set) {
-	if dt.Mode&FIS == FIS {
-		seen = make(map[int]bool)
+	if dt.Mode&FIS == FIS || dt.Mode&GIS == GIS {
+		if seen == nil {
+			seen = make(map[int]bool)
+		}
 		fisEmbs = make([]*subgraph.Embedding, 0, 10)
 	} else {
 		sets = make([]*hashtable.LinearHash, len(pattern.V))
@@ -203,9 +209,11 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 		seenIt := false
 		for idx, id := range emb.Ids {
 			if fisEmbs != nil {
+				seenMu.Lock()
 				if seen[id] {
 					seenIt = true
 				}
+				seenMu.Unlock()
 			}
 			if overlap != nil {
 				if overlap[idx] == nil {
@@ -333,7 +341,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	}
 
 	var embeddings []*subgraph.Embedding
-	if mode&(MNI|GIS) != 0 {
+	if mode&(MNI) != 0 {
 		// compute the minimally supported vertex
 		arg, size := stats.Min(stats.RandomPermutation(len(sets)), func(i int) float64 {
 			if sets[i] == nil {
@@ -349,7 +357,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 				embeddings = append(embeddings, emb)
 			}
 		}
-	} else if mode&(FIS) == FIS {
+	} else if mode&(FIS|GIS) != 0 {
 		embeddings = fisEmbs
 	} else {
 		return 0, nil, nil, nil, errors.Errorf("Unknown support counting strategy %v", mode)
