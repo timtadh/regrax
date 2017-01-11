@@ -91,10 +91,12 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	}
 	dt := n.dt()
 	sg := n.SubGraph()
-	patterns, err := extendNode(dt, n, debug)
+	extPoints, err := n.Extensions()
 	if err != nil {
 		return nil, err
 	}
+	patterns := make(chan *extInfo, 100)
+	go extendNode(dt, n, extPoints, patterns)
 	unsupExts, err := n.UnsupportedExts()
 	if err != nil {
 		return nil, err
@@ -104,50 +106,53 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 	if err != nil {
 		return nil, err
 	}
-	var wg sync.WaitGroup
 	type nodeEp struct {
 		n lattice.Node
 		vord []int
 	}
 	nodeCh := make(chan nodeEp)
 	vords := make([][]int, 0, 10)
+	var dataWg sync.WaitGroup
+	dataWg.Add(3)
 	go func() {
 		for nep := range nodeCh {
 			nodes = append(nodes, nep.n)
 			vords = append(vords, nep.vord)
-			wg.Done()
 		}
+		dataWg.Done()
 	}()
 	epCh := make(chan *subgraph.Extension)
 	go func() {
 		for ep := range epCh {
 			newUnsupportedExts.Add(ep)
-			wg.Done()
 		}
+		dataWg.Done()
 	}()
 	errorCh := make(chan error)
 	errs := make([]error, 0, 10)
 	go func() {
 		for err := range errorCh {
 			errs = append(errs, err)
-			wg.Done()
 		}
+		dataWg.Done()
 	}()
-	for k, v, next := patterns.Iterate()(); next != nil; k, v, next = next() {
-		err := dt.pool.Do(func(pattern *subgraph.SubGraph, i *extInfo) func() {
-			wg.Add(1)
-			return func() {
+	workers := dt.config.Workers()
+	var workersWg sync.WaitGroup
+	workersWg.Add(workers)
+	for x := 0; x < workers; x++ {
+		go func(tid int) {
+			for i := range patterns {
+				pattern := i.ext
+				ep := i.ep
+				vord := i.vord
 				if allow != nil {
 					if allowed, err := allow(pattern); err != nil {
 						errorCh <- err
-						return
+						break
 					} else if !allowed {
-						wg.Done()
-						return
+						continue
 					}
 				}
-				ep := i.ep
-				vord := i.vord
 				tu := set.NewSetMap(hashtable.NewLinearHash())
 				for i, next := unsupExts.Items()(); next != nil; i, next = next() {
 					tu.Add(i.(*subgraph.Extension).Translate(len(sg.V), vord))
@@ -156,7 +161,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 				support, exts, embs, overlap, err := ExtsAndEmbs(dt, pattern, pOverlap, tu, dt.Mode, debug)
 				if err != nil {
 					errorCh <- err
-					return
+					break
 				}
 				if debug {
 					errors.Logf("CHILDREN-DEBUG", "pattern %v support %v exts %v", pattern.Pretty(dt.Labels), len(embs), len(exts))
@@ -167,15 +172,14 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 					epCh <- ep
 				}
 			}
-		}(k.(*subgraph.SubGraph), v.(*extInfo)))
-		if err != nil {
-			return nil, err
-		}
+			workersWg.Done()
+		}(x)
 	}
-	wg.Wait()
+	workersWg.Wait()
 	close(nodeCh)
 	close(epCh)
 	close(errorCh)
+	dataWg.Wait()
 	if len(errs) > 0 {
 		e := errors.Errorf("findChildren error").(*errors.Error)
 		for _, err := range errs {
@@ -193,36 +197,30 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 }
 
 type extInfo struct {
+	ext  *subgraph.SubGraph
 	ep   *subgraph.Extension
 	vord []int
 }
 
-func extendNode(dt *Digraph, n Node, debug bool) (*hashtable.LinearHash, error) {
-	if debug {
-		errors.Logf("DEBUG", "n.SubGraph %v", n.SubGraph())
-	}
+func extendNode(dt *Digraph, n Node, extPoints []*subgraph.Extension, ch chan *extInfo) {
 	sg := n.SubGraph()
 	b := subgraph.Build(len(sg.V), len(sg.E)).From(sg)
-	extPoints, err := n.Extensions()
-	if err != nil {
-		return nil, err
-	}
 	patterns := hashtable.NewLinearHash()
 	for _, ep := range extPoints {
 		bc := b.Copy()
 		bc.Extend(ep)
-		if len(bc.V) > dt.MaxVertices {
-			continue
-		}
-		vord, eord := bc.CanonicalPermutation()
-		ext := bc.BuildFromPermutation(vord, eord)
-		if !patterns.Has(ext) {
-			patterns.Put(ext, &extInfo{ep, vord})
+		if len(bc.V) <= dt.MaxVertices {
+			vord, eord := bc.CanonicalPermutation()
+			ext := bc.BuildFromPermutation(vord, eord)
+			if !patterns.Has(ext) {
+				patterns.Put(ext, nil)
+				ch<-&extInfo{ext, ep, vord}
+			}
 		}
 	}
-
-	return patterns, nil
+	close(ch)
 }
+
 
 func translateOverlap(org []map[int]bool, vord []int) []map[int]bool {
 	if org == nil {
