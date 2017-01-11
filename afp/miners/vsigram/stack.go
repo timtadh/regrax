@@ -17,8 +17,7 @@ import (
 type Stack struct {
 	mu sync.Mutex
 	cond  *sync.Cond
-	stacks [][]lattice.Node
-	mux []sync.Mutex
+	stack []lattice.Node
 	threads int
 	waiting int
 	closed bool
@@ -26,30 +25,15 @@ type Stack struct {
 
 func NewStack(expectedThreads int) *Stack {
 	s := &Stack{
-		stacks: make([][]lattice.Node, 0, expectedThreads + 1),
-		mux: make([]sync.Mutex, expectedThreads + 1, expectedThreads + 1),
+		stack: make([]lattice.Node, 0, 100),
 	}
-	s.stacks = append(s.stacks, make([]lattice.Node, 0, 100))
 	s.cond = sync.NewCond(&s.mu)
 	return s
 }
 
 func (s *Stack) AddThread() int {
 	s.mu.Lock()
-	tid := s.threads + 1
-	if tid >= len(s.mux) {
-		errors.Logf("DEBUG", "tid %v, len(mux) %v, len(stacks) %v", tid, len(s.mux), len(s.stacks))
-		panic("more threads than expected!!")
-	}
-	s.mux[tid].Lock()
-	s.stacks = append(s.stacks, make([]lattice.Node, 0, 100))
-	s.mux[0].Lock()
-	if len(s.stacks[0]) > 0 {
-		s.stacks[tid] = append(s.stacks[tid], s.stacks[0][len(s.stacks[0]) - 1])
-		s.stacks[0] = s.stacks[0][:len(s.stacks[0])-1]
-	}
-	s.mux[0].Unlock()
-	s.mux[tid].Unlock()
+	tid := s.threads
 	s.threads++
 	s.mu.Unlock()
 	return tid
@@ -57,14 +41,8 @@ func (s *Stack) AddThread() int {
 
 func (s *Stack) Close() {
 	s.mu.Lock()
-	for i := 0; i < len(s.mux); i++ {
-		s.mux[i].Lock()
-	}
 	s.closed = true
-	s.stacks = nil
-	for i := len(s.mux) - 1; i >= 0; i-- {
-		s.mux[i].Unlock()
-	}
+	s.stack = nil
 	s.mu.Unlock()
 	s.cond.Broadcast()
 }
@@ -85,58 +63,34 @@ func (s *Stack) WaitClosed() {
 }
 
 func (s *Stack) Push(tid int, node lattice.Node) {
-	if len(s.stacks) < tid {
-		tid = 0
-	}
 	if false {
-		errors.Logf("DEBUG", "tid %v, len(mux) %v, len(stacks) %v", tid, len(s.mux), len(s.stacks))
+		errors.Logf("DEBUG", "tid %v", tid)
 	}
-	s.mux[tid].Lock()
+	s.mu.Lock()
 	if s.closed {
-		s.mux[tid].Unlock()
+		s.mu.Unlock()
 		return
 	}
-	s.stacks[tid] = append(s.stacks[tid], node)
-	s.mux[tid].Unlock()
+	s.stack = append(s.stack, node)
+	s.mu.Unlock()
 	s.cond.Broadcast()
 }
 
 func (s *Stack) Pop(tid int) (node lattice.Node) {
-	if len(s.stacks) < tid {
-		tid = 0
-	}
-	s.mux[tid].Lock()
+	s.mu.Lock()
 	if s.closed {
-		s.mux[tid].Unlock()
+		s.mu.Unlock()
 		return nil
 	}
-
-	// try a local pop first
-	if len(s.stacks[tid]) > 0 {
-		node = s.stacks[tid][len(s.stacks[tid])-1]
-		s.stacks[tid] = s.stacks[tid][:len(s.stacks[tid])-1]
-		s.mux[tid].Unlock()
-		return node
-	}
-
-	// local is empty we need to steal
-	s.mux[tid].Unlock()
-
 	for {
-		// try a steal
-		for i := 0; i < len(s.stacks); i++ {
-			s.mux[i].Lock()
-			if i < len(s.stacks) && len(s.stacks[i]) > 0 {
-				node = s.stacks[i][len(s.stacks[i])-1]
-				s.stacks[i] = s.stacks[i][:len(s.stacks[i])-1]
-				s.mux[i].Unlock()
-				return node
-			}
-			s.mux[i].Unlock()
+		if len(s.stack) > 0 {
+			node = s.stack[len(s.stack)-1]
+			s.stack = s.stack[:len(s.stack)-1]
+			s.mu.Unlock()
+			return node
 		}
 
 		// steal failed; wait for a broadcast of a Push
-		s.mu.Lock()
 		s.waiting++
 		if (s.threads > 0 && s.threads == s.waiting) || s.closed {
 			s.mu.Unlock()
@@ -146,6 +100,5 @@ func (s *Stack) Pop(tid int) (node lattice.Node) {
 		}
 		s.cond.Wait()
 		s.waiting--
-		s.mu.Unlock()
 	}
 }
