@@ -238,21 +238,21 @@ type workItem struct {
 }
 
 var workItems chan *workItem
+var THREADS int
 
 func init() {
-	THREADS := runtime.NumCPU()
+	THREADS = runtime.NumCPU()*2
 	workItems = make(chan *workItem)
 	for x := 0; x < THREADS; x++ {
 		go func(id int) {
 			// errors.Logf("DEBUG", "worker started %v", id)
 			for work := range workItems {
 				work.complete.Add(1)
-				work.stack.AddThread()
-				// wid := work.stack.Threads()
+				tid := work.stack.AddThread()
 				work.started<-true
 				// errors.Logf("DEBUG", "worker %v starting work item %v %v", id, wid, work.sg)
 				for {
-					ids, eid := work.stack.Pop()
+					ids, eid := work.stack.Pop(tid)
 					if ids == nil {
 						break
 					}
@@ -283,7 +283,7 @@ func init() {
 							if work.prune != nil && work.prune(ids) {
 								return
 							}
-							work.stack.Push(ext, eid + 1)
+							work.stack.Push(tid, ext, eid + 1)
 						})
 					}
 				}
@@ -302,6 +302,15 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 		}
 		return ei
 	}
+	if workers < 0 {
+		workers = THREADS/2
+	}
+	if workers == 0 {
+		workers = 1
+	}
+	if workers >= THREADS/2 {
+		workers = THREADS/2
+	}
 	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
 
@@ -313,12 +322,12 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 		overlap: overlap,
 		embs: make(chan *Embedding, 10000),
 		started: make(chan bool),
-		stack: NewStack(),
+		stack: NewStack(workers),
 	}
 
 	vembs := sg.startEmbeddings(indices, startIdx)
 	for _, vemb := range vembs {
-		work.stack.Push(vemb, 0)
+		work.stack.Push(0, vemb, 0)
 	}
 
 	workItems<-work
