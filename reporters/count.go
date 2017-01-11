@@ -5,7 +5,9 @@ import (
 	"os"
 )
 
-import ()
+import (
+	"github.com/timtadh/data-structures/errors"
+)
 
 import (
 	"github.com/timtadh/sfp/config"
@@ -32,6 +34,7 @@ func (r *Count) Report(n lattice.Node) error {
 }
 
 func (r *Count) Close() error {
+	errors.Logf("INFO", "total graphs found %v", r.count)
 	f, err := os.Create(r.config.OutputFile(r.filename))
 	if err != nil {
 		return err
