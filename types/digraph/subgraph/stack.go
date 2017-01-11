@@ -17,15 +17,15 @@ type embSearchNode struct {
 type Stack struct {
 	mu sync.Mutex
 	cond  *sync.Cond
-	stacks [][]embSearchNode
+	stack []embSearchNode
 	threads int
 	waiting int
 	closed bool
 }
 
-func NewStack(maxThreads int) *Stack {
+func NewStack() *Stack {
 	s := &Stack{
-		s.stacks: make([][]embSearchNode, 0, maxThreads)
+		stack: make([]embSearchNode, 0, 100),
 	}
 	s.cond = sync.NewCond(&s.mu)
 	return s
@@ -35,7 +35,6 @@ func (s *Stack) AddThread() int {
 	s.mu.Lock()
 	tid := s.threads
 	s.threads++
-	s.stacks = append(s.stacks, make([]embSearchNode, 10))
 	s.mu.Unlock()
 	return tid
 }
@@ -69,7 +68,7 @@ func (s *Stack) WaitClosed() {
 	s.mu.Unlock()
 }
 
-func (s *Stack) Push(tid int, ids *IdNode, eid int) {
+func (s *Stack) Push(ids *IdNode, eid int) {
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
@@ -80,7 +79,7 @@ func (s *Stack) Push(tid int, ids *IdNode, eid int) {
 	s.cond.Broadcast()
 }
 
-func (s *Stack) Pop(tid int) (ids *IdNode, eid int) {
+func (s *Stack) Pop() (ids *IdNode, eid int) {
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
