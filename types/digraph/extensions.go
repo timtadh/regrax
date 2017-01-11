@@ -278,11 +278,11 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 	switch {
 	case mode&(MNI|FIS) != 0:
 		ei = pattern.IterEmbeddings(
-			dt.config.Parallelism, dt.EmbSearchStartPoint, dt.Indices, patternOverlap, nil)
+			dt.config.Workers(), dt.EmbSearchStartPoint, dt.Indices, patternOverlap, nil)
 	case mode&(GIS) == GIS:
 		seen = make(map[int]bool)
 		ei = pattern.IterEmbeddings(
-			dt.config.Parallelism,
+			dt.config.Workers(),
 			dt.EmbSearchStartPoint,
 			dt.Indices,
 			patternOverlap,

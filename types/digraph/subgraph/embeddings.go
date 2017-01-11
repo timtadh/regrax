@@ -306,15 +306,6 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 		}
 		return ei
 	}
-	if workers < 0 {
-		workers = THREADS
-	}
-	if workers == 0 {
-		workers = 1
-	}
-	if workers >= THREADS {
-		workers = THREADS
-	}
 	startIdx := sg.searchStartingPoint(spMode, indices, overlap)
 	chain := sg.edgeChain(indices, overlap, startIdx)
 
@@ -333,7 +324,6 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 	for _, vemb := range vembs {
 		work.stack.Push(0, vemb, 0)
 	}
-
 	workItems<-work
 	<-work.started
 	if workers > 1 {
@@ -350,7 +340,7 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 					x++
 				default:
 					retries--
-					time.Sleep(2*time.Second)
+					time.Sleep(1*time.Millisecond)
 				}
 			}
 			close(work.started)
