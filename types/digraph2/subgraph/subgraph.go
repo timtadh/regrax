@@ -14,7 +14,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph/digraph"
+	"github.com/timtadh/sfp/types/digraph2/digraph"
 )
 
 type Labels interface {
@@ -173,7 +173,10 @@ func ParsePretty(str string, labels *digraph.Labels) (*SubGraph, error) {
 }
 
 func (sg *SubGraph) Builder() *Builder {
-	return Build(len(sg.V), len(sg.E)).From(sg)
+	if sg == nil {
+		return Build(1, 2)
+	}
+	return Build(len(sg.V)+1, len(sg.E)+1).From(sg)
 }
 
 func (sg *SubGraph) Serialize() []byte {

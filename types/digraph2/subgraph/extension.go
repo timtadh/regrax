@@ -18,6 +18,22 @@ func NewExt(src, targ Vertex, color int) *Extension {
 	}
 }
 
+func (sg *SubGraph) HasExtension(ext *Extension) bool {
+	if ext.Source.Idx >= len(sg.V) || ext.Source.Color != sg.V[ext.Source.Idx].Color {
+		return false
+	}
+	if ext.Target.Idx >= len(sg.V) || ext.Target.Color != sg.V[ext.Target.Idx].Color {
+		return false
+	}
+	for _, eidx := range sg.Adj[ext.Source.Idx] {
+		e := &sg.E[eidx]
+		if e.Src == ext.Source.Idx && e.Targ == ext.Target.Idx && e.Color == ext.Color {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *Extension) Translate(orgLen int, vord []int) *Extension {
 	srcIdx := e.Source.Idx
 	targIdx := e.Target.Idx

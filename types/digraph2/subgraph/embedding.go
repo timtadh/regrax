@@ -1,79 +1,101 @@
 package subgraph
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strings"
 )
 
 import (
-	"github.com/timtadh/data-structures/errors"
+	"github.com/timtadh/data-structures/types"
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph/digraph"
+	"github.com/timtadh/sfp/types/digraph2/digraph"
 )
 
 type Embedding struct {
-	SG  *SubGraph
-	Ids []int // Idx vertices in the graph
+	VertexEmbedding
+	Prev *Embedding
 }
 
-func LoadEmbedding(bytes []byte) (*Embedding, error) {
-	emb := new(Embedding)
-	err := emb.UnmarshalBinary(bytes)
-	if err != nil {
-		return nil, err
-	}
-	return emb, nil
+type VertexEmbedding struct {
+	SgIdx, EmbIdx   int
 }
 
-func (emb *Embedding) Builder() *EmbeddingBuilder {
-	return BuildEmbedding(len(emb.SG.V), len(emb.SG.E)).From(emb)
+func StartEmbedding(v VertexEmbedding) *Embedding {
+	return &Embedding{VertexEmbedding: v, Prev: nil}
 }
 
-func (sg *SubGraph) HasExtension(ext *Extension) bool {
-	if ext.Source.Idx >= len(sg.V) || ext.Source.Color != sg.V[ext.Source.Idx].Color {
+func (emb *Embedding) Extend(v VertexEmbedding) *Embedding {
+	return &Embedding{VertexEmbedding: v, Prev: emb}
+}
+
+func (v *VertexEmbedding) Equals(o types.Equatable) bool {
+	a := v
+	switch b := o.(type) {
+	case *VertexEmbedding:
+		return a.EmbIdx == b.EmbIdx && a.SgIdx == b.SgIdx
+	default:
 		return false
 	}
-	if ext.Target.Idx >= len(sg.V) || ext.Target.Color != sg.V[ext.Target.Idx].Color {
-		return false
-	}
-	for _, eidx := range sg.Adj[ext.Source.Idx] {
-		e := &sg.E[eidx]
-		if e.Src == ext.Source.Idx && e.Targ == ext.Target.Idx && e.Color == ext.Color {
-			return true
-		}
-	}
-	return false
 }
 
-func (emb *Embedding) Exists(G *digraph.Digraph) bool {
-	seen := make(map[int]bool, len(emb.Ids))
-	for _, id := range emb.Ids {
-		if seen[id] {
+func (v *VertexEmbedding) Less(o types.Sortable) bool {
+	a := v
+	switch b := o.(type) {
+	case *VertexEmbedding:
+		return a.EmbIdx < b.EmbIdx || (a.EmbIdx == b.EmbIdx && a.SgIdx < b.SgIdx)
+	default:
+		return false
+	}
+}
+
+func (v *VertexEmbedding) Hash() int {
+	return v.EmbIdx*3 + v.SgIdx*5
+}
+
+func (v *VertexEmbedding) Translate(orgLen int, vord []int) *VertexEmbedding {
+	idx := v.SgIdx
+	if idx >= orgLen {
+		idx = len(vord) + (idx - orgLen)
+	}
+	if idx < len(vord) {
+		idx = vord[idx]
+	}
+	return &VertexEmbedding{
+		SgIdx: idx,
+		EmbIdx: v.EmbIdx,
+	}
+}
+
+func (sg *SubGraph) EmbeddingExists(emb *Embedding, G *digraph.Digraph) bool {
+	seen := make(map[int]bool, len(sg.V))
+	ids := make([]int, len(sg.V))
+	for e := emb; e != nil; e = e.Prev {
+		if seen[e.EmbIdx] {
 			return false
 		}
-		seen[id] = true
+		seen[e.EmbIdx] = true
+		ids[e.SgIdx] = e.EmbIdx
 	}
-	for i := range emb.SG.E {
-		e := &emb.SG.E[i]
+	for i := range sg.E {
+		e := &sg.E[i]
 		found := false
-		for _, x := range G.Kids[emb.Ids[e.Src]] {
+		for _, x := range G.Kids[ids[e.Src]] {
 			ke := &G.E[x]
 			if ke.Color != e.Color {
 				continue
 			}
-			if G.V[ke.Src].Color != emb.SG.V[e.Src].Color {
+			if G.V[ke.Src].Color != sg.V[e.Src].Color {
 				continue
 			}
-			if G.V[ke.Targ].Color != emb.SG.V[e.Targ].Color {
+			if G.V[ke.Targ].Color != sg.V[e.Targ].Color {
 				continue
 			}
-			if ke.Src != emb.Ids[e.Src] {
+			if ke.Src != ids[e.Src] {
 				continue
 			}
-			if ke.Targ != emb.Ids[e.Targ] {
+			if ke.Targ != ids[e.Targ] {
 				continue
 			}
 			found = true
@@ -86,188 +108,38 @@ func (emb *Embedding) Exists(G *digraph.Digraph) bool {
 	return true
 }
 
-func (emb *Embedding) MarshalBinary() ([]byte, error) {
-	return emb.Serialize(), nil
+func (emb *Embedding) Slice(sg *SubGraph) []int {
+	ids := make([]int, len(sg.V))
+	for i := 0; i < len(sg.V); i++ {
+		ids[i] = -1
+	}
+	for e := emb; e != nil; e = e.Prev {
+		ids[e.SgIdx] = e.EmbIdx
+	}
+	return ids
 }
 
-func (emb *Embedding) Serialize() []byte {
-	size := 8 + len(emb.SG.V)*8 + len(emb.SG.E)*12
-	label := make([]byte, size)
-	binary.BigEndian.PutUint32(label[0:4], uint32(len(emb.SG.E)))
-	binary.BigEndian.PutUint32(label[4:8], uint32(len(emb.SG.V)))
-	off := 8
-	for i := range emb.SG.V {
-		s := off + i*8
-		e := s + 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(emb.Ids[i]))
-		s += 4
-		e += 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(emb.SG.V[i].Color))
+func (emb *Embedding) list(length int) []int {
+	l := make([]int, length)
+	for e := emb; e != nil; e = e.Prev {
+		l[e.SgIdx] = e.EmbIdx
 	}
-	off += len(emb.SG.V) * 8
-	for i := range emb.SG.E {
-		edge := &emb.SG.E[i]
-		s := off + i*12
-		e := s + 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Src))
-		s += 4
-		e += 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Targ))
-		s += 4
-		e += 4
-		binary.BigEndian.PutUint32(label[s:e], uint32(edge.Color))
-	}
-	return label
+	return l
 }
 
-func (emb *Embedding) UnmarshalBinary(bytes []byte) error {
-	if emb.SG != nil || emb.Ids != nil {
-		return errors.Errorf("Embedding is already loaded! will not load serialized data")
+func (emb *Embedding) hasId(id int) bool {
+	for c := emb; c != nil; c = c.Prev {
+		if id == c.EmbIdx {
+			return true
+		}
 	}
-	if len(bytes) < 8 {
-		return errors.Errorf("bytes was too small %v < 8", len(bytes))
-	}
-	lenE := int(binary.BigEndian.Uint32(bytes[0:4]))
-	lenV := int(binary.BigEndian.Uint32(bytes[4:8]))
-	off := 8
-	expected := 8 + lenV*8 + lenE*12
-	if len(bytes) < expected {
-		return errors.Errorf("bytes was too small %v < %v", len(bytes), expected)
-	}
-	ids := make([]int, lenV)
-	sg := &SubGraph{
-		V:   make([]Vertex, lenV),
-		E:   make([]Edge, lenE),
-		Adj: make([][]int, lenV),
-	}
-	for i := 0; i < lenV; i++ {
-		s := off + i*8
-		e := s + 4
-		id := int(binary.BigEndian.Uint32(bytes[s:e]))
-		s += 4
-		e += 4
-		color := int(binary.BigEndian.Uint32(bytes[s:e]))
-		ids[i] = id
-		sg.V[i].Idx = i
-		sg.V[i].Color = color
-		sg.Adj[i] = make([]int, 0, 5)
-	}
-	off += lenV * 8
-	for i := 0; i < lenE; i++ {
-		s := off + i*12
-		e := s + 4
-		src := int(binary.BigEndian.Uint32(bytes[s:e]))
-		s += 4
-		e += 4
-		targ := int(binary.BigEndian.Uint32(bytes[s:e]))
-		s += 4
-		e += 4
-		color := int(binary.BigEndian.Uint32(bytes[s:e]))
-		sg.E[i].Src = src
-		sg.E[i].Targ = targ
-		sg.E[i].Color = color
-		sg.Adj[src] = append(sg.Adj[src], i)
-		sg.Adj[targ] = append(sg.Adj[targ], i)
-	}
-	emb.SG = sg
-	emb.Ids = ids
-	return nil
-}
-
-func (emb *Embedding) Label() []byte {
-	return emb.SG.Label()
+	return false
 }
 
 func (emb *Embedding) String() string {
-	V := make([]string, 0, len(emb.SG.V))
-	E := make([]string, 0, len(emb.SG.E))
-	for i := range emb.SG.V {
-		V = append(V, fmt.Sprintf(
-			"(%v:%v)",
-			emb.Ids[i],
-			emb.SG.V[i].Color,
-		))
+	items := make([]string, 0, 10)
+	for e := emb; e != nil; e = e.Prev {
+		items = append(items, fmt.Sprintf("<sg-idx: %v, emb-idx: %v>", e.SgIdx, e.EmbIdx))
 	}
-	for i := range emb.SG.E {
-		E = append(E, fmt.Sprintf(
-			"[%v->%v:%v]",
-			emb.SG.E[i].Src,
-			emb.SG.E[i].Targ,
-			emb.SG.E[i].Color,
-		))
-	}
-	return fmt.Sprintf("{%v:%v}%v%v", len(emb.SG.E), len(emb.SG.V), strings.Join(V, ""), strings.Join(E, ""))
-}
-
-func (emb *Embedding) Pretty(colors []string) string {
-	V := make([]string, 0, len(emb.SG.V))
-	E := make([]string, 0, len(emb.SG.E))
-	for i := range emb.SG.V {
-		V = append(V, fmt.Sprintf(
-			"(%v:%v)",
-			emb.Ids[i],
-			colors[emb.SG.V[i].Color],
-		))
-	}
-	for i := range emb.SG.E {
-		E = append(E, fmt.Sprintf(
-			"[%v->%v:%v]",
-			emb.SG.E[i].Src,
-			emb.SG.E[i].Targ,
-			colors[emb.SG.E[i].Color],
-		))
-	}
-	return fmt.Sprintf("{%v:%v}%v%v", len(emb.SG.E), len(emb.SG.V), strings.Join(V, ""), strings.Join(E, ""))
-}
-
-func (emb *Embedding) Dotty(labels *digraph.Labels, attrs map[int]map[string]interface{}) string {
-	V := make([]string, 0, len(emb.SG.V))
-	E := make([]string, 0, len(emb.SG.E))
-	// TODO: Replace this with strconv.Quote
-	safeStr := func(i interface{}) string {
-		s := fmt.Sprint(i)
-		s = strings.Replace(s, "\n", "\\n", -1)
-		s = strings.Replace(s, "\"", "\\\"", -1)
-		return s
-	}
-	renderAttrs := func(color, id int) string {
-		a := attrs[id]
-		label := labels.Label(color)
-		strs := make([]string, 0, len(a)+1)
-		strs = append(strs, fmt.Sprintf(`idx="%v"`, id))
-		if line, has := a["start_line"]; has {
-			strs = append(strs, fmt.Sprintf(`label="%v\n[line: %v]"`, safeStr(label), safeStr(line)))
-		} else {
-			strs = append(strs, fmt.Sprintf(`label="%v"`, safeStr(label)))
-		}
-		for name, value := range a {
-			if name == "label" || name == "id" {
-				continue
-			}
-			strs = append(strs, fmt.Sprintf("%v=\"%v\"", name, safeStr(value)))
-		}
-		return strings.Join(strs, ",")
-	}
-	for idx, id := range emb.Ids {
-		V = append(V, fmt.Sprintf(
-			"%v [%v];",
-			id,
-			renderAttrs(emb.SG.V[idx].Color, id),
-		))
-	}
-	for idx := range emb.SG.E {
-		e := &emb.SG.E[idx]
-		E = append(E, fmt.Sprintf(
-			"%v -> %v [label=\"%v\"];",
-			emb.Ids[e.Src],
-			emb.Ids[e.Targ],
-			safeStr(labels.Label(e.Color)),
-		))
-	}
-	return fmt.Sprintf(
-		`digraph {
-    %v
-    %v
-}
-`, strings.Join(V, "\n    "), strings.Join(E, "\n    "))
+	return fmt.Sprintf("(%v)", strings.Join(items, ", "))
 }

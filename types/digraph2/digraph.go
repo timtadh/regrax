@@ -62,10 +62,15 @@ func (dt *Digraph) Init(b *digraph.Builder, l *digraph.Labels) (err error) {
 	dt.Labels = l
 
 	errors.Logf("DEBUG", "computing starting points")
-	// for color, _ := range dt.Indices.ColorIndex {
-	// 	// sg := subgraph.Build(1, 0).FromVertex(color).Build()
-	// 	// dt.FrequentVertices = append(dt.FrequentVertices, n)
-	// }
+	for color, embIdxs := range dt.Indices.ColorIndex {
+		sg := subgraph.Build(1, 0).FromVertex(color).Build()
+		embs := make([]*subgraph.Embedding, 0, len(embIdxs))
+		for _, embIdx := range embIdxs {
+			embs = append(embs, subgraph.StartEmbedding(subgraph.VertexEmbedding{SgIdx: 0, EmbIdx: embIdx}))
+		}
+		n := NewNode(dt, sg, embs)
+		dt.FrequentVertices = append(dt.FrequentVertices, n)
+	}
 	return nil
 }
 
@@ -87,12 +92,15 @@ func (g *Digraph) MinimumLevel() int {
 }
 
 func (g *Digraph) Root() lattice.Node {
-	// return RootEmbListNode(g)
-	return nil
+	return NewNode(g, nil, nil)
 }
 
 func VE(node lattice.Node) (V, E int) {
-	panic("wizard")
+	n := node.(*Node)
+	if n.SubGraph == nil {
+		return 0, 0
+	}
+	return len(n.SubGraph.V), len(n.SubGraph.E)
 }
 
 func (g *Digraph) Acceptable(node lattice.Node) bool {

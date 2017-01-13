@@ -11,7 +11,7 @@ import (
 import ()
 
 type embSearchNode struct {
-	ids *IdNode
+	emb *Embedding
 	eid int
 }
 
@@ -85,7 +85,7 @@ func (s *Stack) WaitClosed() {
 	s.mu.Unlock()
 }
 
-func (s *Stack) Push(tid int, ids *IdNode, eid int) {
+func (s *Stack) Push(tid int, emb *Embedding, eid int) {
 	if len(s.stacks) < tid {
 		tid = 0
 	}
@@ -97,12 +97,12 @@ func (s *Stack) Push(tid int, ids *IdNode, eid int) {
 		s.mux[tid].Unlock()
 		return
 	}
-	s.stacks[tid] = append(s.stacks[tid], embSearchNode{ids, eid})
+	s.stacks[tid] = append(s.stacks[tid], embSearchNode{emb, eid})
 	s.mux[tid].Unlock()
 	s.cond.Broadcast()
 }
 
-func (s *Stack) Pop(tid int) (ids *IdNode, eid int) {
+func (s *Stack) Pop(tid int) (emb *Embedding, eid int) {
 	if len(s.stacks) < tid {
 		tid = 0
 	}
@@ -117,7 +117,7 @@ func (s *Stack) Pop(tid int) (ids *IdNode, eid int) {
 		item := s.stacks[tid][len(s.stacks[tid])-1]
 		s.stacks[tid] = s.stacks[tid][:len(s.stacks[tid])-1]
 		s.mux[tid].Unlock()
-		return item.ids, item.eid
+		return item.emb, item.eid
 	}
 
 	// local is empty we need to steal
@@ -131,7 +131,7 @@ func (s *Stack) Pop(tid int) (ids *IdNode, eid int) {
 				item := s.stacks[i][len(s.stacks[i])-1]
 				s.stacks[i] = s.stacks[i][:len(s.stacks[i])-1]
 				s.mux[i].Unlock()
-				return item.ids, item.eid
+				return item.emb, item.eid
 			}
 			s.mux[i].Unlock()
 		}

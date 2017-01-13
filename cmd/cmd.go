@@ -54,7 +54,9 @@ import (
 	"github.com/timtadh/sfp/miners"
 	"github.com/timtadh/sfp/reporters"
 	"github.com/timtadh/sfp/types/digraph"
+	"github.com/timtadh/sfp/types/digraph2"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
+	subgraph2 "github.com/timtadh/sfp/types/digraph2/subgraph"
 	"github.com/timtadh/sfp/types/itemset"
 )
 
@@ -714,6 +716,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"max-vertices=",
 			"include=",
 			"exclude=",
+			"version-2",
 		},
 	)
 	if err != nil {
@@ -729,6 +732,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	extendFromEdges := false
 	embSearchStartingPoint := subgraph.MostConnected
 	caching := true
+	version2 := false
 	minE := 0
 	maxE := int(math.MaxInt32)
 	minV := 0
@@ -741,6 +745,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			Usage(0)
 		case "-l", "--loader":
 			loaderType = oa.Arg()
+		case "--version-2":
+			version2 = true
 		case "-c", "--count-mode":
 			modeStr = oa.Arg()
 		case "--overlap-pruning":
@@ -843,37 +849,70 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		errors.Logf("INFO", "excluding labels matching '%v'", exclude)
 	}
 
-	dc := &digraph.Config{
-		MinEdges: minE,
-		MaxEdges: maxE,
-		MinVertices: minV,
-		MaxVertices: maxV,
-		Mode: mode,
-		Include: include,
-		Exclude: exclude,
-		EmbSearchStartPoint: embSearchStartingPoint,
-	}
+	if version2 {
+		dc := &digraph2.Config{
+			MinEdges: minE,
+			MaxEdges: maxE,
+			MinVertices: minV,
+			MaxVertices: maxV,
+			Include: include,
+			Exclude: exclude,
+			EmbSearchStartPoint: subgraph2.MostConnected,
+		}
 
-	var loader lattice.Loader
-	switch loaderType {
-	case "veg":
-		loader, err = digraph.NewVegLoader(conf, dc)
-	case "dot":
-		loader, err = digraph.NewDotLoader(conf, dc)
-	case "int":
-		loader, err = digraph.NewIntLoader(conf, dc)
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
-		Usage(ErrorCodes["opts"])
+		var loader lattice.Loader
+		switch loaderType {
+		case "veg":
+			loader, err = digraph2.NewVegLoader(conf, dc)
+		case "dot":
+			loader, err = digraph2.NewDotLoader(conf, dc)
+		case "int":
+			loader, err = digraph2.NewIntLoader(conf, dc)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
+			Usage(ErrorCodes["opts"])
+		}
+		if err != nil {
+			log.Panic(err)
+		}
+		fmtr := func(dt lattice.DataType, prfmt lattice.PrFormatter) lattice.Formatter {
+			g := dt.(*digraph2.Digraph)
+			return digraph2.NewFormatter(g, prfmt)
+		}
+		return loader, fmtr, args
+	} else {
+		dc := &digraph.Config{
+			MinEdges: minE,
+			MaxEdges: maxE,
+			MinVertices: minV,
+			MaxVertices: maxV,
+			Mode: mode,
+			Include: include,
+			Exclude: exclude,
+			EmbSearchStartPoint: embSearchStartingPoint,
+		}
+
+		var loader lattice.Loader
+		switch loaderType {
+		case "veg":
+			loader, err = digraph.NewVegLoader(conf, dc)
+		case "dot":
+			loader, err = digraph.NewDotLoader(conf, dc)
+		case "int":
+			loader, err = digraph.NewIntLoader(conf, dc)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown itemset loader '%v'\n", loaderType)
+			Usage(ErrorCodes["opts"])
+		}
+		if err != nil {
+			log.Panic(err)
+		}
+		fmtr := func(dt lattice.DataType, prfmt lattice.PrFormatter) lattice.Formatter {
+			g := dt.(*digraph.Digraph)
+			return digraph.NewFormatter(g, prfmt)
+		}
+		return loader, fmtr, args
 	}
-	if err != nil {
-		log.Panic(err)
-	}
-	fmtr := func(dt lattice.DataType, prfmt lattice.PrFormatter) lattice.Formatter {
-		g := dt.(*digraph.Digraph)
-		return digraph.NewFormatter(g, prfmt)
-	}
-	return loader, fmtr, args
 }
 
 type Reporter func(map[string]Reporter, []string, lattice.Formatter, *config.Config) (miners.Reporter, []string)

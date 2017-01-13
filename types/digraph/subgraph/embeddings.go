@@ -284,7 +284,7 @@ func init() {
 						// ok extend the embedding
 						// size := len(stack)
 						work.sg.extendEmbedding(work.indices, ids, &work.sg.E[work.chain[eid]], work.overlap, func(ext *IdNode) {
-							if work.prune != nil && work.prune(ids) {
+							if work.prune != nil && work.prune(ext) {
 								return
 							}
 							work.stack.Push(tid, ext, eid + 1)
