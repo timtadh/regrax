@@ -67,8 +67,10 @@ func (dt *Digraph) Init(b *digraph.Builder, l *digraph.Labels) (err error) {
 		for _, embIdx := range embIdxs {
 			embs = append(embs, subgraph.StartEmbedding(subgraph.VertexEmbedding{SgIdx: 0, EmbIdx: embIdx}))
 		}
-		n := NewNode(dt, sg, embs)
-		dt.FrequentVertices = append(dt.FrequentVertices, n)
+		if len(embs) >= dt.Support() {
+			n := NewNode(dt, sg, embs)
+			dt.FrequentVertices = append(dt.FrequentVertices, n)
+		}
 	}
 	return nil
 }

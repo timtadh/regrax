@@ -5,7 +5,7 @@ import (
 )
 
 func (n *Node) support(V int, embs []*subgraph.Embedding) int {
-	return n.mni(V, embs)
+	return n.fis(V, embs)
 }
 
 func (n *Node) mni(V int, embs []*subgraph.Embedding) int {
@@ -20,11 +20,29 @@ func (n *Node) mni(V int, embs []*subgraph.Embedding) int {
 			set[e.EmbIdx] = true
 		}
 	}
-	min := -1
+	min := len(embs)
 	for _, set := range sets {
-		if min < 0 || len(set) < min {
+		if len(set) < min {
 			min = len(set)
 		}
 	}
 	return min
+}
+
+func (n *Node) fis(V int, embs []*subgraph.Embedding) int {
+	seen := make(map[int]bool, len(embs)*V)
+	fis := 0
+	for _, emb := range embs {
+		saw := false
+		for e := emb; e != nil; e = e.Prev {
+			if seen[e.EmbIdx] {
+				saw = true
+			}
+			seen[e.EmbIdx] = true
+		}
+		if !saw {
+			fis++
+		}
+	}
+	return fis
 }

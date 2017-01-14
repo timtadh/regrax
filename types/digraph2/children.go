@@ -1,8 +1,6 @@
 package digraph2
 
-import (
-	"sort"
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -13,37 +11,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph2/digraph"
 	"github.com/timtadh/sfp/types/digraph2/subgraph"
 )
-
-type extension struct {
-	ext *subgraph.Extension
-	emb *subgraph.Embedding
-}
-
-type extensions []extension
-
-type extPartition struct {
-	ext *subgraph.Extension
-	embs subgraph.Embeddings
-}
-
-func (exts extensions) partition() []extPartition {
-	sort.Slice(exts, func(i, j int) bool {
-		return exts[i].ext.ExtLess(exts[j].ext)
-	})
-	partitions := make([]extPartition, 0, 10)
-	var prev *subgraph.Extension = nil
-	for _, e := range exts {
-		if !e.ext.ExtEquals(prev) {
-			partitions = append(partitions, extPartition{
-				ext: e.ext,
-				embs: make(subgraph.Embeddings, 0, 10),
-			})
-		}
-		partitions[len(partitions)-1].embs = append(partitions[len(partitions)-1].embs, e.emb)
-		prev = e.ext
-	}
-	return partitions
-}
 
 func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes []lattice.Node, err error) {
 	if false {
@@ -63,6 +30,10 @@ func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes
 	for ext, embs := range exts {
 		// ext := p.ext
 		// embs := p.embs
+		if len(embs) < n.dt.Support() {
+			unsupported[ext] = true
+			continue
+		}
 		b := builder.Copy()
 		_, _, err := b.Extend(&ext)
 		if err != nil {
@@ -85,30 +56,31 @@ func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes
 			}
 		}
 		tembs := embs.Translate(len(extended.V), vord)
-		for _, temb := range tembs {
-			if !extended.EmbeddingExists(temb, n.dt.G) {
-				panic("non-existant embedding")
-			}
-		}
+		// for _, temb := range tembs {
+		// 	if !extended.EmbeddingExists(temb, n.dt.G) {
+		// 		panic("non-existant embedding")
+		// 	}
+		// }
 		label := string(extended.Label())
 		if _, has := seen[label]; has {
-			errors.Logf("ERROR", "sg %v", n.SubGraph)
-			errors.Logf("ERROR", "cur sg %v", extended)
-			errors.Logf("ERROR", "cur ext %v", ext)
-			prevExt := seen[label]
-			b := builder.Copy()
-			b.Extend(&prevExt)
-			prevSg := b.Build()
-			errors.Logf("ERROR", "prev sg %v", prevSg)
-			errors.Logf("ERROR", "prev ext %v", prevExt)
-			m := make(map[subgraph.Extension][]*subgraph.SubGraph)
-			m[prevExt] = append(m[prevExt], prevSg)
-			m[ext] = append(m[ext], extended)
-			errors.Logf("ERROR", "map %v", m)
-			for ext := range exts {
-				errors.Logf("ERROR", "ext %v", ext)
-			}
-			panic("seen node before")
+			// errors.Logf("ERROR", "sg %v", n.SubGraph)
+			// errors.Logf("ERROR", "cur sg %v", extended)
+			// errors.Logf("ERROR", "cur ext %v", ext)
+			// prevExt := seen[label]
+			// b := builder.Copy()
+			// b.Extend(&prevExt)
+			// prevSg := b.Build()
+			// errors.Logf("ERROR", "prev sg %v", prevSg)
+			// errors.Logf("ERROR", "prev ext %v", prevExt)
+			// m := make(map[subgraph.Extension][]*subgraph.SubGraph)
+			// m[prevExt] = append(m[prevExt], prevSg)
+			// m[ext] = append(m[ext], extended)
+			// errors.Logf("ERROR", "map %v", m)
+			// for ext := range exts {
+			// 	errors.Logf("ERROR", "ext %v", ext)
+			// }
+			// panic("seen node before")
+			continue
 		}
 		seen[label] = ext
 		nodes = append(nodes, NewNode(n.dt, extended, tembs))
@@ -160,20 +132,10 @@ func (n *Node) validExtChecker(unsupported map[subgraph.Extension]bool, do func(
 }
 
 func (n *Node) extension(embedding *subgraph.Embedding, e *digraph.Edge, src, targ, embIdx int) (*subgraph.Embedding, *subgraph.Extension) {
-	// errors.Logf("DEBUG", "start create ext from %v, \n\t\twith emb %v, edge %v, src %v targ %v, embIdx %v",
-	// 			n.SubGraph, embedding, e, src, targ, embIdx)
-	if src >= len(n.SubGraph.V) {
-		errors.Logf("ERROR", "node %v", n)
-		panic("bad src vertex")
-	}
-	if targ >= len(n.SubGraph.V) {
-		panic("bad targ vertex")
-	}
 	hasTarg := false
 	hasSrc := false
 	var srcIdx int = len(n.SubGraph.V)
 	var targIdx int = len(n.SubGraph.V)
-	var newVE *subgraph.VertexEmbedding = nil
 	if src >= 0 {
 		hasSrc = true
 		srcIdx = src
@@ -195,6 +157,11 @@ func (n *Node) extension(embedding *subgraph.Embedding, e *digraph.Edge, src, ta
 			targIdx = emb.SgIdx
 		}
 	}
+	ext := subgraph.NewExt(
+		subgraph.Vertex{Idx: srcIdx, Color: n.dt.G.V[e.Src].Color},
+		subgraph.Vertex{Idx: targIdx, Color: n.dt.G.V[e.Targ].Color},
+		e.Color)
+	var newVE *subgraph.VertexEmbedding = nil
 	if !hasSrc && !hasTarg {
 		panic("both src and targ unattached")
 	} else if !hasSrc {
@@ -208,30 +175,8 @@ func (n *Node) extension(embedding *subgraph.Embedding, e *digraph.Edge, src, ta
 			EmbIdx: embIdx,
 		}
 	}
-	ext := subgraph.NewExt(
-		subgraph.Vertex{Idx: srcIdx, Color: n.dt.G.V[e.Src].Color},
-		subgraph.Vertex{Idx: targIdx, Color: n.dt.G.V[e.Targ].Color},
-		e.Color)
-	// orgEmb := embedding
 	if newVE != nil {
 		embedding = embedding.Extend(*newVE)
 	}
-	// b := n.SubGraph.Builder()
-	// _, _, err := b.Extend(ext)
-	// if err != nil {
-	// 	errors.Logf("ERROR", "created bad extension for %v is %v with %v", n.SubGraph, ext, embedding)
-	// 	panic(err)
-	// }
-	// vord, eord := b.CanonicalPermutation()
-	// extended := b.BuildFromPermutation(vord, eord)
-	// // errors.Logf("DEBUG", "created %v is %v with %v", ext, extended, embedding)
-	// temb := embedding.Translate(len(extended.V), vord)
-	// matches := temb.Slice(extended)
-	// for sgIdx, embIdx := range matches {
-	// 	if embIdx == -1 {
-	// 		errors.Logf("ERROR", "created bad emb extension for %v is %v with %v -> %v with %v at %v", n.SubGraph, ext, orgEmb, extended, temb, sgIdx)
-	// 		panic("bad extension")
-	// 	}
-	// }
 	return embedding, ext
 }

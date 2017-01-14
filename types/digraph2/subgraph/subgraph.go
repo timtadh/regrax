@@ -87,6 +87,9 @@ func (sg *SubGraph) EmbeddingExists(emb *Embedding, G *digraph.Digraph) bool {
 		}
 		seen[e.EmbIdx] = true
 		ids[e.SgIdx] = e.EmbIdx
+		if G.V[e.EmbIdx].Color != sg.V[e.SgIdx].Color {
+			return false
+		}
 	}
 	for i := range sg.E {
 		e := &sg.E[i]
