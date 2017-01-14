@@ -65,42 +65,58 @@ func (e *Extension) Translate(orgLen int, vord []int) *Extension {
 func (e *Extension) Equals(o types.Equatable) bool {
 	switch x := o.(type) {
 	case *Extension:
-		return e.Source.Idx == x.Source.Idx &&
-			e.Source.Color == x.Source.Color &&
-			e.Target.Idx == x.Target.Idx &&
-			e.Target.Color == x.Target.Color &&
-			e.Color == x.Color
+		return e.ExtEquals(x)
 	}
 	return false
 }
 
+func (e *Extension) ExtEquals(x *Extension) bool {
+	if e == nil && x == nil {
+		return true
+	} else if e == nil {
+		return false
+	} else if x == nil {
+		return false
+	}
+	return e.Source.Idx == x.Source.Idx &&
+		e.Source.Color == x.Source.Color &&
+		e.Target.Idx == x.Target.Idx &&
+		e.Target.Color == x.Target.Color &&
+		e.Color == x.Color
+}
+
+
 func (e *Extension) Less(o types.Sortable) bool {
 	switch x := o.(type) {
 	case *Extension:
-		if e.Source.Idx < x.Source.Idx {
-			return true
-		} else if e.Source.Idx > x.Source.Idx {
-			return false
-		}
-		if e.Source.Color < x.Source.Color {
-			return true
-		} else if e.Source.Color > x.Source.Color {
-			return false
-		}
-		if e.Target.Idx < x.Target.Idx {
-			return true
-		} else if e.Target.Idx > x.Target.Idx {
-			return false
-		}
-		if e.Target.Color < x.Target.Color {
-			return true
-		} else if e.Target.Color > x.Target.Color {
-			return false
-		}
-		if e.Color < x.Color {
-			return true
-		}
+		return e.ExtLess(x)
+	}
+	return false
+}
+
+func (e *Extension) ExtLess(x *Extension) bool {
+	if e.Source.Idx < x.Source.Idx {
+		return true
+	} else if e.Source.Idx > x.Source.Idx {
 		return false
+	}
+	if e.Source.Color < x.Source.Color {
+		return true
+	} else if e.Source.Color > x.Source.Color {
+		return false
+	}
+	if e.Target.Idx < x.Target.Idx {
+		return true
+	} else if e.Target.Idx > x.Target.Idx {
+		return false
+	}
+	if e.Target.Color < x.Target.Color {
+		return true
+	} else if e.Target.Color > x.Target.Color {
+		return false
+	}
+	if e.Color < x.Color {
+		return true
 	}
 	return false
 }

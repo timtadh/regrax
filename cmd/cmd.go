@@ -56,7 +56,6 @@ import (
 	"github.com/timtadh/sfp/types/digraph"
 	"github.com/timtadh/sfp/types/digraph2"
 	"github.com/timtadh/sfp/types/digraph/subgraph"
-	subgraph2 "github.com/timtadh/sfp/types/digraph2/subgraph"
 	"github.com/timtadh/sfp/types/itemset"
 )
 
@@ -857,7 +856,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			MaxVertices: maxV,
 			Include: include,
 			Exclude: exclude,
-			EmbSearchStartPoint: subgraph2.MostConnected,
 		}
 
 		var loader lattice.Loader

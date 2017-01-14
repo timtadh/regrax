@@ -21,7 +21,6 @@ type Config struct {
 	MinEdges, MaxEdges       int
 	MinVertices, MaxVertices int
 	Include, Exclude         *regexp.Regexp
-	EmbSearchStartPoint      subgraph.EmbSearchStartPoint
 }
 
 type Digraph struct {

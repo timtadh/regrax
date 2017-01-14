@@ -241,7 +241,7 @@ var workItems chan *workItem
 var THREADS int
 
 func init() {
-	THREADS = runtime.NumCPU()
+	THREADS = 1 + runtime.NumCPU()*0
 	workItems = make(chan *workItem)
 	for x := 0; x < THREADS; x++ {
 		go func(id int) {

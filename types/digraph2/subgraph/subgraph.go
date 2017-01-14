@@ -78,6 +78,46 @@ func (E Edges) Iterate() (ei bliss.EdgeIterator) {
 	return ei
 }
 
+func (sg *SubGraph) EmbeddingExists(emb *Embedding, G *digraph.Digraph) bool {
+	seen := make(map[int]bool, len(sg.V))
+	ids := make([]int, len(sg.V))
+	for e := emb; e != nil; e = e.Prev {
+		if seen[e.EmbIdx] {
+			return false
+		}
+		seen[e.EmbIdx] = true
+		ids[e.SgIdx] = e.EmbIdx
+	}
+	for i := range sg.E {
+		e := &sg.E[i]
+		found := false
+		for _, x := range G.Kids[ids[e.Src]] {
+			ke := &G.E[x]
+			if ke.Color != e.Color {
+				continue
+			}
+			if G.V[ke.Src].Color != sg.V[e.Src].Color {
+				continue
+			}
+			if G.V[ke.Targ].Color != sg.V[e.Targ].Color {
+				continue
+			}
+			if ke.Src != ids[e.Src] {
+				continue
+			}
+			if ke.Targ != ids[e.Targ] {
+				continue
+			}
+			found = true
+			break
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 func LoadSubGraph(label []byte) (*SubGraph, error) {
 	sg := new(SubGraph)
 	err := sg.UnmarshalBinary(label)

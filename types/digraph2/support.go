@@ -4,16 +4,16 @@ import (
 	"github.com/timtadh/sfp/types/digraph2/subgraph"
 )
 
-func (n *Node) support(embs []*subgraph.Embedding) int {
-	return n.mni(embs)
+func (n *Node) support(V int, embs []*subgraph.Embedding) int {
+	return n.mni(V, embs)
 }
 
-func (n *Node) mni(embs []*subgraph.Embedding) int {
-	sets := make(map[int]map[int]bool)
+func (n *Node) mni(V int, embs []*subgraph.Embedding) int {
+	sets := make([]map[int]bool, V)
 	for _, emb := range embs {
 		for e := emb; e != nil; e = e.Prev {
-			set, has := sets[e.SgIdx]
-			if !has {
+			set := sets[e.SgIdx]
+			if set == nil {
 				set = make(map[int]bool)
 				sets[e.SgIdx] = set
 			}

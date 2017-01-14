@@ -9,9 +9,9 @@ import (
 	"github.com/timtadh/data-structures/types"
 )
 
-import (
-	"github.com/timtadh/sfp/types/digraph2/digraph"
-)
+import ()
+
+type Embeddings []*Embedding
 
 type Embedding struct {
 	VertexEmbedding
@@ -68,44 +68,22 @@ func (v *VertexEmbedding) Translate(orgLen int, vord []int) *VertexEmbedding {
 	}
 }
 
-func (sg *SubGraph) EmbeddingExists(emb *Embedding, G *digraph.Digraph) bool {
-	seen := make(map[int]bool, len(sg.V))
-	ids := make([]int, len(sg.V))
-	for e := emb; e != nil; e = e.Prev {
-		if seen[e.EmbIdx] {
-			return false
-		}
-		seen[e.EmbIdx] = true
-		ids[e.SgIdx] = e.EmbIdx
+func (emb *Embedding) Translate(orgLen int, vord []int) *Embedding {
+	if emb == nil {
+		return nil
 	}
-	for i := range sg.E {
-		e := &sg.E[i]
-		found := false
-		for _, x := range G.Kids[ids[e.Src]] {
-			ke := &G.E[x]
-			if ke.Color != e.Color {
-				continue
-			}
-			if G.V[ke.Src].Color != sg.V[e.Src].Color {
-				continue
-			}
-			if G.V[ke.Targ].Color != sg.V[e.Targ].Color {
-				continue
-			}
-			if ke.Src != ids[e.Src] {
-				continue
-			}
-			if ke.Targ != ids[e.Targ] {
-				continue
-			}
-			found = true
-			break
-		}
-		if !found {
-			return false
-		}
+	return &Embedding{
+		VertexEmbedding: *emb.VertexEmbedding.Translate(orgLen, vord),
+		Prev: emb.Prev.Translate(orgLen, vord),
 	}
-	return true
+}
+
+func (embs Embeddings) Translate(orgLen int, vord []int) Embeddings {
+	translated := make(Embeddings, 0, len(embs))
+	for _, emb := range embs {
+		translated = append(translated, emb.Translate(orgLen, vord))
+	}
+	return translated
 }
 
 func (emb *Embedding) Slice(sg *SubGraph) []int {
