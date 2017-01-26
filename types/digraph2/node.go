@@ -18,6 +18,7 @@ type Node struct {
 	SubGraph *subgraph.SubGraph
 	Embeddings subgraph.Embeddings
 	unsupportedExts map[subgraph.Extension]bool
+	kids []lattice.Node
 }
 
 func NewNode(dt *Digraph, sg *subgraph.SubGraph, embs subgraph.Embeddings) *Node {
@@ -58,7 +59,8 @@ func (n *Node) Parents() ([]lattice.Node, error) {
 }
 
 func (n *Node) Children() (nodes []lattice.Node, err error) {
-	return n.findChildren(nil)
+	n.kids, err = n.findChildren(nil)
+	return n.kids, err
 }
 
 func (n *Node) CanonKids() (nodes []lattice.Node, err error) {
@@ -84,7 +86,13 @@ func (n *Node) ParentCount() (int, error) {
 }
 
 func (n *Node) ChildCount() (int, error) {
-	return 0, errors.Errorf("not supported yet")
+	if n.kids == nil {
+		_, err := n.Children()
+		if err != nil {
+			return 0, err
+		}
+	}
+	return len(n.kids), nil
 }
 
 func (n *Node) Maximal() (bool, error) {

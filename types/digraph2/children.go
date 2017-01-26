@@ -25,7 +25,7 @@ func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes
 	unsupported := n.unsupportedExts
 	vords := make([][]int, 0, 10)
 	builder := n.SubGraph.Builder()
-	seen := make(map[string]subgraph.Extension)
+	seen := make(map[string]bool)
 	exts := n.extensions(unsupported)
 	for ext, embs := range exts {
 		// ext := p.ext
@@ -46,6 +46,11 @@ func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes
 		}
 		vord, eord := b.CanonicalPermutation()
 		extended := b.BuildFromPermutation(vord, eord)
+		label := string(extended.Label())
+		if seen[label] {
+			continue
+		}
+		seen[label] = true
 		if allow != nil {
 			allowed, err := allow(extended)
 			if err != nil {
@@ -56,33 +61,6 @@ func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes
 			}
 		}
 		tembs := embs.Translate(len(extended.V), vord)
-		// for _, temb := range tembs {
-		// 	if !extended.EmbeddingExists(temb, n.dt.G) {
-		// 		panic("non-existant embedding")
-		// 	}
-		// }
-		label := string(extended.Label())
-		if _, has := seen[label]; has {
-			// errors.Logf("ERROR", "sg %v", n.SubGraph)
-			// errors.Logf("ERROR", "cur sg %v", extended)
-			// errors.Logf("ERROR", "cur ext %v", ext)
-			// prevExt := seen[label]
-			// b := builder.Copy()
-			// b.Extend(&prevExt)
-			// prevSg := b.Build()
-			// errors.Logf("ERROR", "prev sg %v", prevSg)
-			// errors.Logf("ERROR", "prev ext %v", prevExt)
-			// m := make(map[subgraph.Extension][]*subgraph.SubGraph)
-			// m[prevExt] = append(m[prevExt], prevSg)
-			// m[ext] = append(m[ext], extended)
-			// errors.Logf("ERROR", "map %v", m)
-			// for ext := range exts {
-			// 	errors.Logf("ERROR", "ext %v", ext)
-			// }
-			// panic("seen node before")
-			continue
-		}
-		seen[label] = ext
 		nodes = append(nodes, NewNode(n.dt, extended, tembs))
 		vords = append(vords, vord)
 	}
@@ -103,11 +81,11 @@ func (n *Node) extensions(unsupported map[subgraph.Extension]bool) map[subgraph.
 		for emb := embedding; emb != nil; emb = emb.Prev {
 			for _, e := range n.dt.G.Kids[emb.EmbIdx] {
 				edge := &n.dt.G.E[e]
-				add(embedding, edge, emb.SgIdx, -1, edge.Targ)
+				add(embedding, edge, emb.SgIdx, -1)
 			}
 			for _, e := range n.dt.G.Parents[emb.EmbIdx] {
 				edge := &n.dt.G.E[e]
-				add(embedding, edge, -1, emb.SgIdx, edge.Src)
+				add(embedding, edge, -1, emb.SgIdx)
 			}
 		}
 	}
@@ -115,12 +93,12 @@ func (n *Node) extensions(unsupported map[subgraph.Extension]bool) map[subgraph.
 	return exts
 }
 
-func (n *Node) validExtChecker(unsupported map[subgraph.Extension]bool, do func(*subgraph.Embedding, *subgraph.Extension)) func (*subgraph.Embedding, *digraph.Edge, int, int, int) {
-	return func(emb *subgraph.Embedding, e *digraph.Edge, src, targ, embIdx int) {
+func (n *Node) validExtChecker(unsupported map[subgraph.Extension]bool, do func(*subgraph.Embedding, *subgraph.Extension)) func (*subgraph.Embedding, *digraph.Edge, int, int) {
+	return func(emb *subgraph.Embedding, e *digraph.Edge, src, targ int) {
 		if n.dt.Indices.EdgeCounts[n.dt.Indices.Colors(e)] < n.dt.Support() {
 			return
 		}
-		emb, ext := n.extension(emb, e, src, targ, embIdx)
+		emb, ext := n.extension(emb, e, src, targ)
 		if n.SubGraph.HasExtension(ext) {
 			return
 		}
@@ -131,7 +109,7 @@ func (n *Node) validExtChecker(unsupported map[subgraph.Extension]bool, do func(
 	}
 }
 
-func (n *Node) extension(embedding *subgraph.Embedding, e *digraph.Edge, src, targ, embIdx int) (*subgraph.Embedding, *subgraph.Extension) {
+func (n *Node) extension(embedding *subgraph.Embedding, e *digraph.Edge, src, targ int) (*subgraph.Embedding, *subgraph.Extension) {
 	hasTarg := false
 	hasSrc := false
 	var srcIdx int = len(n.SubGraph.V)
@@ -167,12 +145,12 @@ func (n *Node) extension(embedding *subgraph.Embedding, e *digraph.Edge, src, ta
 	} else if !hasSrc {
 		newVE = &subgraph.VertexEmbedding{
 			SgIdx: srcIdx,
-			EmbIdx: embIdx,
+			EmbIdx: e.Src,
 		}
 	} else if !hasTarg {
 		newVE = &subgraph.VertexEmbedding{
 			SgIdx: targIdx,
-			EmbIdx: embIdx,
+			EmbIdx: e.Targ,
 		}
 	}
 	if newVE != nil {

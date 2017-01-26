@@ -5,7 +5,7 @@ import (
 )
 
 func (n *Node) support(V int, embs []*subgraph.Embedding) int {
-	return n.fis(V, embs)
+	return n.mni(V, embs)
 }
 
 func (n *Node) mni(V int, embs []*subgraph.Embedding) int {
