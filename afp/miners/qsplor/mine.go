@@ -7,10 +7,10 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/stats"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/stats"
 )
 
 

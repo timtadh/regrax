@@ -39,10 +39,10 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/cmd"
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/types/digraph"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/cmd"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/types/digraph"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 func init() {

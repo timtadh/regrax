@@ -11,10 +11,10 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/bytes_bytes"
-	"github.com/timtadh/sfp/stores/bytes_int"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/stores/bytes_bytes"
+	"github.com/timtadh/regrax/stores/bytes_int"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 type Node interface {

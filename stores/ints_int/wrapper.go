@@ -14,13 +14,13 @@ package ints_int
 *     --package-name=ints_int \
 *     bptree \
 *     --key-type=[]int32 \
-*     --key-serializer=github.com/timtadh/sfp/stores/ints_ints/SerializeInt32s \
-*     --key-deserializer=github.com/timtadh/sfp/stores/ints_ints/DeserializeInt32s \
+*     --key-serializer=github.com/timtadh/regrax/stores/ints_ints/SerializeInt32s \
+*     --key-deserializer=github.com/timtadh/regrax/stores/ints_ints/DeserializeInt32s \
 *     --value-type=int32 \
 *     --value-empty=0 \
 *     --value-size=4 \
-*     --value-serializer=github.com/timtadh/sfp/stores/int_int/SerializeInt32 \
-*     --value-deserializer=github.com/timtadh/sfp/stores/int_int/DeserializeInt32
+*     --value-serializer=github.com/timtadh/regrax/stores/int_int/SerializeInt32 \
+*     --value-deserializer=github.com/timtadh/regrax/stores/int_int/DeserializeInt32
 *
 * By including this code (and linking to github.com/timtadh/fs2) you
 * accept the terms of the GPL version 3 unless another license has been
@@ -57,8 +57,8 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stores/int_int"
-	"github.com/timtadh/sfp/stores/ints_ints"
+	"github.com/timtadh/regrax/stores/int_int"
+	"github.com/timtadh/regrax/stores/ints_ints"
 )
 
 type MultiMap interface {

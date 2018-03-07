@@ -9,7 +9,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
+	"github.com/timtadh/regrax/config"
 )
 
 var items = [][]int32{

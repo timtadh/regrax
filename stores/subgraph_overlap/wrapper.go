@@ -13,9 +13,9 @@ package subgraph_overlap
 *     --output=wrapper.go \
 *     --package-name=subgraph_overlap \
 *     bptree \
-*     --key-type=*github.com/timtadh/sfp/types/digraph/subgraph/SubGraph \
-*     --key-serializer=github.com/timtadh/sfp/stores/subgraph_embedding/SerializeSubGraph \
-*     --key-deserializer=github.com/timtadh/sfp/stores/subgraph_embedding/DeserializeSubGraph \
+*     --key-type=*github.com/timtadh/regrax/types/digraph/subgraph/SubGraph \
+*     --key-serializer=github.com/timtadh/regrax/stores/subgraph_embedding/SerializeSubGraph \
+*     --key-deserializer=github.com/timtadh/regrax/stores/subgraph_embedding/DeserializeSubGraph \
 *     --value-type=[]map[int]bool \
 *     --value-serializer=SerializeOverlap \
 *     --value-deserializer=DeserializeOverlap
@@ -55,8 +55,8 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stores/subgraph_embedding"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/stores/subgraph_embedding"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 type MultiMap interface {

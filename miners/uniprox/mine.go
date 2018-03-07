@@ -10,12 +10,12 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/miners/graple"
-	"github.com/timtadh/sfp/miners/walker"
-	"github.com/timtadh/sfp/stores/bytes_float"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/miners/graple"
+	"github.com/timtadh/regrax/miners/walker"
+	"github.com/timtadh/regrax/stores/bytes_float"
 )
 
 type Walker struct {

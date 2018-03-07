@@ -1,4 +1,4 @@
-//go:generate fs2-generic --output=wrapper.go --package-name=bytes_float bptree --key-type=[]byte --key-serializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity --key-deserializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity --value-type=float64 --value-empty=0.0 --value-size=8 --value-serializer=SerializeFloat64 --value-deserializer=DeserializeFloat64
+//go:generate fs2-generic --output=wrapper.go --package-name=bytes_float bptree --key-type=[]byte --key-serializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity --key-deserializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity --value-type=float64 --value-empty=0.0 --value-size=8 --value-serializer=SerializeFloat64 --value-deserializer=DeserializeFloat64
 package bytes_float
 
 import (

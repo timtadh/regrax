@@ -5,7 +5,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/regrax/lattice"
 )
 
 type Log struct {

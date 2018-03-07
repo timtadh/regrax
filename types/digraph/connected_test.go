@@ -19,8 +19,8 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 func init() {

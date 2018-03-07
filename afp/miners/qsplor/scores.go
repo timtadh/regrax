@@ -5,9 +5,9 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stats"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/types/digraph"
+	"github.com/timtadh/regrax/stats"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/types/digraph"
 )
 
 type Scorer interface {
