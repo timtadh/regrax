@@ -52,11 +52,11 @@ import (
 )
 
 func init() {
-	cmd.UsageMessage = "sfp --help"
+	cmd.UsageMessage = fmt.Sprintf("%v --help", os.Args[0])
 	cmd.ExtendedMessage = `
-sfp - sample frequent patterns
+regrax - sample frequent patterns
 
-$ sfp -o <path> --samples=<int> --support=<int> [Global Options] \
+$ regrax -o <path> --samples=<int> --support=<int> [Global Options] \
     <type> [Type Options] <input-path> \
     <mode> [Mode Options] \
     [<reporter> [Reporter Options]]
@@ -85,7 +85,7 @@ Global Options
                               0 to turn off parallelism.
     --samples=<int>           number of samples to collect (required)
     --support=<int>           minimum support of patterns (required)
-    --non-unique              by default, sfp collects only unique samples. This
+    --non-unique              by default, regrax collects only unique samples. This
                               option allows non-unique samples.
     --skip-log=<level>        don't output the given log level.
 
@@ -94,7 +94,7 @@ Developer Options
 
     heap-profile Reporter
 
-        $ sfp ... <type> ... <mode> ... chain ... heap-profile [options]
+        $ regrax ... <type> ... <mode> ... chain ... heap-profile [options]
 
         -p, profile=<path>    where you want the heap-profile written
         -e, every=<int>       collect every n samples collected (default 1)

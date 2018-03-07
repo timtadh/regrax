@@ -1,3 +1,3 @@
 export GOPATH=$(realpath $(pwd)/../../../..)
-export PATH=$GOPATH:$PATH
+export PATH=$GOPATH/bin:$PATH
 source $GOPATH/env/bin/activate
