@@ -1,4 +1,4 @@
-//go:generate fs2-generic --output=wrapper.go --package-name=bytes_extension bptree --key-type=[]byte --key-serializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity --key-deserializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity --value-type=*github.com/timtadh/sfp/types/digraph/subgraph/Extension --value-size=20 --value-serializer=SerializeExtension --value-deserializer=DeserializeExtension
+//go:generate fs2-generic --output=wrapper.go --package-name=bytes_extension bptree --key-type=[]byte --key-serializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity --key-deserializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity --value-type=*github.com/timtadh/regrax/types/digraph/subgraph/Extension --value-size=20 --value-serializer=SerializeExtension --value-deserializer=DeserializeExtension
 package bytes_extension
 
 import (
@@ -6,7 +6,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 func SerializeExtension(e *subgraph.Extension) []byte {

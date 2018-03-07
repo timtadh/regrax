@@ -6,7 +6,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 )
 
 func (sg *SubGraph) EstimateMatch(indices *digraph.Indices) (match float64, csg *SubGraph, err error) {

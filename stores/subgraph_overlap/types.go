@@ -1,4 +1,4 @@
-//go:generate fs2-generic --output=wrapper.go --package-name=subgraph_overlap bptree --key-type=*github.com/timtadh/sfp/types/digraph/subgraph/SubGraph --key-serializer=github.com/timtadh/sfp/stores/subgraph_embedding/SerializeSubGraph --key-deserializer=github.com/timtadh/sfp/stores/subgraph_embedding/DeserializeSubGraph --value-type=[]map[int]bool --value-serializer=SerializeOverlap --value-deserializer=DeserializeOverlap
+//go:generate fs2-generic --output=wrapper.go --package-name=subgraph_overlap bptree --key-type=*github.com/timtadh/regrax/types/digraph/subgraph/SubGraph --key-serializer=github.com/timtadh/regrax/stores/subgraph_embedding/SerializeSubGraph --key-deserializer=github.com/timtadh/regrax/stores/subgraph_embedding/DeserializeSubGraph --value-type=[]map[int]bool --value-serializer=SerializeOverlap --value-deserializer=DeserializeOverlap
 
 package subgraph_overlap
 

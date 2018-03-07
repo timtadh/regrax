@@ -5,7 +5,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stats"
+	"github.com/timtadh/regrax/stats"
 )
 
 type Kernel [][]float64

@@ -12,18 +12,18 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stacks/subgraph"
-	"github.com/timtadh/sfp/stores/bytes_bytes"
-	"github.com/timtadh/sfp/stores/bytes_extension"
-	"github.com/timtadh/sfp/stores/bytes_float"
-	"github.com/timtadh/sfp/stores/bytes_int"
-	"github.com/timtadh/sfp/stores/bytes_subgraph"
-	"github.com/timtadh/sfp/stores/int_int"
-	"github.com/timtadh/sfp/stores/int_json"
-	"github.com/timtadh/sfp/stores/ints_int"
-	"github.com/timtadh/sfp/stores/ints_ints"
-	"github.com/timtadh/sfp/stores/subgraph_embedding"
-	"github.com/timtadh/sfp/stores/subgraph_overlap"
+	"github.com/timtadh/regrax/stacks/subgraph"
+	"github.com/timtadh/regrax/stores/bytes_bytes"
+	"github.com/timtadh/regrax/stores/bytes_extension"
+	"github.com/timtadh/regrax/stores/bytes_float"
+	"github.com/timtadh/regrax/stores/bytes_int"
+	"github.com/timtadh/regrax/stores/bytes_subgraph"
+	"github.com/timtadh/regrax/stores/int_int"
+	"github.com/timtadh/regrax/stores/int_json"
+	"github.com/timtadh/regrax/stores/ints_int"
+	"github.com/timtadh/regrax/stores/ints_ints"
+	"github.com/timtadh/regrax/stores/subgraph_embedding"
+	"github.com/timtadh/regrax/stores/subgraph_overlap"
 )
 
 type Config struct {

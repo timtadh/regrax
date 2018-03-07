@@ -14,8 +14,8 @@ package bytes_float
 *     --package-name=bytes_float \
 *     bptree \
 *     --key-type=[]byte \
-*     --key-serializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity \
-*     --key-deserializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity \
+*     --key-serializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity \
+*     --key-deserializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity \
 *     --value-type=float64 \
 *     --value-empty=0.0 \
 *     --value-size=8 \
@@ -57,7 +57,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stores/bytes_subgraph"
+	"github.com/timtadh/regrax/stores/bytes_subgraph"
 )
 
 type MultiMap interface {

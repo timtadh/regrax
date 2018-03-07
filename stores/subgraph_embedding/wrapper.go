@@ -13,10 +13,10 @@ package subgraph_embedding
 *     --output=wrapper.go \
 *     --package-name=subgraph_embedding \
 *     bptree \
-*     --key-type=*github.com/timtadh/sfp/types/digraph/subgraph/SubGraph \
+*     --key-type=*github.com/timtadh/regrax/types/digraph/subgraph/SubGraph \
 *     --key-serializer=SerializeSubGraph \
 *     --key-deserializer=DeserializeSubGraph \
-*     --value-type=*github.com/timtadh/sfp/types/digraph/subgraph/Embedding \
+*     --value-type=*github.com/timtadh/regrax/types/digraph/subgraph/Embedding \
 *     --value-serializer=SerializeEmbedding \
 *     --value-deserializer=DeserializeEmbedding
 *
@@ -55,7 +55,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 type MultiMap interface {

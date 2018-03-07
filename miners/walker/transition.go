@@ -7,8 +7,8 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stats"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/stats"
 )
 
 type Weight func(u, v lattice.Node) (float64, error)

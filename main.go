@@ -39,16 +39,16 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/cmd"
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/miners/fastmax"
-	"github.com/timtadh/sfp/miners/graple"
-	"github.com/timtadh/sfp/miners/musk"
-	"github.com/timtadh/sfp/miners/ospace"
-	"github.com/timtadh/sfp/miners/premusk"
-	"github.com/timtadh/sfp/miners/uniprox"
-	"github.com/timtadh/sfp/miners/walker"
+	"github.com/timtadh/regrax/cmd"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/miners/fastmax"
+	"github.com/timtadh/regrax/miners/graple"
+	"github.com/timtadh/regrax/miners/musk"
+	"github.com/timtadh/regrax/miners/ospace"
+	"github.com/timtadh/regrax/miners/premusk"
+	"github.com/timtadh/regrax/miners/uniprox"
+	"github.com/timtadh/regrax/miners/walker"
 )
 
 func init() {

@@ -10,9 +10,9 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners/walker"
-	"github.com/timtadh/sfp/stats"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/miners/walker"
+	"github.com/timtadh/regrax/stats"
 )
 
 func MakeUniformWalk(restartPr float64, selfTransition bool) walker.Walk {

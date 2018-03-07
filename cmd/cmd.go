@@ -49,13 +49,13 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/reporters"
-	"github.com/timtadh/sfp/types/digraph"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
-	"github.com/timtadh/sfp/types/itemset"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/reporters"
+	"github.com/timtadh/regrax/types/digraph"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
+	"github.com/timtadh/regrax/types/itemset"
 )
 
 func init() {

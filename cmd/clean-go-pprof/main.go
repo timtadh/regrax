@@ -43,7 +43,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/cmd"
+	"github.com/timtadh/regrax/cmd"
 )
 
 func init() {

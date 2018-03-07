@@ -1,4 +1,4 @@
-//go:generate fs2-generic --output=wrapper.go --package-name=int_edge bptree --key-type=int32 --key-size=4 --key-empty=0 --key-serializer=github.com/timtadh/sfp/stores/int_int/SerializeInt32 --key-deserializer=github.com/timtadh/sfp/stores/int_int/DeserializeInt32 --value-type=github.com/timtadh/sfp/types/digraph/subgraph/Edge --value-size=12 --value-empty=subgraph.Edge{} --value-serializer=SerializeEdge --value-deserializer=DeserializeEdge
+//go:generate fs2-generic --output=wrapper.go --package-name=int_edge bptree --key-type=int32 --key-size=4 --key-empty=0 --key-serializer=github.com/timtadh/regrax/stores/int_int/SerializeInt32 --key-deserializer=github.com/timtadh/regrax/stores/int_int/DeserializeInt32 --value-type=github.com/timtadh/regrax/types/digraph/subgraph/Edge --value-size=12 --value-empty=subgraph.Edge{} --value-serializer=SerializeEdge --value-deserializer=DeserializeEdge
 
 package int_edge
 
@@ -7,7 +7,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 func SerializeEdge(e subgraph.Edge) []byte {

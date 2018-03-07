@@ -14,11 +14,11 @@ package bytes_bytes
 *     --package-name=bytes_bytes \
 *     bptree \
 *     --key-type=[]byte \
-*     --key-serializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity \
-*     --key-deserializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity \
+*     --key-serializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity \
+*     --key-deserializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity \
 *     --value-type=[]byte \
-*     --value-serializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity \
-*     --value-deserializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity
+*     --value-serializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity \
+*     --value-deserializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity
 *
 * By including this code (and linking to github.com/timtadh/fs2) you
 * accept the terms of the GPL version 3 unless another license has been
@@ -55,7 +55,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stores/bytes_subgraph"
+	"github.com/timtadh/regrax/stores/bytes_subgraph"
 )
 
 type MultiMap interface {

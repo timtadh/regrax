@@ -3,7 +3,7 @@ package miners
 import ()
 
 import (
-	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/regrax/lattice"
 )
 
 // Note: the miner's Close function should close both reporter and the datatype that were passed into it.
