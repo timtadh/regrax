@@ -13,10 +13,10 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/ints_int"
-	"github.com/timtadh/sfp/stores/ints_ints"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/stores/ints_int"
+	"github.com/timtadh/regrax/stores/ints_ints"
 )
 
 type MakeLoader func(*ItemSets) lattice.Loader

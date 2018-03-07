@@ -1,7 +1,7 @@
 package digraph2
 
 import (
-	"github.com/timtadh/sfp/types/digraph2/subgraph"
+	"github.com/timtadh/regrax/types/digraph2/subgraph"
 )
 
 func (n *Node) support(V int, embs []*subgraph.Embedding) int {

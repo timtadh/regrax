@@ -12,13 +12,13 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners/fastmax"
-	"github.com/timtadh/sfp/reporters"
-	"github.com/timtadh/sfp/types/digraph"
-	dg "github.com/timtadh/sfp/types/digraph/digraph"
-	"github.com/timtadh/sfp/types/itemset"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/miners/fastmax"
+	"github.com/timtadh/regrax/reporters"
+	"github.com/timtadh/regrax/types/digraph"
+	dg "github.com/timtadh/regrax/types/digraph/digraph"
+	"github.com/timtadh/regrax/types/itemset"
 )
 
 func CommonAncestor(patterns []lattice.Pattern) (_ lattice.Pattern, err error) {

@@ -7,9 +7,9 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/types/digraph2/digraph"
-	"github.com/timtadh/sfp/types/digraph2/subgraph"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph2/subgraph"
 )
 
 func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes []lattice.Node, err error) {

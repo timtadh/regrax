@@ -49,14 +49,14 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/reporters"
-	"github.com/timtadh/sfp/types/digraph"
-	"github.com/timtadh/sfp/types/digraph2"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
-	"github.com/timtadh/sfp/types/itemset"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/reporters"
+	"github.com/timtadh/regrax/types/digraph"
+	"github.com/timtadh/regrax/types/digraph2"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
+	"github.com/timtadh/regrax/types/itemset"
 )
 
 func init() {
@@ -95,7 +95,7 @@ Types
 
     itemset Exmaple
 
-        $ sfp -o /tmp/sfp --support=1000 --samples=10 \
+        $ regrax -o /tmp/sfp --support=1000 --samples=10 \
             itemset --min-items=4 --max-items=4  ./data/transactions.dat.gz \
             graple
 
@@ -121,7 +121,7 @@ Types
 
     digraph Example
 
-        $ sfp -o /tmp/sfp --support=5 --samples=100 \
+        $ regrax -o /tmp/sfp --support=5 --samples=100 \
             digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
                 ./data/digraph.veg.gz \
             graple
@@ -156,12 +156,12 @@ Types
           You can specify both (-i,--include) and (-e,--exclude) multiple
           times. For example:
 
-            $ digraph -i '^github\.com/timtadh' -i '^$' -e sfp -e fs2
+            $ digraph -i '^github\.com/timtadh' -i '^$' -e regrax -e fs2
 
           Would result in the following regular expressions
 
             include: (^github\.com/timtadh)|(^$)
-            exclude: (sfp)|(fs2)
+            exclude: (regrax)|(fs2)
 
     digraph Support Counting Modes
 
@@ -407,22 +407,22 @@ Reporters
 
     Examples
 
-        $ sfp -o <path> --samples=5 --support=5 \
+        $ regrax -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
             chain log file
 
-        $ sfp -o <path> --samples=5 --support=5 \
+        $ regrax -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
             chain log chain log log endchain file
 
-        $ sfp -o <path> --samples=5 --support=5 \
+        $ regrax -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
             chain log -p all max chain log -p max file
 
-        $ sfp --non-unique --skip-log=DEBUG -o /tmp/sfp --samples=5 --support=5 \
+        $ regrax --non-unique --skip-log=DEBUG -o /tmp/sfp --samples=5 --support=5 \
             digraph --min-vertices=3 ../fsm/data/expr.gz \
             graple \
             chain \

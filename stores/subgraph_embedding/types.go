@@ -1,9 +1,9 @@
-//go:generate fs2-generic --output=wrapper.go --package-name=subgraph_embedding bptree --key-type=*github.com/timtadh/sfp/types/digraph/subgraph/SubGraph --key-serializer=SerializeSubGraph --key-deserializer=DeserializeSubGraph --value-type=*github.com/timtadh/sfp/types/digraph/subgraph/Embedding --value-serializer=SerializeEmbedding --value-deserializer=DeserializeEmbedding
+//go:generate fs2-generic --output=wrapper.go --package-name=subgraph_embedding bptree --key-type=*github.com/timtadh/regrax/types/digraph/subgraph/SubGraph --key-serializer=SerializeSubGraph --key-deserializer=DeserializeSubGraph --value-type=*github.com/timtadh/regrax/types/digraph/subgraph/Embedding --value-serializer=SerializeEmbedding --value-deserializer=DeserializeEmbedding
 
 package subgraph_embedding
 
 import (
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 func SerializeSubGraph(sg *subgraph.SubGraph) []byte {

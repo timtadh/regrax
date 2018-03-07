@@ -5,7 +5,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph2/digraph"
 )
 
 type baseLoader struct {

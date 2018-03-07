@@ -7,9 +7,9 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/bytes_bytes"
-	"github.com/timtadh/sfp/stores/bytes_int"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/stores/bytes_bytes"
+	"github.com/timtadh/regrax/stores/bytes_int"
 )
 
 func cacheAdj(dt *Digraph, count bytes_int.MultiMap, cache bytes_bytes.MultiMap, key []byte, nodes []lattice.Node) (err error) {

@@ -12,9 +12,9 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stats"
-	"github.com/timtadh/sfp/types/digraph/digraph"
-	"github.com/timtadh/sfp/types/digraph/subgraph"
+	"github.com/timtadh/regrax/stats"
+	"github.com/timtadh/regrax/types/digraph/digraph"
+	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
 const CACHE_DEBUG = false

@@ -1,6 +1,7 @@
 *swp
 *swo
 pkg/
+vendor/
 bin/*
 data/
 *.pyc

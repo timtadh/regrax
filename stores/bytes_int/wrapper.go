@@ -14,13 +14,13 @@ package bytes_int
 *     --package-name=bytes_int \
 *     bptree \
 *     --key-type=[]byte \
-*     --key-serializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity \
-*     --key-deserializer=github.com/timtadh/sfp/stores/bytes_subgraph/Identity \
+*     --key-serializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity \
+*     --key-deserializer=github.com/timtadh/regrax/stores/bytes_subgraph/Identity \
 *     --value-type=int32 \
 *     --value-empty=0 \
 *     --value-size=4 \
-*     --value-serializer=github.com/timtadh/sfp/stores/int_int/SerializeInt32 \
-*     --value-deserializer=github.com/timtadh/sfp/stores/int_int/DeserializeInt32
+*     --value-serializer=github.com/timtadh/regrax/stores/int_int/SerializeInt32 \
+*     --value-deserializer=github.com/timtadh/regrax/stores/int_int/DeserializeInt32
 *
 * By including this code (and linking to github.com/timtadh/fs2) you
 * accept the terms of the GPL version 3 unless another license has been
@@ -57,8 +57,8 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/stores/bytes_subgraph"
-	"github.com/timtadh/sfp/stores/int_int"
+	"github.com/timtadh/regrax/stores/bytes_subgraph"
+	"github.com/timtadh/regrax/stores/int_int"
 )
 
 type MultiMap interface {

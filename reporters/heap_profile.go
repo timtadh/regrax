@@ -10,7 +10,7 @@ import (
 import ()
 
 import (
-	"github.com/timtadh/sfp/lattice"
+	"github.com/timtadh/regrax/lattice"
 )
 
 type HeapProfile struct {

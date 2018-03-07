@@ -37,13 +37,13 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/afp/miners/dfs"
-	"github.com/timtadh/sfp/afp/miners/index_speed"
-	"github.com/timtadh/sfp/afp/miners/qsplor"
-	"github.com/timtadh/sfp/afp/miners/vsigram"
-	"github.com/timtadh/sfp/cmd"
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/miners"
+	"github.com/timtadh/regrax/afp/miners/dfs"
+	"github.com/timtadh/regrax/afp/miners/index_speed"
+	"github.com/timtadh/regrax/afp/miners/qsplor"
+	"github.com/timtadh/regrax/afp/miners/vsigram"
+	"github.com/timtadh/regrax/cmd"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/miners"
 )
 
 func init() {

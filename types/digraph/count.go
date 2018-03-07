@@ -5,8 +5,8 @@ import ()
 import ()
 
 import (
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/stores/bytes_int"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/stores/bytes_int"
 )
 
 func count(n Node, compute func() ([]lattice.Node, error), counts bytes_int.MultiMap) (int, error) {

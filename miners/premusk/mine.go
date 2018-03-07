@@ -9,13 +9,13 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/config"
-	"github.com/timtadh/sfp/lattice"
-	"github.com/timtadh/sfp/miners"
-	"github.com/timtadh/sfp/miners/musk"
-	"github.com/timtadh/sfp/miners/ospace"
-	"github.com/timtadh/sfp/reporters"
-	"github.com/timtadh/sfp/miners/walker"
+	"github.com/timtadh/regrax/config"
+	"github.com/timtadh/regrax/lattice"
+	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/miners/musk"
+	"github.com/timtadh/regrax/miners/ospace"
+	"github.com/timtadh/regrax/reporters"
+	"github.com/timtadh/regrax/miners/walker"
 )
 
 type Walker struct {

@@ -33,3 +33,7 @@ func (c *Labels) Label(color int) string {
 	}
 	return c.labels[color]
 }
+
+func (c *Labels) Labels() []string {
+	return c.labels
+}

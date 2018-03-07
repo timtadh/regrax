@@ -9,7 +9,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/sfp/types/digraph2/subgraph"
+	"github.com/timtadh/regrax/types/digraph2/subgraph"
 )
 
 func isCanonicalExtension(cur *subgraph.SubGraph, ext *subgraph.SubGraph) (bool, error) {
