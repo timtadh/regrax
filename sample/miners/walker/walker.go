@@ -11,7 +11,7 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/sample/miners"
 )
 
 type Walk func(w *Walker) (chan lattice.Node, chan bool, chan error)

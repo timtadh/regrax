@@ -1,8 +1,6 @@
-package vsigram
+package dfs
 
-import (
-	"sync"
-)
+import ()
 
 import (
 	"github.com/timtadh/data-structures/errors"
@@ -11,7 +9,7 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/sample/miners"
 )
 
 type Miner struct {
@@ -69,68 +67,48 @@ func (m *Miner) Mine(dt lattice.DataType, rptr miners.Reporter, fmtr lattice.For
 }
 
 func (m *Miner) mine() (err error) {
-	workers := m.Config.Workers()
-	stack := NewStack(workers)
-	stack.Push(0, m.Dt.Root())
-	errs := make(chan error)
-	reports := make(chan lattice.Node, 100)
-	var wg sync.WaitGroup
-	go func() {
-		for n := range reports {
-			err := m.Rptr.Report(n)
-			if err != nil {
-				errs<-err
-			}
-			wg.Done()
+	seen, err := m.Config.BytesIntMultiMap("stack-seen")
+	if err != nil {
+		return err
+	}
+	add := func(stack []lattice.Node, n lattice.Node) ([]lattice.Node, error) {
+		err := seen.Add(n.Pattern().Label(), 1)
+		if err != nil {
+			return nil, err
 		}
-	}()
-	errList := make([]error, 0, 10)
-	go func() {
-		for err := range errs {
+		return append(stack, n), nil
+	}
+	pop := func(stack []lattice.Node) ([]lattice.Node, lattice.Node) {
+		return stack[:len(stack)-1], stack[len(stack)-1]
+	}
+	stack := make([]lattice.Node, 0, 10)
+	stack, err = add(stack, m.Dt.Root())
+	if err != nil {
+		return err
+	}
+	for len(stack) > 0 {
+		var n lattice.Node
+		stack, n = pop(stack)
+		if m.Dt.Acceptable(n) {
+			err = m.Rptr.Report(n)
 			if err != nil {
-				errList = append(errList, err)
+				return err
 			}
-			wg.Done()
 		}
-	}()
-	started := make(chan bool)
-	for i := 0; i < workers; i ++ {
-		go func() {
-			tid := stack.AddThread()
-			started<-true
-			for {
-				n := stack.Pop(tid)
-				if n == nil {
-					return
-				}
-				if m.Dt.Acceptable(n) {
-					wg.Add(1)
-					reports<-n
-				}
-				kids, err := n.CanonKids()
+		kids, err := n.Children()
+		if err != nil {
+			return err
+		}
+		for _, k := range kids {
+			if has, err := seen.Has(k.Pattern().Label()); err != nil {
+				return err
+			} else if !has {
+				stack, err = add(stack, k)
 				if err != nil {
-					wg.Add(1)
-					errs <- err
-					continue
-				}
-				for _, k := range kids {
-					stack.Push(tid, k)
+					return err
 				}
 			}
-		}()
-		<-started
+		}
 	}
-	close(started)
-	stack.WaitClosed()
-	close(reports)
-	close(errs)
-	wg.Wait()
-	if len(errList) > 0 {
-		return errList[0]
-	}
-	return nil
-}
-
-func (m *Miner) step(tid int, wg *sync.WaitGroup, n lattice.Node, reports chan lattice.Node, stack *Stack) (err error) {
 	return nil
 }

@@ -1,4 +1,0 @@
-/*
-the command
-*/
-package main

@@ -1,4 +1,4 @@
-package main
+package mine
 
 /* Tim Henderson (tadh@case.edu)
 *
@@ -37,66 +37,14 @@ import (
 )
 
 import (
-	"github.com/timtadh/regrax/afp/miners/dfs"
-	"github.com/timtadh/regrax/afp/miners/index_speed"
-	"github.com/timtadh/regrax/afp/miners/qsplor"
-	"github.com/timtadh/regrax/afp/miners/vsigram"
 	"github.com/timtadh/regrax/cmd"
 	"github.com/timtadh/regrax/config"
-	"github.com/timtadh/regrax/miners"
+	"github.com/timtadh/regrax/mine/miners/dfs"
+	"github.com/timtadh/regrax/mine/miners/index_speed"
+	"github.com/timtadh/regrax/mine/miners/qsplor"
+	"github.com/timtadh/regrax/mine/miners/vsigram"
+	"github.com/timtadh/regrax/sample/miners"
 )
-
-func init() {
-	cmd.UsageMessage = "afp --help"
-	cmd.ExtendedMessage = `
-afp - find all frequent patterns
-
-$ afp -o <path> [Global Options] \
-    <type> [Type Options] <input-path> \
-    <mode> [Mode Options] \
-    [<reporter> [Reporter Options]]
-
-Note: You must supply [Global Options] then [<type> [Type Options]] then
-      [<mode> [Mode Options]] and finally <input-path>. Changes in ordering are
-      not supported.
-
-Note: You may either supply the <input-path> as a regular file or a gzipped
-      file. If supplying a gzip file the file extension must be '.gz'.
-
-Note: If you don't supply a reporter by default it will use 'chain log file'.
-      See the the documentations for Reporters for details.
-
-
-Global Options
-    -h, --help                view this message
-    --types                   show the available types
-    --modes                   show the available modes
-    -o, --ouput=<path>        path to output directory (required)
-                              NB: will overwrite contents of dir
-    -c, --cache=<path>        path to cache directory (optional)
-                              NB: will overwrite contents of dir
-    -p, --parallelism=<int>   Parallelism level to use. Defaults to
-                              the number of CPU cores you have. Set to
-                              0 to turn off parallelism.
-    --support=<int>           minimum support of patterns (required)
-    --skip-log=<level>        don't output the given log level.
-
-Developer Options
-    --cpu-profile=<path>      write a cpu-profile to this location
-
-    heap-profile Reporter
-
-        $ afp ... <type> ... <mode> ... chain ... heap-profile [options]
-
-        -p, profile=<path>    where you want the heap-profile written
-        -e, every=<int>       collect every n samples collected (default 1)
-        -a, after=<int>       collect after n samples collected (default 0)
-
-Modes
-    dfs                       depth first search of the lattice
-    vsigram                   dfs but only on the canonical edges
-`
-}
 
 func vsigramMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
@@ -210,14 +158,7 @@ func qsplorMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	return qsplor.NewMiner(conf, scorer, maxQueueSize), args
 }
 
-func main() {
-	exitCode := run()
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-}
-
-func run() int {
+func Run(argv []string) int {
 	modes := map[string]cmd.Mode{
 		"dfs":         dfsMode,
 		"index-speed": indexSpeedMode,
@@ -226,7 +167,7 @@ func run() int {
 	}
 
 	args, optargs, err := getopt.GetOpt(
-		os.Args[1:],
+		argv,
 		"ho:c:p:",
 		[]string{
 			"help",
@@ -307,9 +248,9 @@ func run() int {
 	}
 
 	conf := &config.Config{
-		Cache:   cache,
-		Output:  output,
-		Support: support,
+		Cache:       cache,
+		Output:      output,
+		Support:     support,
 		Parallelism: parallelism,
 	}
 
@@ -327,7 +268,7 @@ func profileWriter(w io.Writer) {
 		errors.Logf("DEBUG", "profileWriter got data %v", len(data))
 		w.Write(data)
 	}
-	profileDone<-true
+	profileDone <- true
 }
 
 func profileUnsafe(w io.Writer, hz int) {

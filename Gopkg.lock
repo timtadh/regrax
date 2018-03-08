@@ -27,20 +27,7 @@
 
 [[projects]]
   name = "github.com/timtadh/data-structures"
-  packages = [
-    "errors",
-    "exc",
-    "hashtable",
-    "heap",
-    "linked",
-    "list",
-    "pool",
-    "rand",
-    "set",
-    "tree",
-    "tree/avl",
-    "types"
-  ]
+  packages = ["errors","exc","hashtable","heap","linked","list","pool","rand","set","tree","tree/avl","types"]
   revision = "cd0c1de5390876f92ce0762c9c626a569b124f24"
   version = "v0.5.2"
 
@@ -53,16 +40,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/timtadh/fs2"
-  packages = [
-    ".",
-    "bptree",
-    "consts",
-    "errors",
-    "fmap",
-    "mmlist",
-    "slice"
-  ]
-  revision = "2a4d3bd295a71658a0a23514a35413dab7f8d0d5"
+  packages = [".","bptree","consts","errors","fmap","mmlist","slice"]
+  revision = "84e943692a83c857f237efc61a8a3805b41b7965"
 
 [[projects]]
   name = "github.com/timtadh/getopt"
@@ -73,22 +52,12 @@
 [[projects]]
   branch = "master"
   name = "github.com/timtadh/goiso"
-  packages = [
-    ".",
-    "bliss"
-  ]
+  packages = [".","bliss"]
   revision = "740a65d0c06dc74c2bb34b07092edaf53398088d"
 
 [[projects]]
   name = "github.com/timtadh/lexmachine"
-  packages = [
-    ".",
-    "dfa",
-    "frontend",
-    "inst",
-    "machines",
-    "queue"
-  ]
+  packages = [".","dfa","frontend","inst","machines","queue"]
   revision = "1fc6bf654cb92be37fc21e477a19d27f6c639aff"
   version = "v0.2.2"
 

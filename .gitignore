@@ -2,6 +2,7 @@
 *swo
 pkg/
 vendor/
+data
 bin/*
 data/
 *.pyc
