@@ -12,9 +12,9 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners"
-	"github.com/timtadh/regrax/miners/graple"
-	"github.com/timtadh/regrax/miners/walker"
+	"github.com/timtadh/regrax/sample/miners"
+	"github.com/timtadh/regrax/sample/miners/graple"
+	"github.com/timtadh/regrax/sample/miners/walker"
 	"github.com/timtadh/regrax/stores/bytes_float"
 )
 

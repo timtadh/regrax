@@ -11,11 +11,11 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners"
-	"github.com/timtadh/regrax/miners/musk"
-	"github.com/timtadh/regrax/miners/ospace"
+	"github.com/timtadh/regrax/sample/miners"
+	"github.com/timtadh/regrax/sample/miners/musk"
+	"github.com/timtadh/regrax/sample/miners/ospace"
 	"github.com/timtadh/regrax/reporters"
-	"github.com/timtadh/regrax/miners/walker"
+	"github.com/timtadh/regrax/sample/miners/walker"
 )
 
 type Walker struct {

@@ -25,12 +25,10 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"io"
 	"os"
-	"os/signal"
-	"runtime/pprof"
+	"runtime"
 	"strings"
-	"syscall"
 )
 
 import (
@@ -39,24 +37,21 @@ import (
 )
 
 import (
+	"github.com/timtadh/regrax/mine/miners/dfs"
+	"github.com/timtadh/regrax/mine/miners/index_speed"
+	"github.com/timtadh/regrax/mine/miners/qsplor"
+	"github.com/timtadh/regrax/mine/miners/vsigram"
 	"github.com/timtadh/regrax/cmd"
 	"github.com/timtadh/regrax/config"
-	"github.com/timtadh/regrax/miners"
-	"github.com/timtadh/regrax/miners/fastmax"
-	"github.com/timtadh/regrax/miners/graple"
-	"github.com/timtadh/regrax/miners/musk"
-	"github.com/timtadh/regrax/miners/ospace"
-	"github.com/timtadh/regrax/miners/premusk"
-	"github.com/timtadh/regrax/miners/uniprox"
-	"github.com/timtadh/regrax/miners/walker"
+	"github.com/timtadh/regrax/sample/miners"
 )
 
 func init() {
-	cmd.UsageMessage = fmt.Sprintf("%v --help", os.Args[0])
+	cmd.UsageMessage = "afp --help"
 	cmd.ExtendedMessage = `
-regrax - sample frequent patterns
+afp - find all frequent patterns
 
-$ regrax -o <path> --samples=<int> --support=<int> [Global Options] \
+$ afp -o <path> [Global Options] \
     <type> [Type Options] <input-path> \
     <mode> [Mode Options] \
     [<reporter> [Reporter Options]]
@@ -83,10 +78,7 @@ Global Options
     -p, --parallelism=<int>   Parallelism level to use. Defaults to
                               the number of CPU cores you have. Set to
                               0 to turn off parallelism.
-    --samples=<int>           number of samples to collect (required)
     --support=<int>           minimum support of patterns (required)
-    --non-unique              by default, regrax collects only unique samples. This
-                              option allows non-unique samples.
     --skip-log=<level>        don't output the given log level.
 
 Developer Options
@@ -94,32 +86,19 @@ Developer Options
 
     heap-profile Reporter
 
-        $ regrax ... <type> ... <mode> ... chain ... heap-profile [options]
+        $ afp ... <type> ... <mode> ... chain ... heap-profile [options]
 
         -p, profile=<path>    where you want the heap-profile written
         -e, every=<int>       collect every n samples collected (default 1)
         -a, after=<int>       collect after n samples collected (default 0)
 
 Modes
-    graple                    the GRAPLE (unweighted random walk) algorithm.
-    musk                      uniform sampling of maximal patterns.
-    ospace                    uniform sampling of all patterns.
-    fastmax                   faster sampling of large max patterns than
-                              graple.
-    premusk                   musk but with random teleports
-    uniprox                   approximately uniform sampling of max patterns
-                              using an absorbing chain
-
-    premusk Options
-        -t, teleports=<float> the probability of teleporting (default: .01)
-
-    uniprox Options
-        -w, walks=<int>       (default 15) number of estimating
-                              walks
+    dfs                       depth first search of the lattice
+    vsigram                   dfs but only on the canonical edges
 `
 }
 
-func grapleMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+func vsigramMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"hc",
@@ -140,10 +119,10 @@ func grapleMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			cmd.Usage(cmd.ErrorCodes["opts"])
 		}
 	}
-	return graple.NewWalker(conf), args
+	return vsigram.NewMiner(conf), args
 }
 
-func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+func dfsMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"h",
@@ -164,46 +143,10 @@ func fastmaxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			cmd.Usage(cmd.ErrorCodes["opts"])
 		}
 	}
-	return fastmax.NewWalker(conf), args
+	return dfs.NewMiner(conf), args
 }
 
-func uniproxMode(argv []string, conf *config.Config) (miners.Miner, []string) {
-	args, optargs, err := getopt.GetOpt(
-		argv,
-		"hw:",
-		[]string{
-			"help",
-			"walks=",
-			"max",
-		},
-	)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		cmd.Usage(cmd.ErrorCodes["opts"])
-	}
-	walks := 15
-	max := false
-	for _, oa := range optargs {
-		switch oa.Opt() {
-		case "-h", "--help":
-			cmd.Usage(0)
-		case "-w", "--walks":
-			walks = cmd.ParseInt(oa.Arg())
-		case "--max":
-			max = true
-		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
-			cmd.Usage(cmd.ErrorCodes["opts"])
-		}
-	}
-	miner, err := uniprox.NewWalker(conf, walks, max)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return miner, args
-}
-
-func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+func indexSpeedMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
 		"h",
@@ -224,79 +167,62 @@ func muskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 			cmd.Usage(cmd.ErrorCodes["opts"])
 		}
 	}
-	miner := walker.NewWalker(conf, musk.MakeMaxUniformWalk(musk.Next, nil))
-	return miner, args
+	return index_speed.NewMiner(conf), args
 }
 
-func premuskMode(argv []string, conf *config.Config) (miners.Miner, []string) {
+func qsplorMode(argv []string, conf *config.Config) (miners.Miner, []string) {
 	args, optargs, err := getopt.GetOpt(
 		argv,
-		"h",
+		"hs:m:",
 		[]string{
 			"help",
-			"teleport=",
+			"score-function=",
+			"max-queue-size=",
 		},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
-	teleport := .01
+	var scorer qsplor.Scorer = qsplor.Scorers["random"]
+	var maxQueueSize int = 10
 	for _, oa := range optargs {
 		switch oa.Opt() {
 		case "-h", "--help":
 			cmd.Usage(0)
-		case "--teleport":
-			teleport = cmd.ParseFloat(oa.Arg())
+		case "-m", "--max-queue-size":
+			maxQueueSize = cmd.ParseInt(oa.Arg())
+		case "-s", "--score-function":
+			if _, has := qsplor.Scorers[oa.Arg()]; !has {
+				fmt.Fprintf(os.Stderr, "Unknown score function: %v\n", oa.Arg())
+				fmt.Fprintf(os.Stderr, "Valid score functions:\n")
+				for name, _ := range qsplor.Scorers {
+					fmt.Fprintf(os.Stderr, "%v\n", name)
+				}
+				cmd.Usage(cmd.ErrorCodes["opts"])
+			}
+			scorer = qsplor.Scorers[oa.Arg()]
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			cmd.Usage(cmd.ErrorCodes["opts"])
 		}
 	}
-	miner := premusk.NewWalker(conf, teleport)
-	return miner, args
-}
-
-func ospaceMode(argv []string, conf *config.Config) (miners.Miner, []string) {
-	args, optargs, err := getopt.GetOpt(
-		argv,
-		"h",
-		[]string{
-			"help",
-		},
-	)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		cmd.Usage(cmd.ErrorCodes["opts"])
-	}
-	for _, oa := range optargs {
-		switch oa.Opt() {
-		case "-h", "--help":
-			cmd.Usage(0)
-		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
-			cmd.Usage(cmd.ErrorCodes["opts"])
-		}
-	}
-	miner := walker.NewWalker(conf, ospace.MakeUniformWalk(0, true))
-	return miner, args
+	return qsplor.NewMiner(conf, scorer, maxQueueSize), args
 }
 
 func main() {
-	code := run()
-	if code != 0 {
-		os.Exit(code)
+	exitCode := run()
+	if exitCode != 0 {
+		os.Exit(exitCode)
 	}
 }
 
 func run() int {
 	modes := map[string]cmd.Mode{
-		"graple":  grapleMode,
-		"fastmax": fastmaxMode,
-		"musk":    muskMode,
-		"ospace":  ospaceMode,
-		"premusk": premuskMode,
-		"uniprox": uniproxMode,
+		"dfs":         dfsMode,
+		"index-speed": indexSpeedMode,
+		"vsigram":     vsigramMode,
+		"qsplor":      qsplorMode,
 	}
 
 	args, optargs, err := getopt.GetOpt(
@@ -305,10 +231,8 @@ func run() int {
 		[]string{
 			"help",
 			"output=", "cache=",
-			"modes", "types", "reporters",
-			"non-unique",
 			"support=",
-			"samples=",
+			"modes", "types", "reporters",
 			"skip-log=",
 			"cpu-profile=",
 			"parallelism=",
@@ -323,9 +247,7 @@ func run() int {
 
 	output := ""
 	cache := ""
-	unique := true
 	support := 0
-	samples := 0
 	cpuProfile := ""
 	parallelism := -1
 	for _, oa := range optargs {
@@ -340,10 +262,6 @@ func run() int {
 			parallelism = cmd.ParseInt(oa.Arg())
 		case "--support":
 			support = cmd.ParseInt(oa.Arg())
-		case "--samples":
-			samples = cmd.ParseInt(oa.Arg())
-		case "--non-unique":
-			unique = false
 		case "--types":
 			fmt.Fprintln(os.Stderr, "Types:")
 			for k := range cmd.Types {
@@ -379,51 +297,47 @@ func run() int {
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
 
-	if samples <= 0 {
-		fmt.Fprintf(os.Stderr, "Samples <= 0, must be > 0\n")
-		cmd.Usage(cmd.ErrorCodes["opts"])
-	}
-
 	if output == "" {
 		fmt.Fprintf(os.Stderr, "You must supply an output dir (-o)\n")
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
 
 	if cpuProfile != "" {
-		errors.Logf("DEBUG", "starting cpu profile: %v", cpuProfile)
-		f, err := os.Create(cpuProfile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = pprof.StartCPUProfile(f)
-		if err != nil {
-			log.Fatal(err)
-		}
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			sig:=<-sigs
-			errors.Logf("DEBUG", "closing cpu profile")
-			pprof.StopCPUProfile()
-			err := f.Close()
-			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
-			panic(errors.Errorf("caught signal: %v", sig))
-		}()
-		defer func() {
-			errors.Logf("DEBUG", "closing cpu profile")
-			pprof.StopCPUProfile()
-			err := f.Close()
-			errors.Logf("DEBUG", "closed cpu profile, err: %v", err)
-		}()
+		defer cmd.CPUProfile(cpuProfile)()
 	}
 
 	conf := &config.Config{
 		Cache:   cache,
 		Output:  output,
 		Support: support,
-		Samples: samples,
-		Unique:  unique,
 		Parallelism: parallelism,
 	}
+
 	return cmd.Main(args, conf, modes)
+}
+
+var profileDone chan bool
+
+func profileWriter(w io.Writer) {
+	for {
+		data := runtime.CPUProfile()
+		if data == nil {
+			break
+		}
+		errors.Logf("DEBUG", "profileWriter got data %v", len(data))
+		w.Write(data)
+	}
+	profileDone<-true
+}
+
+func profileUnsafe(w io.Writer, hz int) {
+	errors.Logf("DEBUG", "profileUnsafe at %v hz", hz)
+	profileDone = make(chan bool)
+	runtime.SetCPUProfileRate(hz)
+	go profileWriter(w)
+}
+
+func stopProfile() {
+	runtime.SetCPUProfileRate(0)
+	<-profileDone
 }

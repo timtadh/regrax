@@ -8,7 +8,7 @@ import (
 
 import (
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners/walker"
+	"github.com/timtadh/regrax/sample/miners/walker"
 )
 
 type Transition func(interface{}, lattice.Node) (lattice.Node, error)
