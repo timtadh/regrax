@@ -2,9 +2,9 @@
 .PHONY: install
 install:
 	go install \
-	github.com/timtadh/sfp \
-	github.com/timtadh/sfp/afp \
-	github.com/timtadh/sfp/cmd/clean-go-pprof \
-	github.com/timtadh/sfp/cmd/dot-to-veg \
-	github.com/timtadh/sfp/cmd/find-embeddings \
-	github.com/timtadh/sfp/cmd/list-embeddings
+	github.com/timtadh/regrax \
+	github.com/timtadh/regrax/afp \
+	github.com/timtadh/regrax/cmd/clean-go-pprof \
+	github.com/timtadh/regrax/cmd/dot-to-veg \
+	github.com/timtadh/regrax/cmd/find-embeddings \
+	github.com/timtadh/regrax/cmd/list-embeddings
