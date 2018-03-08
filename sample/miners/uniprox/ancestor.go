@@ -14,7 +14,7 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners/fastmax"
+	"github.com/timtadh/regrax/sample/miners/fastmax"
 	"github.com/timtadh/regrax/reporters"
 	"github.com/timtadh/regrax/types/digraph"
 	dg "github.com/timtadh/regrax/types/digraph/digraph"

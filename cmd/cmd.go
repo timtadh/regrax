@@ -51,8 +51,8 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners"
 	"github.com/timtadh/regrax/reporters"
+	"github.com/timtadh/regrax/sample/miners"
 	"github.com/timtadh/regrax/types/digraph"
 	"github.com/timtadh/regrax/types/digraph/subgraph"
 	"github.com/timtadh/regrax/types/itemset"
@@ -94,7 +94,7 @@ Types
 
     itemset Exmaple
 
-        $ regrax -o /tmp/sfp --support=1000 --samples=10 \
+        $ regrax sample -o /tmp/sfp --support=1000 --samples=10 \
             itemset --min-items=4 --max-items=4  ./data/transactions.dat.gz \
             graple
 
@@ -120,7 +120,7 @@ Types
 
     digraph Example
 
-        $ regrax -o /tmp/sfp --support=5 --samples=100 \
+        $ regrax sample -o /tmp/sfp --support=5 --samples=100 \
             digraph --min-vertices=5 --max-vertices=8 --max-edges=15 \
                 ./data/digraph.veg.gz \
             graple
@@ -346,6 +346,7 @@ Types
 
 var ReportersUsage string = `
 Reporters
+
     chain                     chain several reporters together (end the chain
                                 with endchain)
     max                       only write maximal patterns
@@ -406,22 +407,22 @@ Reporters
 
     Examples
 
-        $ regrax -o <path> --samples=5 --support=5 \
+        $ regrax sample -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
             chain log file
 
-        $ regrax -o <path> --samples=5 --support=5 \
+        $ regrax sample -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
             chain log chain log log endchain file
 
-        $ regrax -o <path> --samples=5 --support=5 \
+        $ regrax sample -o <path> --samples=5 --support=5 \
             digraph ./digraph.veg.gz \
             graple \
             chain log -p all max chain log -p max file
 
-        $ regrax --non-unique --skip-log=DEBUG -o /tmp/sfp --samples=5 --support=5 \
+        $ regrax sample --non-unique --skip-log=DEBUG -o /tmp/sfp --samples=5 --support=5 \
             digraph --min-vertices=3 ../fsm/data/expr.gz \
             graple \
             chain \
@@ -435,13 +436,12 @@ Reporters
 `
 
 func Usage(code int) {
-	fmt.Fprintln(os.Stderr, UsageMessage)
 	if code == 0 {
 		fmt.Fprintln(os.Stdout, ExtendedMessage)
 		fmt.Fprintln(os.Stdout, CommonUsage)
 		code = ErrorCodes["usage"]
 	} else {
-		fmt.Fprintln(os.Stderr, "Try -h or --help for help")
+		fmt.Fprintln(os.Stderr, UsageMessage)
 	}
 	os.Exit(code)
 }
@@ -631,7 +631,7 @@ func CPUProfile(cpuProfile string) func() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		sig:=<-sigs
+		sig := <-sigs
 		errors.Logf("DEBUG", "closing cpu profile")
 		pprof.StopCPUProfile()
 		err := f.Close()
@@ -792,9 +792,9 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		case "--extend-from-freq-edges":
 			extendFromEdges = true
 		case "-i", "--include":
-			includes = append(includes, "(" + AssertRegex(oa.Arg()) + ")")
+			includes = append(includes, "("+AssertRegex(oa.Arg())+")")
 		case "-e", "--exclude":
-			excludes = append(excludes, "(" + AssertRegex(oa.Arg()) + ")")
+			excludes = append(excludes, "("+AssertRegex(oa.Arg())+")")
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])
@@ -851,13 +851,13 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 
 	dc := &digraph.Config{
-		MinEdges: minE,
-		MaxEdges: maxE,
-		MinVertices: minV,
-		MaxVertices: maxV,
-		Mode: mode,
-		Include: include,
-		Exclude: exclude,
+		MinEdges:            minE,
+		MaxEdges:            maxE,
+		MinVertices:         minV,
+		MaxVertices:         maxV,
+		Mode:                mode,
+		Include:             include,
+		Exclude:             exclude,
 		EmbSearchStartPoint: embSearchStartingPoint,
 	}
 
@@ -1019,7 +1019,7 @@ func countReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Format
 		"hf:",
 		[]string{
 			"help",
-            "filename=",
+			"filename=",
 		},
 	)
 	if err != nil {
@@ -1031,8 +1031,8 @@ func countReporter(rptrs map[string]Reporter, argv []string, fmtr lattice.Format
 		switch oa.Opt() {
 		case "-h", "--help":
 			Usage(0)
-        case "-f", "--filename":
-            filename = oa.Arg()
+		case "-f", "--filename":
+			filename = oa.Arg()
 		default:
 			errors.Logf("ERROR", "Unknown flag '%v'\n", oa.Opt())
 			Usage(ErrorCodes["opts"])

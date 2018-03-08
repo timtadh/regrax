@@ -11,7 +11,7 @@ import (
 
 import (
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/miners/walker"
+	"github.com/timtadh/regrax/sample/miners/walker"
 	"github.com/timtadh/regrax/stats"
 )
 
