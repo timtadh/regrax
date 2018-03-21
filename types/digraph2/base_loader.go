@@ -5,21 +5,21 @@ import (
 )
 
 import (
-	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 )
 
 type baseLoader struct {
-	dt *Digraph
-	b *digraph.Builder
-	vidxs map[int32]int32
+	dt       *Digraph
+	b        *digraph.Builder
+	vidxs    map[int32]int32
 	excluded map[int32]bool
 }
 
 func newBaseLoader(dt *Digraph, b *digraph.Builder) *baseLoader {
 	return &baseLoader{
-		dt: dt,
-		b: b,
-		vidxs: make(map[int32]int32),
+		dt:       dt,
+		b:        b,
+		vidxs:    make(map[int32]int32),
 		excluded: make(map[int32]bool),
 	}
 }
@@ -55,11 +55,10 @@ func (l *baseLoader) addEdge(sid, tid int32, color int, label string) (err error
 	}
 	if sidx, has := l.vidxs[sid]; !has {
 		return errors.Errorf("unknown src id %v", tid)
-	} else if tidx, has := l.vidxs[tid]; !has{
+	} else if tidx, has := l.vidxs[tid]; !has {
 		return errors.Errorf("unknown targ id %v", tid)
 	} else {
 		l.b.AddEdge(&l.b.V[sidx], &l.b.V[tidx], color)
 	}
 	return nil
 }
-

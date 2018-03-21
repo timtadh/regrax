@@ -1,14 +1,12 @@
 package digraph2
 
-import ()
-
 import (
 	"github.com/timtadh/data-structures/errors"
 )
 
 import (
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 	"github.com/timtadh/regrax/types/digraph2/subgraph"
 )
 
@@ -17,7 +15,7 @@ func (n *Node) findChildren(allow func(*subgraph.SubGraph) (bool, error)) (nodes
 		errors.Logf("DEBUG", "findChildren %v", n)
 	}
 	if n.SubGraph == nil {
-		for _, n := range n.dt.FrequentVertices { 
+		for _, n := range n.dt.FrequentVertices {
 			nodes = append(nodes, n)
 		}
 		return nodes, nil
@@ -93,7 +91,7 @@ func (n *Node) extensions(unsupported map[subgraph.Extension]bool) map[subgraph.
 	return exts
 }
 
-func (n *Node) validExtChecker(unsupported map[subgraph.Extension]bool, do func(*subgraph.Embedding, *subgraph.Extension)) func (*subgraph.Embedding, *digraph.Edge, int, int) {
+func (n *Node) validExtChecker(unsupported map[subgraph.Extension]bool, do func(*subgraph.Embedding, *subgraph.Extension)) func(*subgraph.Embedding, *digraph.Edge, int, int) {
 	return func(emb *subgraph.Embedding, e *digraph.Edge, src, targ int) {
 		if n.dt.Indices.EdgeCounts[n.dt.Indices.Colors(e)] < n.dt.Support() {
 			return
@@ -144,12 +142,12 @@ func (n *Node) extension(embedding *subgraph.Embedding, e *digraph.Edge, src, ta
 		panic("both src and targ unattached")
 	} else if !hasSrc {
 		newVE = &subgraph.VertexEmbedding{
-			SgIdx: srcIdx,
+			SgIdx:  srcIdx,
 			EmbIdx: e.Src,
 		}
 	} else if !hasTarg {
 		newVE = &subgraph.VertexEmbedding{
-			SgIdx: targIdx,
+			SgIdx:  targIdx,
 			EmbIdx: e.Targ,
 		}
 	}

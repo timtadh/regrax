@@ -14,7 +14,7 @@ import (
 )
 
 import (
-	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 )
 
 type Labels interface {

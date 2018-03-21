@@ -12,10 +12,9 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 	"github.com/timtadh/regrax/types/digraph2/subgraph"
 )
-
 
 type Config struct {
 	MinEdges, MaxEdges       int
@@ -25,12 +24,12 @@ type Config struct {
 
 type Digraph struct {
 	Config
-	config                   *config.Config
-	G                        *digraph.Digraph
-	Labels                   *digraph.Labels
-	FrequentVertices         []*Node
-	Indices                  *digraph.Indices
-	NodeAttrs                map[int]map[string]interface{}
+	config           *config.Config
+	G                *digraph.Digraph
+	Labels           *digraph.Labels
+	FrequentVertices []*Node
+	Indices          *digraph.Indices
+	NodeAttrs        map[int]map[string]interface{}
 }
 
 func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {

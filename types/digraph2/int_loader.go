@@ -2,8 +2,8 @@ package digraph2
 
 import (
 	"bytes"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 import (
@@ -13,7 +13,7 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 )
 
 type IntLoader struct {
@@ -107,7 +107,7 @@ func (v *IntLoader) loadEdge(labels *digraph.Labels, b *baseLoader, data []byte)
 		return err
 	}
 	label := string(split[2])
-	return b.addEdge(int32(src), int32(targ), labels.Color(label), label )
+	return b.addEdge(int32(src), int32(targ), labels.Color(label), label)
 }
 
 func intParseLine(line []byte) (line_type string, data []byte) {

@@ -15,7 +15,7 @@ import (
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 )
 
 type ErrorList []error

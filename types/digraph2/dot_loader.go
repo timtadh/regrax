@@ -6,15 +6,15 @@ import (
 )
 
 import (
+	"github.com/timtadh/combos"
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/dot"
-	"github.com/timtadh/combos"
 )
 
 import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/types/digraph2/digraph"
+	"github.com/timtadh/regrax/types/digraph/digraph"
 )
 
 type DotLoader struct {
@@ -57,10 +57,10 @@ func (v *DotLoader) loadDigraph(input lattice.Input, labels *digraph.Labels) (gr
 	}
 	G := digraph.Build(100, 1000)
 	dp := &dotParse{
-		b: newBaseLoader(v.dt, G),
-		d: v,
+		b:      newBaseLoader(v.dt, G),
+		d:      v,
 		labels: labels,
-		vids: make(map[string]int32),
+		vids:   make(map[string]int32),
 	}
 	// s, err := dot.Lexer.Scanner(text)
 	// if err != nil {
@@ -75,14 +75,14 @@ func (v *DotLoader) loadDigraph(input lattice.Input, labels *digraph.Labels) (gr
 }
 
 type dotParse struct {
-	b *baseLoader
-	d *DotLoader
-	labels *digraph.Labels
-	graphId int
+	b        *baseLoader
+	d        *DotLoader
+	labels   *digraph.Labels
+	graphId  int
 	curGraph string
 	subgraph int
-	nextId int32
-	vids map[string]int32
+	nextId   int32
+	vids     map[string]int32
 }
 
 func (p *dotParse) Enter(name string, n *combos.Node) error {
