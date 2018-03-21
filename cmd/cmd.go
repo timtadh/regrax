@@ -137,7 +137,8 @@ Types
         --unsup-embs-pruning     (see below)
         --overlap-pruning        (see below)
         --extension-pruning      (see below)
-        --no-caching             do not cache any lattice nodes.
+        --caching                cache any lattice nodes (may help on low mem
+                                 systems) (make sure you specify cache dir)
         --min-edges=<int>        minimum edges in a samplable digraph
         --max-edges=<int>        maximum edges in a samplable digraph
         --min-vertices=<int>     minimum vertices in a samplable digraph
@@ -702,12 +703,11 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 		[]string{"help",
 			"loader=",
 			"count-mode=",
-			"fully-optimistic",
 			"overlap-pruning",
 			"extension-pruning",
 			"extend-from-embeddings",
 			"extend-from-freq-edges",
-			"no-caching",
+			"caching",
 			"emb-search-starting-point=",
 			"min-edges=",
 			"max-edges=",
@@ -730,7 +730,7 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	extendFromEmb := false
 	extendFromEdges := false
 	embSearchStartingPoint := subgraph.MostConnected
-	caching := true
+	caching := false
 	version2 := false
 	minE := 0
 	maxE := int(math.MaxInt32)
@@ -778,8 +778,8 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 				fmt.Fprintln(os.Stderr, "             (most|fewest)-extensions, (lowest|highest)-cardinality")
 				Usage(ErrorCodes["opts"])
 			}
-		case "--no-caching":
-			caching = false
+		case "--caching":
+			caching = true
 		case "--min-edges":
 			minE = ParseInt(oa.Arg())
 		case "--max-edges":
