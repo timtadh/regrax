@@ -24,7 +24,6 @@ import (
 	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
-
 type Config struct {
 	MinEdges, MaxEdges       int
 	MinVertices, MaxVertices int
@@ -35,26 +34,26 @@ type Config struct {
 
 type Digraph struct {
 	Config
-	config                   *config.Config
-	G                        *digraph.Digraph
-	Labels                   *digraph.Labels
-	FrequentVertices         []*EmbListNode
-	NodeAttrs                int_json.MultiMap
-	Embeddings               subgraph_embedding.MultiMap
-	UnsupEmbs                subgraph_embedding.MultiMap
-	Overlap                  subgraph_overlap.MultiMap
-	Extensions               bytes_extension.MultiMap
-	UnsupExts                bytes_extension.MultiMap
-	Parents                  bytes_bytes.MultiMap
-	ParentCount              bytes_int.MultiMap
-	Children                 bytes_bytes.MultiMap
-	ChildCount               bytes_int.MultiMap
-	CanonKids                bytes_bytes.MultiMap
-	CanonKidCount            bytes_int.MultiMap
-	Frequency                bytes_int.MultiMap
-	Indices                  *digraph.Indices
-	pool                     *pool.Pool
-	lock                     sync.RWMutex
+	config           *config.Config
+	G                *digraph.Digraph
+	Labels           *digraph.Labels
+	FrequentVertices []*EmbListNode
+	NodeAttrs        int_json.MultiMap
+	Embeddings       subgraph_embedding.MultiMap
+	UnsupEmbs        subgraph_embedding.MultiMap
+	Overlap          subgraph_overlap.MultiMap
+	Extensions       bytes_extension.MultiMap
+	UnsupExts        bytes_extension.MultiMap
+	Parents          bytes_bytes.MultiMap
+	ParentCount      bytes_int.MultiMap
+	Children         bytes_bytes.MultiMap
+	ChildCount       bytes_int.MultiMap
+	CanonKids        bytes_bytes.MultiMap
+	CanonKidCount    bytes_int.MultiMap
+	Frequency        bytes_int.MultiMap
+	Indices          *digraph.Indices
+	pool             *pool.Pool
+	lock             sync.RWMutex
 }
 
 func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
@@ -125,7 +124,7 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 		return nil, err
 	}
 	g = &Digraph{
-		Config: *dc,
+		Config:        *dc,
 		NodeAttrs:     nodeAttrs,
 		Embeddings:    embeddings,
 		Overlap:       overlap,
@@ -138,8 +137,8 @@ func NewDigraph(config *config.Config, dc *Config) (g *Digraph, err error) {
 		CanonKids:     canonKids,
 		CanonKidCount: canonKidCount,
 		Frequency:     frequency,
-		config: config,
-		pool: pool.New(config.Workers()),
+		config:        config,
+		pool:          pool.New(config.Workers()),
 	}
 	return g, nil
 }
