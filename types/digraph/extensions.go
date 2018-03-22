@@ -171,7 +171,7 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 					hash.Add(ext)
 				}
 			}
-			done<-hash
+			done <- hash
 			close(done)
 		}()
 		for i := range pattern.V {
@@ -184,21 +184,21 @@ func extensionsFromFreqEdges(dt *Digraph, pattern *subgraph.SubGraph, ei subgrap
 							subgraph.Vertex{Idx: i, Color: e.SrcColor},
 							subgraph.Vertex{Idx: j, Color: e.TargColor},
 							e.EdgeColor)
-						exts <-ep
+						exts <- ep
 					}
 				}
 				ep := subgraph.NewExt(
 					subgraph.Vertex{Idx: i, Color: u.Color},
 					subgraph.Vertex{Idx: len(pattern.V), Color: e.TargColor},
 					e.EdgeColor)
-				exts <-ep
+				exts <- ep
 			}
 			for _, e := range dt.Indices.EdgesToColor[u.Color] {
 				ep := subgraph.NewExt(
 					subgraph.Vertex{Idx: len(pattern.V), Color: e.SrcColor},
 					subgraph.Vertex{Idx: i, Color: u.Color},
 					e.EdgeColor)
-				exts <-ep
+				exts <- ep
 			}
 		}
 		close(exts)
@@ -376,7 +376,7 @@ func ExtsAndEmbs(dt *Digraph, pattern *subgraph.SubGraph, patternOverlap []map[i
 }
 
 func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) error {
-	if dt.Mode & Caching == 0 {
+	if dt.Mode&Caching == 0 {
 		return nil
 	}
 	dt.lock.Lock()
@@ -422,7 +422,7 @@ func cacheExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph, support int, exts []
 }
 
 func loadCachedExtsEmbs(dt *Digraph, pattern *subgraph.SubGraph) (bool, int, []*subgraph.Extension, []*subgraph.Embedding, []map[int]bool, error) {
-	if dt.Mode & Caching == 0 {
+	if dt.Mode&Caching == 0 {
 		return false, 0, nil, nil, nil, nil
 	}
 	dt.lock.RLock()
