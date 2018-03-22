@@ -19,6 +19,9 @@ type EmbListNode struct {
 	embeddings []*subgraph.Embedding
 	overlap    []map[int]bool
 	unsupExts  *set.SortedSet
+	kids       []lattice.Node
+	canonKids  []lattice.Node
+	parents    []lattice.Node
 }
 
 func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) *EmbListNode {
@@ -26,9 +29,9 @@ func NewEmbListNode(dt *Digraph, pattern *subgraph.SubGraph, exts []*subgraph.Ex
 		if exts == nil {
 			panic("nil exts")
 		}
-		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap, nil}
+		return &EmbListNode{SubgraphPattern{dt, pattern}, exts, embs, overlap, nil, nil, nil, nil}
 	}
-	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil}
+	return &EmbListNode{SubgraphPattern{dt, pattern}, nil, nil, nil, nil, nil, nil, nil}
 }
 
 func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension, embs []*subgraph.Embedding, overlap []map[int]bool) Node {
@@ -77,16 +80,39 @@ func (n *EmbListNode) String() string {
 }
 
 func (n *EmbListNode) Parents() ([]lattice.Node, error) {
-	return parents(n, nil, nil)
+	if n.parents != nil {
+		return n.parents, nil
+	}
+	nodes, err := parents(n)
+	if err != nil {
+		return nil, err
+	}
+	n.parents = nodes
+	return nodes, nil
 }
 
 func (n *EmbListNode) Children() (nodes []lattice.Node, err error) {
-	return children(n)
+	if n.kids != nil {
+		return n.kids, nil
+	}
+	nodes, err = children(n)
+	if err != nil {
+		return nil, err
+	}
+	n.kids = nodes
+	return nodes, nil
 }
 
 func (n *EmbListNode) CanonKids() (nodes []lattice.Node, err error) {
-	// errors.Logf("DEBUG", "CanonKids of %v", n)
-	return canonChildren(n)
+	if n.canonKids != nil {
+		return n.canonKids, nil
+	}
+	nodes, err = canonChildren(n)
+	if err != nil {
+		return nil, err
+	}
+	n.canonKids = nodes
+	return nodes, nil
 }
 
 func (n *EmbListNode) loadFrequentVertices() ([]lattice.Node, error) {
@@ -110,11 +136,19 @@ func (n *EmbListNode) AdjacentCount() (int, error) {
 }
 
 func (n *EmbListNode) ParentCount() (int, error) {
-	return count(n, nil, nil)
+	parents, err := n.Parents()
+	if err != nil {
+		return 0, err
+	}
+	return len(parents), nil
 }
 
 func (n *EmbListNode) ChildCount() (int, error) {
-	return count(n, nil, nil)
+	kids, err := n.Children()
+	if err != nil {
+		return 0, err
+	}
+	return len(kids), nil
 }
 
 func (n *EmbListNode) Maximal() (bool, error) {

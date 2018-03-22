@@ -7,11 +7,9 @@ import (
 
 import (
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/stores/bytes_bytes"
-	"github.com/timtadh/regrax/stores/bytes_int"
 )
 
-func parents(n Node, parents bytes_bytes.MultiMap, parentCount bytes_int.MultiMap) (nodes []lattice.Node, err error) {
+func parents(n Node) (nodes []lattice.Node, err error) {
 	// errors.Logf("DEBUG", "compute Parents\n    of %v", n)
 	if n.isRoot() {
 		return []lattice.Node{}, nil
