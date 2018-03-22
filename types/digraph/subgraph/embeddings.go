@@ -3,10 +3,10 @@ package subgraph
 import (
 	"fmt"
 	"math/rand"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
-	"runtime"
 )
 
 import (
@@ -89,8 +89,8 @@ func FilterAutomorphs(it EmbIterator) (ei EmbIterator) {
 }
 
 type VrtEmb struct {
-	Id   int
-	Idx  int
+	Id  int
+	Idx int
 }
 
 func (v *VrtEmb) Equals(o types.Equatable) bool {
@@ -127,13 +127,13 @@ func (v *VrtEmb) Translate(orgLen int, vord []int) *VrtEmb {
 	}
 	return &VrtEmb{
 		Idx: idx,
-		Id: v.Id,
+		Id:  v.Id,
 	}
 }
 
 type VertexEmbeddings []*VrtEmb
 
-func (embs VertexEmbeddings) Translate(orgLen int, vord []int) (VertexEmbeddings) {
+func (embs VertexEmbeddings) Translate(orgLen int, vord []int) VertexEmbeddings {
 	translated := make(VertexEmbeddings, len(embs))
 	for i := range embs {
 		translated[i] = embs[i].Translate(orgLen, vord)
@@ -195,7 +195,7 @@ func (ids *IdNode) addOrReplace(id, idx int) *IdNode {
 			return ids
 		}
 	}
-	return &IdNode{VrtEmb:VrtEmb{Id: id, Idx: idx}, Prev: ids}
+	return &IdNode{VrtEmb: VrtEmb{Id: id, Idx: idx}, Prev: ids}
 }
 
 func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *digraph.Indices, overlap []map[int]bool) int {
@@ -223,18 +223,17 @@ func (sg *SubGraph) searchStartingPoint(mode EmbSearchStartPoint, indices *digra
 	}
 }
 
-
 type workItem struct {
-	sg *SubGraph
-	indices *digraph.Indices
-	prune func(*IdNode) bool
-	chain []int
-	overlap []map[int]bool
+	sg       *SubGraph
+	indices  *digraph.Indices
+	prune    func(*IdNode) bool
+	chain    []int
+	overlap  []map[int]bool
 	complete sync.WaitGroup
-	embs chan *Embedding
-	started chan bool
-	stack *Stack
-	threads int
+	embs     chan *Embedding
+	started  chan bool
+	stack    *Stack
+	threads  int
 }
 
 var workItems chan *workItem
@@ -248,12 +247,12 @@ func init() {
 			// errors.Logf("DEBUG", "worker started %v", id)
 			for work := range workItems {
 				if work.stack.Closed() {
-					work.started<-true
+					work.started <- true
 					continue
 				}
 				work.complete.Add(1)
 				tid := work.stack.AddThread()
-				work.started<-true
+				work.started <- true
 				// errors.Logf("DEBUG", "worker %v starting work item %v %v", id, wid, work.sg)
 				for {
 					ids, eid := work.stack.Pop(tid)
@@ -279,7 +278,7 @@ func init() {
 								panic("wat")
 							}
 						}
-						work.embs<-emb
+						work.embs <- emb
 					} else {
 						// ok extend the embedding
 						// size := len(stack)
@@ -287,7 +286,7 @@ func init() {
 							if work.prune != nil && work.prune(ext) {
 								return
 							}
-							work.stack.Push(tid, ext, eid + 1)
+							work.stack.Push(tid, ext, eid+1)
 						})
 					}
 				}
@@ -310,21 +309,21 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 	chain := sg.edgeChain(indices, overlap, startIdx)
 
 	work := &workItem{
-		sg: sg,
+		sg:      sg,
 		indices: indices,
-		prune: prune,
-		chain: chain,
+		prune:   prune,
+		chain:   chain,
 		overlap: overlap,
-		embs: make(chan *Embedding, 10000),
+		embs:    make(chan *Embedding, 10000),
 		started: make(chan bool),
-		stack: NewStack(workers),
+		stack:   NewStack(workers),
 	}
 
 	vembs := sg.startEmbeddings(indices, startIdx)
 	for _, vemb := range vembs {
 		work.stack.Push(0, vemb, 0)
 	}
-	workItems<-work
+	workItems <- work
 	<-work.started
 	if workers > 1 {
 		go func() {
@@ -335,12 +334,12 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 					break
 				}
 				select {
-					case workItems<-work:
+				case workItems <- work:
 					<-work.started
 					x++
 				default:
 					retries--
-					time.Sleep(100*time.Millisecond)
+					time.Sleep(100 * time.Millisecond)
 				}
 			}
 			close(work.started)
@@ -357,7 +356,8 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 		if stop {
 			// errors.Logf("DEBUG", "closed stack")
 			work.stack.Close()
-			for _ = range work.embs {}
+			for _ = range work.embs {
+			}
 			return nil, nil
 		}
 		// errors.Logf("DEBUG", "waiting for emb")
@@ -369,7 +369,6 @@ func (sg *SubGraph) IterEmbeddings(workers int, spMode EmbSearchStartPoint, indi
 	}
 	return ei
 }
-
 
 func (sg *SubGraph) partial(edgeChain []int, ids *IdNode) *Embedding {
 	b := BuildEmbedding(len(sg.V), len(edgeChain))
@@ -445,7 +444,7 @@ func (sg *SubGraph) startEmbeddings(indices *digraph.Indices, startIdx int) []*I
 	color := sg.V[startIdx].Color
 	embs := make([]*IdNode, 0, indices.VertexColorFrequency(color))
 	for _, gIdx := range indices.ColorIndex[color] {
-		embs = append(embs, &IdNode{VrtEmb:VrtEmb{Id: gIdx, Idx: startIdx}})
+		embs = append(embs, &IdNode{VrtEmb: VrtEmb{Id: gIdx, Idx: startIdx}})
 	}
 	return embs
 }
@@ -603,9 +602,9 @@ func (sg *SubGraph) extendEmbedding(indices *digraph.Indices, cur *IdNode, e *Ed
 		// 	}
 		// }
 		if o == nil || len(o[newIdx]) == 0 {
-			do(&IdNode{VrtEmb:VrtEmb{Id: newId, Idx: newIdx}, Prev: cur})
+			do(&IdNode{VrtEmb: VrtEmb{Id: newId, Idx: newIdx}, Prev: cur})
 		} else if o[newIdx] != nil && o[newIdx][newId] {
-			do(&IdNode{VrtEmb:VrtEmb{Id: newId, Idx: newIdx}, Prev: cur})
+			do(&IdNode{VrtEmb: VrtEmb{Id: newId, Idx: newIdx}, Prev: cur})
 		}
 	}
 	srcId, targId := cur.ids(e.Src, e.Targ)
@@ -649,7 +648,7 @@ outer:
 		}
 		for _, id := range indices.ColorIndex[sg.V[idx].Color] {
 			if overlap == nil || len(overlap[idx]) == 0 || overlap[idx][id] {
-				sg.extendEmbedding(indices, &IdNode{VrtEmb:VrtEmb{Id: id, Idx: idx}}, e, overlap, func(_ *IdNode) {
+				sg.extendEmbedding(indices, &IdNode{VrtEmb: VrtEmb{Id: id, Idx: idx}}, e, overlap, func(_ *IdNode) {
 					total++
 				})
 			}
