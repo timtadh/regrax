@@ -5,7 +5,6 @@ import (
 )
 
 import (
-	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
 )
 
@@ -36,28 +35,6 @@ func (n *EmbListNode) New(pattern *subgraph.SubGraph, exts []*subgraph.Extension
 	return NewEmbListNode(n.Dt, pattern, exts, embs, overlap)
 }
 
-func LoadEmbListNode(dt *Digraph, label []byte) (*EmbListNode, error) {
-	sg, err := subgraph.LoadSubGraph(label)
-	if err != nil {
-		return nil, err
-	}
-	has, _, exts, embs, overlap, err := loadCachedExtsEmbs(dt, sg)
-	if err != nil {
-		return nil, err
-	}
-	if !has {
-		return nil, errors.Errorf("Node was not saved: %v", &SubgraphPattern{Dt: dt, Pat: sg})
-	}
-
-	n := &EmbListNode{
-		SubgraphPattern: SubgraphPattern{Dt: dt, Pat: sg},
-		extensions:      exts,
-		embeddings:      embs,
-		overlap:         overlap,
-	}
-	return n, nil
-}
-
 func (n *EmbListNode) Pattern() lattice.Pattern {
 	return &n.SubgraphPattern
 }
@@ -78,21 +55,7 @@ func (n *EmbListNode) UnsupportedExts() (*set.SortedSet, error) {
 	if n.unsupExts != nil && n.Dt.Config.Mode&ExtensionPruning == ExtensionPruning {
 		return n.unsupExts, nil
 	}
-	if n.Dt.UnsupExts == nil || n.Dt.Config.Mode&Caching == 0 {
-		return set.NewSortedSet(0), nil
-	}
-	n.Dt.lock.RLock()
-	defer n.Dt.lock.RUnlock()
-	label := n.Label()
-	u := set.NewSortedSet(10)
-	err := n.Dt.UnsupExts.DoFind(label, func(_ []byte, ext *subgraph.Extension) error {
-		return u.Add(ext)
-	})
-	if err != nil {
-		return nil, err
-	}
-	n.unsupExts = u
-	return u, nil
+	return set.NewSortedSet(0), nil
 }
 
 func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.SortedSet) error {
@@ -105,22 +68,6 @@ func (n *EmbListNode) SaveUnsupportedExts(orgLen int, vord []int, eps *set.Sorte
 		ept := ep.Translate(orgLen, vord)
 		n.unsupExts.Add(ept)
 	}
-	if n.Dt.UnsupExts == nil || n.Dt.Config.Mode&Caching == 0 {
-		return nil
-	}
-	n.Dt.lock.Lock()
-	defer n.Dt.lock.Unlock()
-	if len(n.Pat.E) < 4 {
-		return nil
-	}
-	label := n.Label()
-	for x, next := n.unsupExts.Items()(); next != nil; x, next = next() {
-		ept := x.(*subgraph.Extension)
-		err := n.Dt.UnsupExts.Add(label, ept)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -130,7 +77,7 @@ func (n *EmbListNode) String() string {
 }
 
 func (n *EmbListNode) Parents() ([]lattice.Node, error) {
-	return parents(n, n.Dt.Parents, n.Dt.ParentCount)
+	return parents(n, nil, nil)
 }
 
 func (n *EmbListNode) Children() (nodes []lattice.Node, err error) {
@@ -163,11 +110,11 @@ func (n *EmbListNode) AdjacentCount() (int, error) {
 }
 
 func (n *EmbListNode) ParentCount() (int, error) {
-	return count(n, n.Parents, n.Dt.ParentCount)
+	return count(n, nil, nil)
 }
 
 func (n *EmbListNode) ChildCount() (int, error) {
-	return count(n, n.Children, n.Dt.ChildCount)
+	return count(n, nil, nil)
 }
 
 func (n *EmbListNode) Maximal() (bool, error) {

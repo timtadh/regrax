@@ -137,8 +137,6 @@ Types
         --unsup-embs-pruning     (see below)
         --overlap-pruning        (see below)
         --extension-pruning      (see below)
-        --caching                cache any lattice nodes (may help on low mem
-                                 systems) (make sure you specify cache dir)
         --min-edges=<int>        minimum edges in a samplable digraph
         --max-edges=<int>        maximum edges in a samplable digraph
         --min-vertices=<int>     minimum vertices in a samplable digraph
@@ -312,11 +310,7 @@ Types
                              options. With unsound counting modes it may cause
                              the miner to miss frequent subgraphs which have
                              subgraphs with less support (this can only happen
-                             when DCP is violated). It may cause a high amount
-                             of file IO depending on the mining mode used.  You
-                             can use --no-caching to turn off the caching layer.
-                             Turning off caching is only recommended when mining
-                             all subgraphs (and then it is encouraged).
+                             when DCP is violated).
 
     digraph Loaders
 
@@ -707,7 +701,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 			"extension-pruning",
 			"extend-from-embeddings",
 			"extend-from-freq-edges",
-			"caching",
 			"emb-search-starting-point=",
 			"min-edges=",
 			"max-edges=",
@@ -730,7 +723,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	extendFromEmb := false
 	extendFromEdges := false
 	embSearchStartingPoint := subgraph.MostConnected
-	caching := false
 	version2 := false
 	minE := 0
 	maxE := int(math.MaxInt32)
@@ -778,8 +770,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 				fmt.Fprintln(os.Stderr, "             (most|fewest)-extensions, (lowest|highest)-cardinality")
 				Usage(ErrorCodes["opts"])
 			}
-		case "--caching":
-			caching = true
 		case "--min-edges":
 			minE = ParseInt(oa.Arg())
 		case "--max-edges":
@@ -832,9 +822,6 @@ func digraphType(argv []string, conf *config.Config) (lattice.Loader, func(latti
 	}
 	if extensionPruning {
 		mode |= digraph.ExtensionPruning
-	}
-	if caching {
-		mode |= digraph.Caching
 	}
 
 	var include *regexp.Regexp = nil

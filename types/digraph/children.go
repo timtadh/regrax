@@ -12,8 +12,6 @@ import (
 
 import (
 	"github.com/timtadh/regrax/lattice"
-	"github.com/timtadh/regrax/stores/bytes_bytes"
-	"github.com/timtadh/regrax/stores/bytes_int"
 	"github.com/timtadh/regrax/types/digraph/subgraph"
 )
 
@@ -33,8 +31,7 @@ type Node interface {
 	dt() *Digraph
 }
 
-func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.MultiMap) (has bool, nodes []lattice.Node, err error) {
-	dt := n.dt()
+func precheckChildren(n Node) (has bool, nodes []lattice.Node, err error) {
 	if n.isRoot() {
 		nodes, err = n.loadFrequentVertices()
 		if err != nil {
@@ -42,23 +39,12 @@ func precheckChildren(n Node, kidCount bytes_int.MultiMap, kids bytes_bytes.Mult
 		}
 		return true, nodes, nil
 	}
-	if n.edges() >= dt.MaxEdges {
-		return true, []lattice.Node{}, nil
-	}
-	if nodes, has, err := cachedAdj(n, dt, kidCount, kids); err != nil {
-		return false, nil, err
-	} else if has {
-		return true, nodes, nil
-	}
 	return false, nil, nil
 }
 
 func canonChildren(n Node) (nodes []lattice.Node, err error) {
-	dt := n.dt()
-	if has, nodes, err := precheckChildren(n, dt.CanonKidCount, dt.CanonKids); err != nil {
-		return nil, err
-	} else if has {
-		return nodes, nil
+	if n.isRoot() {
+		return n.loadFrequentVertices()
 	}
 	sg := n.SubGraph()
 	nodes, err = findChildren(n, func(pattern *subgraph.SubGraph) (bool, error) {
@@ -67,22 +53,18 @@ func canonChildren(n Node) (nodes []lattice.Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return nodes, cacheAdj(dt, dt.CanonKidCount, dt.CanonKids, n.Label(), nodes)
+	return nodes, nil
 }
 
 func children(n Node) (nodes []lattice.Node, err error) {
-	dt := n.dt()
-	if has, nodes, err := precheckChildren(n, dt.ChildCount, dt.Children); err != nil {
-		return nil, err
-	} else if has {
-		// errors.Logf("DEBUG", "got from precheck %v", n)
-		return nodes, nil
+	if n.isRoot() {
+		return n.loadFrequentVertices()
 	}
 	nodes, err = findChildren(n, nil, false)
 	if err != nil {
 		return nil, err
 	}
-	return nodes, cacheAdj(dt, dt.ChildCount, dt.Children, n.Label(), nodes)
+	return nodes, nil
 }
 
 func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bool) (nodes []lattice.Node, err error) {
@@ -107,7 +89,7 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		return nil, err
 	}
 	type nodeEp struct {
-		n lattice.Node
+		n    lattice.Node
 		vord []int
 	}
 	nodeCh := make(chan nodeEp)
@@ -214,13 +196,12 @@ func extendNode(dt *Digraph, n Node, extPoints []*subgraph.Extension, ch chan *e
 			ext := bc.BuildFromPermutation(vord, eord)
 			if !patterns.Has(ext) {
 				patterns.Put(ext, nil)
-				ch<-&extInfo{ext, ep, vord}
+				ch <- &extInfo{ext, ep, vord}
 			}
 		}
 	}
 	close(ch)
 }
-
 
 func translateOverlap(org []map[int]bool, vord []int) []map[int]bool {
 	if org == nil {
