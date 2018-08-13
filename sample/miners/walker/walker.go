@@ -1,7 +1,5 @@
 package walker
 
-import ()
-
 import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/data-structures/set"
@@ -47,14 +45,14 @@ func (w *Walker) Close() error {
 	errors := make(chan error)
 	go func() {
 		if w == nil || w.Dt == nil {
-			errors<-nil
+			errors <- nil
 			return
 		}
 		errors <- w.Dt.Close()
 	}()
 	go func() {
 		if w == nil || w.Rptr == nil {
-			errors<-nil
+			errors <- nil
 			return
 		}
 		errors <- w.Rptr.Close()
@@ -120,6 +118,9 @@ func (w *Walker) RejectingWalk(samples chan lattice.Node, terminate chan bool) c
 				errors.Logf("DEBUG", "rejected %v", sampled)
 			}
 			if i >= w.Config.Samples {
+				if i > w.Config.Samples {
+					accept = false
+				}
 				terminate <- true
 			} else {
 				terminate <- false

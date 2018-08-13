@@ -2,14 +2,10 @@ package graple
 
 import (
 	"math/rand"
-)
+	"sync"
 
-import (
 	"github.com/timtadh/data-structures/errors"
 	"github.com/timtadh/matrix"
-)
-
-import (
 	"github.com/timtadh/regrax/config"
 	"github.com/timtadh/regrax/lattice"
 	"github.com/timtadh/regrax/sample/miners/walker"
@@ -155,18 +151,27 @@ func MakeAbsorbingWalk(sample func(lattice.Node) (lattice.Node, error), errs cha
 	return func(wlkr *walker.Walker) (chan lattice.Node, chan bool, chan error) {
 		samples := make(chan lattice.Node)
 		terminate := make(chan bool)
+		cpus := wlkr.Config.Workers()
+		var wg sync.WaitGroup
+		wg.Add(cpus)
+		for c := 0; c < cpus; c++ {
+			go func() {
+				for {
+					sampled, err := sample(wlkr.Dt.Root())
+					if err != nil {
+						errs <- err
+						break
+					}
+					samples <- sampled
+					if <-terminate {
+						break
+					}
+				}
+				wg.Done()
+			}()
+		}
 		go func() {
-			for {
-				sampled, err := sample(wlkr.Dt.Root())
-				if err != nil {
-					errs <- err
-					break
-				}
-				samples <- sampled
-				if <-terminate {
-					break
-				}
-			}
+			wg.Wait()
 			close(samples)
 			close(errs)
 		}()
