@@ -28,7 +28,6 @@ import (
 	"io"
 	"os"
 	"runtime"
-	"strings"
 )
 
 import (
@@ -181,8 +180,6 @@ func Run(argv []string) int {
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, "could not process your arguments (perhaps you forgot a mode?) try:")
-		fmt.Fprintf(os.Stderr, "$ %v breadth %v\n", os.Args[0], strings.Join(os.Args[1:], " "))
 		cmd.Usage(cmd.ErrorCodes["opts"])
 	}
 

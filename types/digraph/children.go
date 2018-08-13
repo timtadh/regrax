@@ -72,6 +72,9 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		errors.Logf("CHILDREN-DEBUG", "node %v", n)
 	}
 	dt := n.dt()
+	if len(n.SubGraph().E)+1 > dt.MaxEdges {
+		return nil, nil
+	}
 	sg := n.SubGraph()
 	extPoints, err := n.Extensions()
 	if err != nil {
@@ -125,6 +128,9 @@ func findChildren(n Node, allow func(*subgraph.SubGraph) (bool, error), debug bo
 		go func(tid int) {
 			for i := range patterns {
 				pattern := i.ext
+				if len(pattern.V) > dt.MaxVertices {
+					continue
+				}
 				ep := i.ep
 				vord := i.vord
 				if allow != nil {
