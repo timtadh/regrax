@@ -2,75 +2,148 @@
 
 
 [[projects]]
+  digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = ""
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = ""
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:a30066593578732a356dc7e5d7f78d69184ca65aeeff5939241a3ab10559bb06"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
+  pruneopts = ""
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
   version = "v1.2.1"
 
 [[projects]]
+  digest = "1:6ad5a829fe22e0d18e4c647ea5a0ea2b6033f420f4bb2366b6821d6d806fafed"
   name = "github.com/timtadh/combos"
   packages = ["."]
+  pruneopts = ""
   revision = "8f75337223504d0fceeb701c3c4a261a13141b61"
   version = "v0.1.0"
 
 [[projects]]
+  digest = "1:0a1775806af0d03cc6833d27c90e0996c935cd83eebc31d6dc31b73376a4829d"
   name = "github.com/timtadh/data-structures"
-  packages = ["errors","exc","hashtable","heap","linked","list","pool","rand","set","tree","tree/avl","types"]
+  packages = [
+    "errors",
+    "exc",
+    "hashtable",
+    "heap",
+    "linked",
+    "list",
+    "pool",
+    "rand",
+    "set",
+    "tree",
+    "tree/avl",
+    "types",
+  ]
+  pruneopts = ""
   revision = "cd0c1de5390876f92ce0762c9c626a569b124f24"
   version = "v0.5.2"
 
 [[projects]]
+  digest = "1:d0df5bc01c4db33b8a0bde9ef8745a75dd9a069896820860fa6d6270a5bdcc46"
   name = "github.com/timtadh/dot"
   packages = ["."]
+  pruneopts = ""
   revision = "e9efd4e2fa330491e6fa0ab717c796abe8f189f7"
   version = "v0.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:6e2669586d028c7ffb79b83202cb30bb7d419fe5b8f9d56ce6867beed58859b9"
   name = "github.com/timtadh/fs2"
-  packages = [".","bptree","consts","errors","fmap","mmlist","slice"]
+  packages = [
+    ".",
+    "bptree",
+    "consts",
+    "errors",
+    "fmap",
+    "mmlist",
+    "slice",
+  ]
+  pruneopts = ""
   revision = "84e943692a83c857f237efc61a8a3805b41b7965"
 
 [[projects]]
+  digest = "1:10e122eaa5b094b5ad13cbc6f58f1fd8e1403f466c15659055fd53d9d02029d7"
   name = "github.com/timtadh/getopt"
   packages = ["."]
+  pruneopts = ""
   revision = "29f1208d827b977f2e4060ca9923032b34094187"
   version = "v1.0.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:1bc7fa25ecf45f741cd9bffe75cc250252605ac4acc52ca4660084609894a8ee"
   name = "github.com/timtadh/goiso"
-  packages = [".","bliss"]
+  packages = [
+    ".",
+    "bliss",
+  ]
+  pruneopts = ""
   revision = "740a65d0c06dc74c2bb34b07092edaf53398088d"
 
 [[projects]]
+  digest = "1:28ec75a1364cfe5872b7c65d842bb5901632057756a5f2783f8660bcfcc71544"
   name = "github.com/timtadh/lexmachine"
-  packages = [".","dfa","frontend","inst","machines","queue"]
+  packages = [
+    ".",
+    "dfa",
+    "frontend",
+    "inst",
+    "machines",
+    "queue",
+  ]
+  pruneopts = ""
   revision = "1fc6bf654cb92be37fc21e477a19d27f6c639aff"
   version = "v0.2.2"
 
 [[projects]]
   branch = "go1"
+  digest = "1:06aa0014c09c0fbe75eb5146aafa363132f21d7478dee56280e1e56fcce9c125"
   name = "github.com/timtadh/matrix"
   packages = ["."]
+  pruneopts = ""
   revision = "885f4f61e20339c45aae48900d0666bd4ae63155"
   source = "https://github.com/timtadh/go.matrix"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e22488b3ef2c233022354eee1cebc6fde5e60dc5173310c0f32e143498f8c84d"
+  input-imports = [
+    "github.com/stretchr/testify/assert",
+    "github.com/timtadh/combos",
+    "github.com/timtadh/data-structures/errors",
+    "github.com/timtadh/data-structures/exc",
+    "github.com/timtadh/data-structures/hashtable",
+    "github.com/timtadh/data-structures/heap",
+    "github.com/timtadh/data-structures/list",
+    "github.com/timtadh/data-structures/pool",
+    "github.com/timtadh/data-structures/set",
+    "github.com/timtadh/data-structures/types",
+    "github.com/timtadh/dot",
+    "github.com/timtadh/fs2",
+    "github.com/timtadh/fs2/bptree",
+    "github.com/timtadh/fs2/fmap",
+    "github.com/timtadh/fs2/mmlist",
+    "github.com/timtadh/getopt",
+    "github.com/timtadh/goiso",
+    "github.com/timtadh/goiso/bliss",
+    "github.com/timtadh/matrix",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
